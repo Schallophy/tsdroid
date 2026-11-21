@@ -275,6 +275,8 @@ private fun MemberRow(
             deafened = member.outputMuted,
             muted = member.inputMuted,
             talking = talking,
+            inputHardwareEnabled = member.inputHardwareEnabled,
+            outputHardwareEnabled = member.outputHardwareEnabled,
             size = 26.dp,
         )
         Spacer(9.dp)

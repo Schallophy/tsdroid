@@ -109,9 +109,16 @@ fun UserSheet(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                 ) {
                     Text(
-                        text = if (user.inputMuted) "麦克风静音" else "麦克风开启",
+                        // Hardware mute outranks the server flag here too: the
+                        // device being off is the reason nothing is heard, and
+                        // "麦克风静音" would wrongly imply a mute button was used.
+                        text = when {
+                            !user.inputHardwareEnabled -> "麦克风设备关闭"
+                            user.inputMuted -> "麦克风静音"
+                            else -> "麦克风开启"
+                        },
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (user.inputMuted) {
+                        color = if (user.inputMuted || !user.inputHardwareEnabled) {
                             MaterialTheme.colorScheme.error
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -126,7 +133,11 @@ fun UserSheet(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                 ) {
                     Text(
-                        text = if (user.outputMuted) "不听声音" else "可以听",
+                        text = when {
+                            !user.outputHardwareEnabled -> "扬声器设备关闭"
+                            user.outputMuted -> "不听声音"
+                            else -> "可以听"
+                        },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

@@ -339,16 +339,23 @@ fun ExitGlyph(tint: Color, modifier: Modifier = Modifier) {
  * nothing useful; it now answers the only question the list is scanned for:
  * can I hear this person, and are they even here.
  *
- * Two of the four states use TeamSpeak's own icons, converted straight from the
+ * Four of the states use TeamSpeak's own icons, converted straight from the
  * `dark` icon pack the desktop client is wearing — a hand-drawn approximation
- * would only look close. The other two are the player ball the client draws
- * before every name: bright while talking, dim otherwise.
+ * would only look close. The remaining state is the player ball the client
+ * draws before every name: bright while talking, dim otherwise.
  *
  * Everything shares one slot, so the states overwrite each other in a fixed
- * order: away, then deafened, then muted. Away wins because someone who walked
- * off is absent whichever way their audio is set; deafening outranks muting
+ * order: away, then deafened or a muted output device, then the mute button or
+ * a muted input device. Away wins because someone who walked off is absent
+ * whichever way their audio is set; the output side outranks the input side
  * because it is the rarer, more consequential one — an open mic that nobody
  * hears is worse than a mic that is simply off.
+ *
+ * A hardware mute uses a different icon from the mute button because it means
+ * something different: the device is switched off in that client's own settings,
+ * and the client is silent no matter what the server thinks. Drawing the open
+ * microphone there was the bug this exists to fix — the row said "you can hear
+ * this person" and nothing arrived.
  */
 @Composable
 fun MemberStatusBadge(
@@ -356,6 +363,8 @@ fun MemberStatusBadge(
     deafened: Boolean,
     muted: Boolean,
     talking: Boolean,
+    inputHardwareEnabled: Boolean = true,
+    outputHardwareEnabled: Boolean = true,
     size: Dp = 26.dp,
     modifier: Modifier = Modifier,
 ) {
@@ -377,12 +386,31 @@ fun MemberStatusBadge(
         return
     }
 
+    if (!outputHardwareEnabled) {
+        Image(
+            painter = painterResource(R.drawable.ts_output_hardware_muted),
+            contentDescription = "已关闭扬声器设备",
+            modifier = modifier.size(size),
+        )
+        return
+    }
+
     if (muted) {
-        // Grey handset, blue body, heavy red X. Reads as "muted" at 26dp
-        // without needing a second glance.
         Image(
             painter = painterResource(R.drawable.ts_input_muted),
             contentDescription = "麦克风已静音",
+            modifier = modifier.size(size),
+        )
+        return
+    }
+
+    if (!inputHardwareEnabled) {
+        // Red prohibition sign over a grey microphone: TeamSpeak's own mark for
+        // "this client's capture device is off", distinct from the X of a
+        // server-side mute so the two are not confused at a glance.
+        Image(
+            painter = painterResource(R.drawable.ts_input_hardware_muted),
+            contentDescription = "麦克风设备已关闭",
             modifier = modifier.size(size),
         )
         return

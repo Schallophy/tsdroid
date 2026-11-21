@@ -135,8 +135,18 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
                         status = if (state.connected) SessionStatus.Online else current.status,
                         // Mirror the server-side flags, so a mute set from another
                         // device shows up here instead of drifting out of sync.
-                        micEnabled = if (state.ownClientId != null) !state.inputMuted else current.micEnabled,
-                        speakerEnabled = if (state.ownClientId != null) !state.outputMuted else current.speakerEnabled,
+                        // The hardware flag counts as muted: the capture device is
+                        // off, so nothing is sent even though `inputMuted` is `false`.
+                        micEnabled = if (state.ownClientId != null) {
+                            !state.inputMuted && state.inputHardwareEnabled
+                        } else {
+                            current.micEnabled
+                        },
+                        speakerEnabled = if (state.ownClientId != null) {
+                            !state.outputMuted && state.outputHardwareEnabled
+                        } else {
+                            current.speakerEnabled
+                        },
                         peer = current.peer?.let { state.user(it.id) },
                     )
                 }

@@ -80,8 +80,11 @@ fun SessionScreen(
 
     // Our own voice never travels through the receive path, so the native
     // talking list only ever names other people. The capture meter is the only
-    // signal for ourselves — and it is meaningless while muted.
-    val ownTalking = !ui.state.inputMuted && micLevel > OwnTalkThreshold
+    // signal for ourselves — and it is meaningless while muted, whether by the
+    // mute button or by the capture device being switched off.
+    val ownTalking = !ui.state.inputMuted &&
+        ui.state.inputHardwareEnabled &&
+        micLevel > OwnTalkThreshold
 
     LaunchedEffect(ui.toast) {
         val message = ui.toast ?: return@LaunchedEffect
@@ -333,12 +336,16 @@ private fun MicBar(
                 )
                 Text(
                     text = when {
+                        // The device flag outranks the mute flag: when the
+                        // capture device is off nothing is transmitted even
+                        // though the server still reports un-muted.
+                        !ui.state.inputHardwareEnabled -> "麦克风设备已关闭"
                         !ui.micEnabled -> "麦克风已静音"
                         ui.state.away -> ui.state.awayMessage.ifEmpty { "离开" }
                         else -> "按下麦克风静音自己"
                     },
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (!ui.micEnabled) {
+                    color = if (!ui.micEnabled || !ui.state.inputHardwareEnabled) {
                         MaterialTheme.colorScheme.error
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant

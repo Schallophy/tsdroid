@@ -17,6 +17,15 @@ data class ServerState(
     val nickname: String = "",
     val inputMuted: Boolean = false,
     val outputMuted: Boolean = false,
+    /**
+     * `false` when this client switched its capture/playback device off in its
+     * own settings. That is a different flag from [inputMuted]: a hardware-muted
+     * microphone sends no audio while `inputMuted` stays `false`, which is why
+     * the member list used to draw such a person as open-mic. Both default to
+     * `true` so an older snapshot without them reads as "device on".
+     */
+    val inputHardwareEnabled: Boolean = true,
+    val outputHardwareEnabled: Boolean = true,
     val away: Boolean = false,
     val awayMessage: String = "",
     val users: List<User> = emptyList(),
@@ -71,6 +80,9 @@ data class User(
     val channelId: Long = 0,
     val inputMuted: Boolean = false,
     val outputMuted: Boolean = false,
+    /** See [ServerState.inputHardwareEnabled]. Defaults to `true`. */
+    val inputHardwareEnabled: Boolean = true,
+    val outputHardwareEnabled: Boolean = true,
     val clientType: Int = 0,
     val away: Boolean = false,
     val awayMessage: String = "",

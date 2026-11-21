@@ -85,6 +85,51 @@ class ServerEventTest {
     }
 
     @Test
+    fun hardwareFlagsLandInTheRightProperties() {
+        val event = ServerEvent.from(
+            mapOf(
+                "type" to "user_mute_changed",
+                "client_id" to 7,
+                "nickname" to "ann",
+                "input_muted" to false,
+                "output_muted" to false,
+                "input_hardware_enabled" to false,
+                "output_hardware_enabled" to true,
+                "scope" to "input",
+            ),
+        ) as ServerEvent.UserMuteChanged
+        assertEquals(7, event.clientId)
+        assertTrue("the server-side flag said un-muted", !event.inputMuted)
+        assertTrue("the capture device flag was dropped", !event.inputHardwareEnabled)
+        assertTrue("the playback device flag was dropped", event.outputHardwareEnabled)
+        assertEquals("input", event.scope)
+    }
+
+    @Test
+    fun hardwareFlagsDefaultToEnabled() {
+        // An event from a native library that predates the hardware fields must
+        // read as "device on". Defaulting to `false` would draw every member as
+        // hardware-muted, which is the visible opposite of the bug being fixed.
+        val event = ServerEvent.from(
+            mapOf(
+                "type" to "user_mute_changed",
+                "client_id" to 7,
+                "nickname" to "ann",
+                "input_muted" to true,
+                "output_muted" to false,
+                "scope" to "input",
+            ),
+        ) as ServerEvent.UserMuteChanged
+        assertTrue(event.inputHardwareEnabled)
+        assertTrue(event.outputHardwareEnabled)
+
+        // Same for the snapshot mirror: absent keys mean an older tsbridge.
+        val legacy = LENIENT_JSON.decodeFromString<ServerState>("""{"rev":1,"nickname":"x"}""")
+        assertTrue(legacy.inputHardwareEnabled)
+        assertTrue(legacy.outputHardwareEnabled)
+    }
+
+    @Test
     fun unknownTypesSurvive() {
         // A newer library may emit an event this build has no case for. Dropping
         // it is how a shipped feature goes quiet, so it must round-trip.
@@ -216,6 +261,8 @@ class ServerEventTest {
             "nickname" to "a",
             "input_muted" to true,
             "output_muted" to false,
+            "input_hardware_enabled" to true,
+            "output_hardware_enabled" to false,
             "scope" to "input",
         ),
         "user_away_changed" to mapOf(
@@ -283,5 +330,8 @@ class ServerEventTest {
 
         /** Matches `override val type = "user_joined"` in `ServerEvent.kt`. */
         val LITERAL_TYPE = Regex("override val type = \"([a-z][a-z0-9_]*)\"")
+
+        /** Built once: `Json {}` instances are not free. */
+        val LENIENT_JSON = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
     }
 }

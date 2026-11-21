@@ -76,6 +76,8 @@ sealed interface ServerEvent {
         val nickname: String,
         val inputMuted: Boolean,
         val outputMuted: Boolean,
+        val inputHardwareEnabled: Boolean,
+        val outputHardwareEnabled: Boolean,
         val scope: String,
     ) : ServerEvent {
         override val type = "user_mute_changed"
@@ -206,6 +208,14 @@ sealed interface ServerEvent {
         private fun bool(map: Map<String, Any>, key: String): Boolean =
             map[key] as? Boolean ?: false
 
+        /**
+         * A boolean whose documented default is `true`: an older native library
+         * omits the key entirely, and reading `false` there would flag every
+         * client as hardware-muted.
+         */
+        private fun boolOr(map: Map<String, Any>, key: String, fallback: Boolean): Boolean =
+            map[key] as? Boolean ?: fallback
+
         private fun direction(map: Map<String, Any>): TransferDirection =
             if (str(map, "direction") == "upload") TransferDirection.Upload else TransferDirection.Download
 
@@ -253,6 +263,11 @@ sealed interface ServerEvent {
                     nickname = str(map, "nickname"),
                     inputMuted = bool(map, "input_muted"),
                     outputMuted = bool(map, "output_muted"),
+                    // Default to enabled: an event from an older native library
+                    // has no hardware keys and must read as "device on" rather
+                    // than flagging everyone as hardware-muted.
+                    inputHardwareEnabled = boolOr(map, "input_hardware_enabled", true),
+                    outputHardwareEnabled = boolOr(map, "output_hardware_enabled", true),
                     scope = str(map, "scope"),
                 )
 

@@ -3,7 +3,7 @@ package dev.tsdroid.core
 /**
  * The entire surface of the native library.
  *
- * Eleven functions, and the count is fixed:
+ * Twelve functions, and the count is fixed:
  *
  * | feature | crosses the boundary as |
  * |---|---|
@@ -11,11 +11,12 @@ package dev.tsdroid.core
  * | everything the UI can *do* | one [nativeExec] call with a name + JSON args |
  * | voice | the three audio calls (a 50 Hz stream does not belong in JSON) |
  * | identity | `nativeIdentity`, so the UID survives a restart |
+ * | version | `nativeAbiVersion`, so a stale .so is caught before it is used |
  *
- * The .so is `libtsbridge_jni.so`, built from the standalone tsbridge repository
- * (`crates/jni`). The symbol names must match that crate's `lib.rs` exactly
- * (`Java_dev_tsdroid_core_Native_<name>`), which is why this class lives at a
- * fixed package and is not renamed casually.
+ * The .so is `libtsbridge_jni.so`, built from the tsbridge submodule
+ * (`crates/jni`) by the `buildTsbridgeJni` Gradle task. The symbol names must
+ * match that crate's `lib.rs` exactly (`Java_dev_tsdroid_core_Native_<name>`),
+ * which is why this class lives at a fixed package and is not renamed casually.
  */
 internal object Native {
 
@@ -51,6 +52,46 @@ internal object Native {
         }
         return "原生库加载失败$hint：${error::class.java.simpleName}: $detail"
     }
+
+    /**
+     * The ABI number this Kotlin code was written against.
+     *
+     * Must equal `tsbridge_core::ABI_VERSION` and `TSBRIDGE_ABI_VERSION` in
+     * tsbridge's header. It only changes when a symbol or a parameter changes
+     * meaning — which is exactly the case where silently continuing would produce
+     * a session that looks connected and behaves wrongly.
+     * `NativeAbiTest` fails the build if the submodule is bumped without this.
+     */
+    const val EXPECTED_ABI: Int = 1
+
+    /**
+     * Why the loaded library is not the one this Kotlin expects, or null when it
+     * is fine (or when there is nothing to check, because it did not load).
+     *
+     * A submodule pin makes the normal case exact, but a stale `.so` on a device,
+     * an old APK, or a debug build against a mismatched library all end here
+     * rather than at the first confusing native call.
+     */
+    val abiError: String? = runCatching {
+        if (loadError != null) return@runCatching null
+        val actual = nativeAbiVersion()
+        if (actual == EXPECTED_ABI) {
+            null
+        } else {
+            "原生库版本不匹配：Kotlin 期望 ABI $EXPECTED_ABI，实际 $actual（重新构建 APK）"
+        }
+    }.getOrElse { t ->
+        // A missing symbol is itself the answer: the library predates the check.
+        "原生库版本不匹配：无法读取 ABI（${t::class.java.simpleName}），可能是旧版本"
+    }
+
+    /**
+     * The ABI version reported by the loaded library.
+     *
+     * Exists so the check above can never be "assumed 1": it reads the value the
+     * binary was actually built with.
+     */
+    external fun nativeAbiVersion(): Int
 
     /**
      * Starts connecting and returns an opaque handle, or 0 if the arguments were

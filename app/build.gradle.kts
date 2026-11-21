@@ -239,4 +239,8 @@ dependencies {
     implementation(libs.androidx.material3)
 
     debugImplementation(libs.androidx.ui.tooling)
+
+    // The event/snapshot contract is pure Kotlin, so it is testable on the JVM
+    // without an emulator. That is the only test tier that can run in CI here.
+    testImplementation(libs.junit)
 }

@@ -81,9 +81,13 @@ class NativeClient(
     fun start(): Boolean {
         if (ptr != 0L) return true
 
-        // A missing or mismatched .so must read as a message, not as a crash on
-        // the connect button.
+        // A missing, mismatched or stale .so must read as a message, not as a
+        // crash on the connect button.
         Native.loadError?.let {
+            startError = it
+            return false
+        }
+        Native.abiError?.let {
             startError = it
             return false
         }

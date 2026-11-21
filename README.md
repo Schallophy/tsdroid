@@ -61,7 +61,7 @@ code lives in the `third_party/tsbridge` submodule: `crates/core`
 
 ## The native contract
 
-Eleven functions, and the count is fixed. The JNI symbol names are
+Twelve functions, and the count is fixed. The JNI symbol names are
 `Java_dev_tsdroid_core_Native_<name>`, so this package path must not be renamed
 casually — `crates/jni` in tsbridge hard-codes it:
 
@@ -74,6 +74,7 @@ casually — `crates/jni` in tsbridge hard-codes it:
 | `nativeExec` | **every** command: name + JSON args |
 | `nativeIdentity` | the identity to persist, so the UID is stable |
 | `nativeAudioWrite` / `nativeAudioRead` / `nativeAudioReset` | the 50 Hz PCM stream |
+| `nativeAbiVersion` | checked once at load; a stale `.so` fails with a message |
 | `nativeDisconnect` | close the connection |
 
 Events and state cross the boundary as plain JDK types and JSON, so the native
@@ -134,8 +135,25 @@ The pin is the gitlink line in `git status`. Bumping it is a separate, reviewabl
 commit — that is the whole reason for a submodule rather than a hand-copied
 binary.
 
+## Tests
+
+`./gradlew :app:testDebugUnitTest` runs on the JVM — no emulator, no device, no
+native library. Two suites, both pinning cross-repo contracts that used to fail
+silently:
+
+| suite | what it pins |
+|---|---|
+| `core/NativeAbiTest` | `Native.EXPECTED_ABI` against `TSBRIDGE_ABI_VERSION` in the submodule's header |
+| `model/ServerEventTest` | `ServerEvent.kt`'s 21 `type` strings and field keys against `docs/events.md` |
+
+Neither can pass on one side alone: tsbridge's `event_contract.rs` proves the
+Rust and the docs agree, and `ServerEventTest` proves the docs and Kotlin agree,
+so a rename in the core fails this build without the table being copied twice.
+
 ## Known gaps
 
 * Release builds are signed with the debug key: no `release.keystore` in the repo.
 * No foreground service, so a long call can be killed when the app is backgrounded.
 * Only `arm64-v8a` is shipped.
+* The unit tests read the submodule from disk (docs and header), so they need
+  `git submodule update --init` — `assembleDebug` needs it anyway.

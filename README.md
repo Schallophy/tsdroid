@@ -150,6 +150,20 @@ Neither can pass on one side alone: tsbridge's `event_contract.rs` proves the
 Rust and the docs agree, and `ServerEventTest` proves the docs and Kotlin agree,
 so a rename in the core fails this build without the table being copied twice.
 
+## CI
+
+Two jobs, both `ubuntu-latest`:
+
+| job | what it proves |
+|---|---|
+| `tests` | `:app:testDebugUnitTest` on a bare JVM, plus a byte-for-byte check that `assets/licenses/*` matches the submodule. No `.so` exists on that runner, so a test that reached into the native library would fail instead of passing on a leftover binary. |
+| `apk` | `assembleDebug` with `cargo ndk` and NDK r27c, then compares the `.so` packaged in the APK against the one `buildTsbridgeJni` produced |
+
+There is no emulator job: there are no instrumentation tests to run, and a
+booted emulator would cost ten minutes to prove nothing the JVM suite does not
+already pin. `build.gradle.kts` prefers `ANDROID_NDK_HOME` over "newest NDK in
+the SDK", so CI and a local build never compile against different sysroots.
+
 ## Known gaps
 
 * Release builds are signed with the debug key: no `release.keystore` in the repo.

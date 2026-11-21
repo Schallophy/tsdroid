@@ -18,7 +18,7 @@ nothing here has to be re-derived to support another desktop.
 |---|---|
 | **Connection** | connect by address, optional channel + password, saved server list |
 | **Channels** | full tree with nesting, lock icon, member counts, join (with password) |
-| **Members** | live list per channel, mute state, away state, speaking indicator |
+| **Members** | live list per channel, mute state (button and switched-off device), away state, speaking indicator |
 | **Chat** | channel / server / private messages, unread badges, own messages right-aligned |
 | **Pokes** | send and receive, shown inline as an amber system line |
 | **Status** | away + away message, mic mute, speaker mute — all server-visible |

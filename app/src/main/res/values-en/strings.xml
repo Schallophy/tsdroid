@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TS Droid</string>
+
+    <string name="connect_title">Connect to a server</string>
+    <string name="server_address">Server address</string>
+    <string name="server_address_hint">e.g. example.com or example.com:9987</string>
+    <string name="nickname">Nickname</string>
+    <string name="channel">Channel (optional)</string>
+    <string name="channel_password">Channel password (optional)</string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+
+    <string name="saved_servers">Saved servers</string>
+    <string name="no_saved_servers">No saved servers yet</string>
+    <string name="delete">Delete</string>
+
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_online">Connected</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_failed">Connection failed</string>
+
+    <string name="section_channels">Channels</string>
+    <string name="section_events">Event log</string>
+    <string name="no_events">No events yet</string>
+    <string name="members_count">%1$d members</string>
+</resources>

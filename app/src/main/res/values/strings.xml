@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TS Droid</string>
+
+    <string name="connect_title">连接服务器</string>
+    <string name="server_address">服务器地址</string>
+    <string name="server_address_hint">例如 example.com 或 example.com:9987</string>
+    <string name="nickname">昵称</string>
+    <string name="channel">频道（可留空）</string>
+    <string name="channel_password">频道密码（可留空）</string>
+    <string name="connect">连接</string>
+    <string name="disconnect">断开</string>
+
+    <string name="saved_servers">已保存的服务器</string>
+    <string name="no_saved_servers">还没有保存的服务器</string>
+    <string name="delete">删除</string>
+
+    <string name="status_connecting">连接中…</string>
+    <string name="status_online">已连接</string>
+    <string name="status_disconnected">已断开</string>
+    <string name="status_failed">连接失败</string>
+
+    <string name="section_channels">频道</string>
+    <string name="section_events">事件日志</string>
+    <string name="no_events">暂无事件</string>
+    <string name="members_count">%1$d 人</string>
+</resources>

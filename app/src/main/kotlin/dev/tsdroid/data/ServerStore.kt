@@ -1,0 +1,97 @@
+package dev.tsdroid.data
+
+import android.content.Context
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import java.io.File
+
+@Serializable
+data class SavedServer(
+    val address: String,
+    val nickname: String,
+    val lastUsed: Long = 0L,
+)
+
+/**
+ * Local persistence: the server list, the identity file, and the passwords for
+ * known servers (encrypted — see [SecureStore]).
+ *
+ * Plain SharedPreferences rather than DataStore — a few short values read at
+ * connect time do not justify a flow-based store.
+ */
+class ServerStore(context: Context) {
+
+    private val prefs = context.getSharedPreferences("servers", Context.MODE_PRIVATE)
+
+    /**
+     * Passwords live in their own file, separate from the server list, because
+     * the two have different exposure: the list is readable JSON, this one is
+     * keyed ciphertext. Keeping them apart means the list can be inspected or
+     * exported later without dragging secrets along.
+     */
+    private val credentials = context.getSharedPreferences("credentials", Context.MODE_PRIVATE)
+
+    private val json = Json { ignoreUnknownKeys = true }
+    private val listSerializer = ListSerializer(SavedServer.serializer())
+    private val identityFile = File(context.filesDir, "identity.ini")
+
+    fun load(): List<SavedServer> {
+        val raw = prefs.getString(KEY_SERVERS, null) ?: return emptyList()
+        return runCatching {
+            json.decodeFromString(listSerializer, raw)
+        }.getOrDefault(emptyList()).sortedByDescending { it.lastUsed }
+    }
+
+    fun upsert(entry: SavedServer) {
+        val next = load().filterNot { it.address == entry.address } + entry
+        write(next.sortedByDescending { it.lastUsed }.take(MAX_SERVERS))
+    }
+
+    fun remove(address: String) {
+        write(load().filterNot { it.address == address })
+        // Forgetting the server must forget its password too, otherwise a
+        // secret stays on disk for a host the user believes they removed.
+        credentials.edit().remove(address).apply()
+    }
+
+    private fun write(entries: List<SavedServer>) {
+        prefs.edit().putString(KEY_SERVERS, json.encodeToString(listSerializer, entries)).apply()
+    }
+
+    /**
+     * The identity is what makes a returning user keep their UID, so it is read
+     * on every connect. Empty means "let the native side generate one".
+     */
+    fun readIdentity(): String =
+        runCatching { if (identityFile.exists()) identityFile.readText() else "" }
+            .getOrDefault("")
+
+    /** Ciphertext that no longer decrypts is dropped rather than left to rot. */
+    fun passwordFor(address: String): String? {
+        val blob = credentials.getString(address, null) ?: return null
+        val plain = SecureStore.decrypt(blob)
+        if (plain == null) credentials.edit().remove(address).apply()
+        return plain
+    }
+
+    /** An empty [password] forgets the entry, so clearing the field really clears it. */
+    fun setPassword(address: String, password: String) {
+        if (password.isEmpty()) {
+            credentials.edit().remove(address).apply()
+            return
+        }
+        SecureStore.encrypt(password)?.let { credentials.edit().putString(address, it).apply() }
+    }
+
+    fun clearPasswords() {
+        credentials.edit().clear().apply()
+    }
+
+    fun hasPasswords(): Boolean = credentials.all.isNotEmpty()
+
+    private companion object {
+        const val KEY_SERVERS = "list"
+        const val MAX_SERVERS = 20
+    }
+}

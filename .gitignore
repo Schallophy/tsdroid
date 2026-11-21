@@ -1,0 +1,15 @@
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+.kotlin/
+captures/
+
+# Rust
+native/target/
+
+# The built native library IS tracked: app/src/main/jniLibs/arm64-v8a/libtsdroid_core.so
+# is what makes a fresh clone buildable without a Rust toolchain. Rebuild it with
+# native/build-jni.sh and commit the result alongside the source that produced it.

@@ -180,7 +180,14 @@ sealed interface ServerEvent {
         is UserLeft -> "- $nickname"
         is UserMoved -> "→ $nickname"
         is UserRenamed -> "~ $oldNickname ⇒ $nickname"
-        is UserMuteChanged -> "mic $nickname ${if (inputMuted) "off" else "on"}"
+        is UserMuteChanged -> when {
+            // A device that is off looks un-muted at the server, so the log line
+            // has to say which of the two happened or it reads as "mic on" for a
+            // client nobody can hear.
+            !inputHardwareEnabled -> "mic device $nickname off"
+            !outputHardwareEnabled -> "speaker device $nickname off"
+            else -> "mic $nickname ${if (inputMuted) "off" else "on"}"
+        }
         is UserAwayChanged -> "away $nickname = $away"
         is ChannelCreated -> "+ channel $name"
         is ChannelRenamed -> "~ channel $oldName ⇒ $name"

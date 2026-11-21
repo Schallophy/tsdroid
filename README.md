@@ -43,12 +43,21 @@ tsdroid/
 │   ├── data/                   saved servers, identity file, local settings
 │   ├── SessionViewModel.kt     session state machine
 │   └── ui/                     connect, session (3 tabs), settings
-└── app/src/main/jniLibs/arm64-v8a/libtsbridge_jni.so   prebuilt, from tsbridge
+└── third_party/tsbridge/       the core, a git submodule (pinned commit)
 ```
 
+The native library is not in this repository. `app/buildTsbridgeJni` compiles
+`third_party/tsbridge` with `cargo ndk` into `app/build/generated/tsbridgeJniLibs`
+and Android packages it from there, so the `.so` always matches the submodule
+commit — there is no separate binary that could be from another checkout.
+
+Because of that, a fresh clone needs `git clone --recursive` (or
+`git submodule update --init`) and a Rust toolchain with `cargo-ndk`, the NDK
+and CMake before it can build an APK.
+
 The Rust sources are no longer here. `native/` has been removed; the equivalent
-code lives in tsbridge's `crates/core` (platform-neutral) and `crates/jni` (the
-Android shim).
+code lives in the `third_party/tsbridge` submodule: `crates/core`
+(platform-neutral) and `crates/jni` (the Android shim).
 
 ## The native contract
 
@@ -78,30 +87,52 @@ an emitted event is not in that document.
 
 ## Building
 
-**Native library** (arm64; needs cargo-ndk, NDK 27.2, cmake+ninja). It is built in
-the tsbridge checkout, not here:
-
-```powershell
-cd ../tsbridge
-./tools/build-android.ps1            # build only
-./tools/build-android.ps1 -Sync      # build, then copy into ../tsdroid
-```
-
-The copy is deliberately a separate step: a build that fails must never silently
-leave the previous `.so` in place, looking like the new code shipped.
-
-**App:** (JDK 17, Android SDK with platform 35 + build-tools 36)
+**Prerequisites** (once): JDK 17, Android SDK with platform 35 + build-tools 36,
+Rust, `cargo install cargo-ndk`, the NDK (27.x), CMake and Ninja — the last two
+because Opus is compiled from C source. On Windows `cmake` must be on `PATH`; the
+build task prepends `C:\Program Files\CMake\bin` if it is not.
 
 ```bash
+git clone --recursive https://github.com/Schallophy/tsdroid.git
 ./gradlew :app:assembleDebug
 ```
 
-The built `.so` is committed under `app/src/main/jniLibs/`, so a fresh clone
-builds an APK without a Rust toolchain. License texts for the statically linked
-third-party code (tsclientlib, Opus, aws-lc) are copied from tsbridge's `NOTICE`
-into `app/src/main/assets/licenses/` and ship inside the APK — the Apache-2.0
-notice obligation applies to the binary, not just the source tree. Refresh them
-whenever tsbridge's `NOTICE` changes.
+`assembleDebug` runs `:app:buildTsbridgeJni`, which compiles the submodule with
+`cargo ndk` and drops `libtsbridge_jni.so` into `app/build/generated/tsbridgeJniLibs`.
+Nothing under `app/src/main/jniLibs` is used or tracked.
+
+**Native library alone**, for working on the core without Gradle:
+
+```powershell
+cd third_party/tsbridge
+./tools/build-android.ps1      # -> out/android/arm64-v8a/libtsbridge_jni.so
+```
+
+There is no separate "install into the app" step any more: Gradle compiles the
+submodule itself, so a hand-built `.so` is only an artifact to inspect.
+
+Both paths share the same cargo cache (`third_party/tsbridge/target`), so the
+first build pays the cold cost (~3 min) and later ones are incremental (~15 s if
+nothing under the submodule changed — the task is `UP-TO-DATE`).
+
+License texts for the statically linked third-party code (tsclientlib, Opus,
+aws-lc) are copied from tsbridge's `NOTICE` into `app/src/main/assets/licenses/`
+and ship inside the APK — the Apache-2.0 notice obligation applies to the
+binary, not just the source tree. Refresh them whenever tsbridge's `NOTICE`
+changes.
+
+## Updating the core
+
+```bash
+cd third_party/tsbridge
+git fetch && git checkout <commit>          # or: git pull
+cd ../..
+git add third_party/tsbridge && git commit -m "tsbridge: bump core"
+```
+
+The pin is the gitlink line in `git status`. Bumping it is a separate, reviewable
+commit — that is the whole reason for a submodule rather than a hand-copied
+binary.
 
 ## Known gaps
 

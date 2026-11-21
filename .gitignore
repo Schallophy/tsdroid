@@ -7,7 +7,11 @@ local.properties
 .kotlin/
 captures/
 
-# The built native library IS tracked: app/src/main/jniLibs/arm64-v8a/libtsbridge_jni.so
-# is what makes a fresh clone buildable without a Rust toolchain. It is built in
-# the tsbridge checkout (`./tools/build-android.ps1 -Sync`) and committed alongside
-# the version of tsbridge that produced it.
+# The native library is NOT tracked any more. `app:buildTsbridgeJni` compiles it
+# from `third_party/tsbridge` (a submodule), so the binary always matches the
+# sources this commit pins. `app/src/main/jniLibs` is no longer read at all; the
+# generated layout goes to `app/build/generated/tsbridgeJniLibs`.
+
+# Cargo's incremental state for the submodule build, kept out of `third_party/`
+# so the submodule stays a clean pinned checkout.
+/third_party/tsbridge/target/

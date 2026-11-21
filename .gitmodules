@@ -1,0 +1,3 @@
+[submodule "third_party/tsbridge"]
+	path = third_party/tsbridge
+	url = https://github.com/Schallophy/tsbridge.git

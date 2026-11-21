@@ -339,7 +339,7 @@ fun ExitGlyph(tint: Color, modifier: Modifier = Modifier) {
  * nothing useful; it now answers the only question the list is scanned for:
  * can I hear this person, and are they even here.
  *
- * Four of the states use TeamSpeak's own icons, converted straight from the
+ * Five of the states use TeamSpeak's own icons, converted straight from the
  * `dark` icon pack the desktop client is wearing — a hand-drawn approximation
  * would only look close. The remaining state is the player ball the client
  * draws before every name: bright while talking, dim otherwise.

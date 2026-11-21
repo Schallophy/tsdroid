@@ -328,7 +328,11 @@ private fun MicBar(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
             MicButton(
-                enabled = ui.micEnabled && deviceOn,
+                // The button is the mute button, so it must show the mute
+                // button's state — otherwise tapping it while the device is off
+                // would look like "unmute" and change nothing. The level and the
+                // label below carry the device story instead.
+                enabled = ui.micEnabled,
                 level = if (ui.micEnabled && deviceOn) level else 0f,
                 onClick = onMic,
             )

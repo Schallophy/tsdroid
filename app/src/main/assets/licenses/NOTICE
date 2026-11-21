@@ -1,0 +1,83 @@
+tsbridge
+Copyright (c) 2026 tsbridge contributors
+Licensed under MIT OR Apache-2.0. See LICENSE-MIT and LICENSE-APACHE.
+
+This product is a TeamSpeak 3/6 client core. It is not affiliated with, endorsed
+by, or sponsored by TeamSpeak Systems GmbH. "TeamSpeak" is a trademark of its
+owner and is used here only to describe what this software interoperates with.
+
+--------------------------------------------------------------------------------
+Third-party components statically linked into every artifact
+--------------------------------------------------------------------------------
+
+tsclientlib, tsproto, tsproto-packets, tsproto-types, ts-bookkeeping
+  Copyright (c) 2017-2026 ReSpeak contributors and the tsclientlib authors
+  https://github.com/ReSpeak/tsclientlib
+  Licensed under Apache License 2.0 OR MIT.
+  Pinned at commit ee3bc6f45a7137db7793ba5593a321df400d53e5.
+  Linked into libtsbridge_jni.so, libtsbridge.so/.dylib and tsbridge.dll as a
+  compiled library; the Apache-2.0 NOTICE obligations therefore apply to the
+  binary distributions, not only to the source tree.
+
+Opus (via audiopus_sys, which compiles the reference encoder/decoder from source)
+  Copyright (c) 2001-2011 Xiph.Org, Skype Limited, Octasic, Jean-Marc Valin,
+  Timothy B. Terriberry, CSIRO, Gregory Maxwell, Mark Borgerding, Erik de Castro
+  Lopo, and other Opus authors
+  https://opus-codec.org
+  Licensed under the BSD 3-Clause license (and the Xiph BSD-style license for
+  the parts derived from Opus's predecessors).
+  Redistribution requires retaining the copyright notice, the list of conditions
+  and the disclaimer; they are reproduced in full below.
+
+aws-lc (used by rustls for TLS through tsclientlib)
+  Copyright (c) 2015-2026 Amazon.com, Inc. or its affiliates
+  Apache License 2.0 OR ISC. The statically compiled parts carry the Apache-2.0
+  NOTICE obligations.
+
+hickory-resolver / hickory-proto
+  Copyright (c) 2015 The Hickory DNS Developers
+  Licensed under MIT OR Apache-2.0.
+
+tokio, futures, serde, serde_json, log, reqwest, rustls, ring (transitive)
+  Respectively MIT OR Apache-2.0 / MIT / Apache-2.0 OR ISC, as declared in each
+  crate's own metadata. A complete, machine-readable list of every transitive
+  dependency and its license is produced by:
+
+      cargo metadata --format-version 1
+
+--------------------------------------------------------------------------------
+Opus BSD 3-Clause license text
+--------------------------------------------------------------------------------
+
+Copyright 2001-2011 Xiph.Org, Skype Limited, Octasic,
+                    Jean-Marc Valin, Timothy B. Terriberry,
+                    CSIRO, Gregory Maxwell, Mark Borgerding,
+                    Erik de Castro Lopo
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+- Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+- Neither the name of Internet Society, IETF or IETF Trust, nor the
+names of specific contributors, may be used to endorse or promote
+products derived from this software without specific prior written
+permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

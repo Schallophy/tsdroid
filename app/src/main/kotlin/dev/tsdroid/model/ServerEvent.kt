@@ -5,9 +5,10 @@ package dev.tsdroid.model
  * property-level book events and incoming protocol messages.
  *
  * The `type` strings and the field keys below are the contract with
- * `native/src/state.rs` and `native/src/conn.rs` — both sides must change
- * together. Unknown types are surfaced as [Unknown] instead of being dropped, so
- * a newer native library never silently loses information the UI could show.
+ * tsbridge's `crates/core/src/state.rs` and `crates/core/src/conn.rs` — both
+ * sides must change together, and `docs/events.md` there is the shared table.
+ * Unknown types are surfaced as [Unknown] instead of being dropped, so a newer
+ * native library never silently loses information the UI could show.
  */
 sealed interface ServerEvent {
 

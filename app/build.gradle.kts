@@ -45,7 +45,17 @@ android {
     sourceSets["main"].kotlin.srcDir("src/main/kotlin")
 
     packaging {
-        resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}")
+        // Only LGPL2.1 is excluded, and only because nothing here ships LGPL
+        // code: it comes from a dependency that uses the text for a linking
+        // exception clause.
+        //
+        // AL2.0 is deliberately *not* excluded any more. tsclientlib is
+        // Apache-2.0 OR MIT and is statically linked into libtsbridge_jni.so, so
+        // if a dependency starts shipping that file, stripping it would be a
+        // redistribution violation. The notice itself travels in
+        // assets/licenses/ (see README) because a JAR entry does not describe
+        // code compiled into a .so.
+        resources.excludes += setOf("/META-INF/{LGPL2.1}")
     }
 }
 

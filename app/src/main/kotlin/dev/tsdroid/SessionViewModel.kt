@@ -104,7 +104,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         CrashLog.markPhase(app, "正在连接 ${config.address}（原生库创建前）")
         _ui.value = SessionUiState(status = SessionStatus.Connecting, config = config)
 
-        val session = NativeClient(config)
+        val session = NativeClient(config) { identity -> servers.writeIdentity(identity) }
         val started = try {
             session.start()
         } catch (t: Throwable) {

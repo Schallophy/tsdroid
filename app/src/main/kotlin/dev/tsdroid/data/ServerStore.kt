@@ -62,10 +62,32 @@ class ServerStore(context: Context) {
     /**
      * The identity is what makes a returning user keep their UID, so it is read
      * on every connect. Empty means "let the native side generate one".
+     *
+     * Trimmed because the file is written by hand as often as by the app, and a
+     * trailing newline makes the identity string invalid — which shows up as
+     * "invalid identity" on connect instead of a stale UID.
      */
     fun readIdentity(): String =
         runCatching { if (identityFile.exists()) identityFile.readText() else "" }
             .getOrDefault("")
+            .trim()
+
+    /**
+     * Remembers the identity the native core actually used.
+     *
+     * Without this write nothing ever creates `identity.ini`, so every launch
+     * generates a fresh key and the server sees a new UID — the user loses their
+     * permissions, their contacts' view of them, and their server-side history.
+     * Written only when the value changed, to keep it off the 20 ms path.
+     */
+    fun writeIdentity(identity: String) {
+        if (identity.isBlank()) return
+        runCatching {
+            if (identityFile.exists() && identityFile.readText() == identity) return
+            identityFile.parentFile?.mkdirs()
+            identityFile.writeText(identity)
+        }
+    }
 
     /** Ciphertext that no longer decrypts is dropped rather than left to rot. */
     fun passwordFor(address: String): String? {

@@ -32,7 +32,7 @@ data class ServerConfig(
     val channel: String = "",
     /** Unlocks the channel the client lands in; unrelated to [password]. */
     val channelPassword: String = "",
-    /** Contents of a TS3 `identity.ini`, or "" to generate a fresh identity. */
+    /** A TS3 `counterVkey` identity from a previous session, or "" for a fresh one. */
     val identityIni: String = "",
 )
 
@@ -45,7 +45,15 @@ data class ServerConfig(
  * bookkeeping a push model would need (cached env per thread, re-entrancy into
  * the UI thread at arbitrary points).
  */
-class NativeClient(private val config: ServerConfig) : AutoCloseable {
+class NativeClient(
+    private val config: ServerConfig,
+    /**
+     * Called once the native side has built the identity, with its TS3
+     * `counterVkey` form. The caller stores it so the next launch reuses the
+     * same UID instead of registering as a new user.
+     */
+    private val onIdentity: (String) -> Unit = {},
+) : AutoCloseable {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val json = Json { ignoreUnknownKeys = true }
@@ -54,6 +62,9 @@ class NativeClient(private val config: ServerConfig) : AutoCloseable {
     private var ptr: Long = 0
     private var pollJob: Job? = null
     private var lastRev = -1L
+
+    /** Ticks left to look for the identity; 0 once it has been seen or given up on. */
+    private var identityTicks = IDENTITY_SEARCH_TICKS
 
     private val _state = MutableStateFlow(ServerState())
     val state: StateFlow<ServerState> = _state.asStateFlow()
@@ -105,6 +116,7 @@ class NativeClient(private val config: ServerConfig) : AutoCloseable {
         while (currentCoroutineContext().isActive && ptr != 0L) {
             try {
                 drainEvents()
+                captureIdentity()
                 refreshState()
             } catch (t: Throwable) {
                 // A throwing poll would silently end the loop and leave the UI
@@ -112,6 +124,25 @@ class NativeClient(private val config: ServerConfig) : AutoCloseable {
                 _events.tryEmit(ServerEvent.Failure(t.message ?: t.toString(), "poll"))
             }
             delay(POLL_INTERVAL_MS)
+        }
+    }
+
+    /**
+     * Stores the identity the core ended up using.
+     *
+     * The native side builds or parses the key on its worker thread right after
+     * the session starts, so the first few ticks return null. Lookups stop after
+     * [IDENTITY_SEARCH_TICKS] rather than running a JNI call every 20 ms for the
+     * life of the session: once the identity exists it never changes, and a
+     * failed connect is no reason to keep asking.
+     */
+    private fun captureIdentity() {
+        if (identityTicks <= 0) return
+        identityTicks--
+        val identity = Native.nativeIdentity(ptr)
+        if (identity != null) {
+            identityTicks = 0
+            onIdentity(identity)
         }
     }
 
@@ -240,5 +271,12 @@ class NativeClient(private val config: ServerConfig) : AutoCloseable {
     private companion object {
         /** 50 Hz keeps the member list feeling live without spinning a core. */
         const val POLL_INTERVAL_MS = 20L
+
+        /**
+         * Two seconds of looking. The identity is ready within a few milliseconds
+         * of the session starting; 100 ticks is generous slack for a slow device,
+         * and stops the extra JNI call once it is pointless.
+         */
+        const val IDENTITY_SEARCH_TICKS = 100
     }
 }

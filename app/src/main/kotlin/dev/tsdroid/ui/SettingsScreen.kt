@@ -203,6 +203,16 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                // tsclientlib is Apache-2.0 OR MIT and is compiled into the
+                // shipped .so, so the notice has to travel with the APK. The
+                // files live in assets/licenses and are copied from tsbridge,
+                // whose NOTICE is the single source of truth.
+                text = "本应用包含 tsclientlib（Apache-2.0 OR MIT）与 Opus（BSD）等第三方组件，" +
+                    "完整许可见安装包 assets/licenses/NOTICE",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

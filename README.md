@@ -84,7 +84,7 @@ cp target/jniLibs/arm64-v8a/libtsdroid_core.so ../app/src/main/jniLibs/arm64-v8a
 The copy is deliberately a separate step: a build that fails must never silently
 leave the previous `.so` in place, looking like the new code shipped.
 
-**App:**
+**App:** (JDK 17, Android SDK with platform 35 + build-tools 36)
 
 ```bash
 ./gradlew :app:assembleDebug

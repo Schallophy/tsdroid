@@ -311,6 +311,14 @@ private fun MicBar(
     onMic: () -> Unit,
     onSpeaker: () -> Unit,
 ) {
+    // Two separate facts decide whether our voice leaves the phone: the mute
+    // button (which this bar toggles) and the capture device that TeamSpeak
+    // reports. The button stays a button, so it only reflects `micEnabled`;
+    // the level ring and the label tell the whole truth, because a running
+    // meter next to a dead microphone is exactly the lie this change fixes.
+    val deviceOn = ui.state.inputHardwareEnabled
+    val speakerDeviceOn = ui.state.outputHardwareEnabled
+
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     Surface(color = MaterialTheme.colorScheme.surface) {
         Row(
@@ -320,8 +328,8 @@ private fun MicBar(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
             MicButton(
-                enabled = ui.micEnabled,
-                level = if (ui.micEnabled) level else 0f,
+                enabled = ui.micEnabled && deviceOn,
+                level = if (ui.micEnabled && deviceOn) level else 0f,
                 onClick = onMic,
             )
 
@@ -339,13 +347,13 @@ private fun MicBar(
                         // The device flag outranks the mute flag: when the
                         // capture device is off nothing is transmitted even
                         // though the server still reports un-muted.
-                        !ui.state.inputHardwareEnabled -> "麦克风设备已关闭"
+                        !deviceOn -> "麦克风设备已关闭"
                         !ui.micEnabled -> "麦克风已静音"
                         ui.state.away -> ui.state.awayMessage.ifEmpty { "离开" }
                         else -> "按下麦克风静音自己"
                     },
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (!ui.micEnabled || !ui.state.inputHardwareEnabled) {
+                    color = if (!ui.micEnabled || !deviceOn) {
                         MaterialTheme.colorScheme.error
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
@@ -357,12 +365,12 @@ private fun MicBar(
 
             RoundGlyphButton(onClick = onSpeaker) {
                 SpeakerGlyph(
-                    tint = if (ui.speakerEnabled) {
+                    tint = if (ui.speakerEnabled && speakerDeviceOn) {
                         MaterialTheme.colorScheme.onSurface
                     } else {
                         MaterialTheme.colorScheme.error
                     },
-                    muted = !ui.speakerEnabled,
+                    muted = !ui.speakerEnabled || !speakerDeviceOn,
                     modifier = Modifier.size(20.dp),
                 )
             }

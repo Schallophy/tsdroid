@@ -120,12 +120,31 @@ fun androidSdkDir(): File {
     )
 }
 
-fun newestNdk(): File =
-    androidSdkDir().resolve("ndk").listFiles()
+/**
+ * Which NDK to compile with: an explicit `ANDROID_NDK_HOME` / `ANDROID_NDK` wins,
+ * otherwise the newest one installed in the SDK.
+ *
+ * The environment variable has to come first. It is how `tools/build-android.ps1`
+ * and CI select the NDK, and honouring it here is what makes `assembleDebug` and
+ * that script agree instead of silently using two different sysroots — CI installs
+ * r27c while the SDK image also ships 29 and 30, so "newest wins" would build an
+ * APK with an NDK no shell was ever tested against.
+ */
+fun selectedNdk(): File {
+    val fromEnv = System.getenv("ANDROID_NDK_HOME")?.takeIf { it.isNotBlank() }
+        ?: System.getenv("ANDROID_NDK")?.takeIf { it.isNotBlank() }
+    if (fromEnv != null) {
+        val dir = File(fromEnv)
+        require(dir.isDirectory) { "ANDROID_NDK_HOME points at a missing directory: $fromEnv" }
+        return dir
+    }
+    val ndkRoot = androidSdkDir().resolve("ndk")
+    return ndkRoot.listFiles()
         ?.filter { it.isDirectory }
         ?.sortedByDescending { it.name }
         ?.firstOrNull()
-        ?: throw GradleException("No NDK under ${androidSdkDir().resolve("ndk")}")
+        ?: throw GradleException("No NDK under $ndkRoot; install one or set ANDROID_NDK_HOME")
+}
 
 val tsbridgeDir = rootProject.file("third_party/tsbridge")
 
@@ -142,7 +161,7 @@ val buildTsbridgeJni = tasks.register<CargoNdkTask>("buildTsbridgeJni") {
     abi.set("arm64-v8a")
     // Resolved when the task runs, not while Gradle configures: a checkout
     // without an Android SDK can still run `tasks`, `clean`, or a lint check.
-    ndkHome.set(providers.provider { newestNdk().absolutePath })
+    ndkHome.set(providers.provider { selectedNdk().absolutePath })
     // Deliberately the submodule's own `target/`, not `app/build`: `gradlew clean`
     // deletes `app/build`, and throwing away the Rust dependency cache turns a
     // 80-second incremental build into a five-minute cold one. It is ignored by

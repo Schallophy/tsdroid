@@ -1,0 +1,29 @@
+# Line endings are pinned, not left to `core.autocrlf`, because two of these
+# files are compared byte-for-byte or executed by something that cares:
+#
+# * `tools/*.sh` and `gradlew` are read by bash, and a CRLF shebang fails with
+#   `/bin/sh^M: bad interpreter`, which reads like a broken checkout.
+# * `assets/licenses/*` must equal tsbridge's copies exactly (its CI compares
+#   them), and that repository forces LF — so a Windows clone with
+#   `autocrlf=true` would otherwise produce a mismatch that is not a real one.
+#
+# `.bat` stays CRLF: cmd.exe is more tolerant than bash, but the convention is
+# universal and a change here would show up as noise in every diff.
+* text=auto
+
+*.kt     text eol=lf
+*.kts    text eol=lf
+*.gradle text eol=lf
+*.sh     text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.xml    text eol=lf
+*.pro    text eol=lf
+gradlew  text eol=lf
+*.bat    text eol=crlf
+*.ps1    text eol=crlf
+
+# The Apache-2.0/MIT notice texts travel into the APK and are byte-compared
+# against the submodule, so their bytes are the deliverable.
+/app/src/main/assets/licenses/* text eol=lf
+LICENSE-* text eol=lf

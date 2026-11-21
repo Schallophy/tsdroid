@@ -1,0 +1,159 @@
+name: CI
+
+# Two jobs.
+#
+#   tests  the JVM unit tests -- no Rust, no NDK, no emulator. They read the
+#          tsbridge submodule from disk (its header and its event table), so the
+#          checkout has to be recursive, but nothing has to be compiled.
+#
+#   apk    the real integration: `assembleDebug`, which runs `buildTsbridgeJni`
+#          (cargo ndk against the submodule) and packages the result. This used to
+#          be a hand-run copy step from a committed binary; the job exists to keep
+#          it that way no longer.
+#
+# Deliberately absent: an emulator job. There is no instrumentation test to run,
+# and a booted emulator would cost ten minutes to prove nothing the JVM suite
+# does not already pin.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: jvm unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # ServerEventTest parses third_party/tsbridge/docs/events.md and
+          # NativeAbiTest parses include/tsbridge.h. Without the submodule they
+          # fail with "submodule missing" instead of skipping, which is the
+          # intended behaviour: a test that cannot see the contract is not a test.
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # The Apache-2.0 notice obligation covers the *binary* that ships, not the
+      # source tree it came from, so the copies under assets/ have to be the
+      # ones tsbridge's NOTICE refers to. A byte-for-byte check is the only
+      # version of this that cannot silently rot when the submodule is bumped.
+      - name: Licenses match the submodule
+        run: |
+          for f in LICENSE-APACHE LICENSE-MIT NOTICE; do
+            cmp "app/src/main/assets/licenses/$f" "third_party/tsbridge/$f" \
+              || { echo "assets/licenses/$f differs from the tsbridge submodule"; exit 1; }
+          done
+          echo "license texts match tsbridge@$(git -C third_party/tsbridge rev-parse --short HEAD)"
+
+      # `testDebugUnitTest` has no dependency on `buildTsbridgeJni`, and no
+      # `.so` exists on this runner at all. So a test that reached into the
+      # native library would fail here with UnsatisfiedLinkError rather than
+      # pass on a binary some earlier step happened to leave behind.
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
+
+      - name: Upload the test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/testDebugUnitTest
+          if-no-files-found: ignore
+
+  apk:
+    name: assembleDebug
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # The submodule pins its own toolchain in `rust-toolchain.toml`; naming the
+      # same version here keeps the cache key stable and makes the version the
+      # job claims to use visible in the log.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.1"
+          targets: aarch64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # The Gradle task points CARGO_TARGET_DIR at the submodule's own
+          # `target/`, so that is the directory worth caching.
+          workspaces: third_party/tsbridge -> target
+          shared-key: apk
+
+      # The version this project is built and tested with. A floating "latest"
+      # would swap the sysroot under a fixed toolchain.
+      - name: Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          add-to-path: true
+
+      # `build.gradle.kts` reads ANDROID_NDK_HOME first and falls back to the
+      # newest NDK in the SDK, so this both selects the NDK and keeps the Gradle
+      # task in agreement with CI. Without it the task would pick whatever the
+      # runner image ships (29 or 30 on ubuntu-latest).
+      - name: Point Gradle at the NDK
+        run: |
+          echo "ANDROID_NDK_HOME=${{ steps.ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
+
+      - name: cargo-ndk
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk@4.1.2
+
+      # CMake and Ninja are on the runner image; Opus needs both. The policy
+      # escape hatch is required because Opus's CMakeLists predates CMake 3.5.
+      - name: Build the APK
+        env:
+          CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+          CMAKE_GENERATOR: Ninja
+        run: ./gradlew :app:assembleDebug --no-daemon
+
+      # Proves the wiring, not just that a file appeared: the packaged `.so`
+      # has to be byte-identical to the one the cargo task produced, or something
+      # else (a stale source set, a leftover jniLibs directory) supplied it.
+      - name: Check the packaged library
+        run: |
+          generated=app/build/generated/tsbridgeJniLibs/arm64-v8a/libtsbridge_jni.so
+          test -f "$generated" || { echo "the cargo task produced nothing"; exit 1; }
+
+          apk=$(find app/build/outputs/apk/debug -name '*.apk' | head -1)
+          unzip -p "$apk" lib/arm64-v8a/libtsbridge_jni.so > packaged.so
+          cmp -s "$generated" packaged.so \
+            || { echo "the APK does not contain the library Gradle just built"; exit 1; }
+
+          size=$(stat -c %s "$generated")
+          echo "packaged libtsbridge_jni.so: $size bytes"
+          # A stub or a truncated file would also compare equal; this bounds it.
+          test "$size" -gt 4000000
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug.apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

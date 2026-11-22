@@ -132,8 +132,9 @@ internal object Native {
 
     /**
      * The identity the session is using, in TS3 `counterVkey` form, or null before
-     * the worker thread has built one. Store it so the server keeps recognising
-     * this user as the same person.
+     * the worker thread has built one. Read it once when the snapshot reports
+     * `identityReady` (older libraries: when `ownClientId` appears), then store
+     * it so the server keeps recognising this user as the same person.
      */
     external fun nativeIdentity(ptr: Long): String?
 

@@ -1,6 +1,8 @@
 package dev.tsdroid.model
 
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -44,6 +46,48 @@ class ServerStateTest {
         val tree = state.channelTree()
         assertEquals(listOf("A", "A1", "A2", "B", "B1"), tree.map { it.channel.name })
         assertEquals(listOf(0, 1, 1, 0, 1), tree.map { it.depth })
+    }
+
+    @Test
+    fun theCoreTreeIsUsedAsGiven() {
+        val state = ServerState(
+            channels = listOf(
+                channel(id = 1, order = 0, name = "A"),
+                channel(id = 2, order = 0, name = "B"),
+                channel(id = 3, order = 0, name = "C"),
+            ),
+            tree = listOf(
+                ChannelTreeEntry(id = 3, depth = 0),
+                ChannelTreeEntry(id = 1, depth = 1),
+                ChannelTreeEntry(id = 2, depth = 0),
+            ),
+        )
+
+        val tree = state.channelTree()
+        assertEquals(listOf("C", "A", "B"), tree.map { it.channel.name })
+        assertEquals(listOf(0, 1, 0), tree.map { it.depth })
+    }
+
+    @Test
+    fun snapshotCarriesTheCoreTreeAndIdentityFlag() {
+        val json = Json { ignoreUnknownKeys = true }
+        val state = json.decodeFromString<ServerState>(
+            """
+            {
+              "rev": 3,
+              "identityReady": true,
+              "channels": [
+                { "id": 7, "parentId": 1, "name": "nested", "order": 0 }
+              ],
+              "channelTree": [ { "id": 7, "depth": 2 } ]
+            }
+            """.trimIndent(),
+        )
+
+        assertTrue(state.identityReady)
+        assertEquals(listOf(ChannelTreeEntry(id = 7, depth = 2)), state.tree)
+        assertEquals(listOf("nested"), state.channelTree().map { it.channel.name })
+        assertEquals(2, state.channelTree().first().depth)
     }
 
     @Test

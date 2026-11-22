@@ -63,8 +63,8 @@ class NativeClient(
     private var pollJob: Job? = null
     private var lastRev = -1L
 
-    /** Ticks left to look for the identity; 0 once it has been seen or given up on. */
-    private var identityTicks = IDENTITY_SEARCH_TICKS
+    /** The identity is handed over once; it never changes within a session. */
+    private var identityCaptured = false
 
     private val _state = MutableStateFlow(ServerState())
     val state: StateFlow<ServerState> = _state.asStateFlow()
@@ -120,7 +120,6 @@ class NativeClient(
         while (currentCoroutineContext().isActive && ptr != 0L) {
             try {
                 drainEvents()
-                captureIdentity()
                 refreshState()
             } catch (t: Throwable) {
                 // A throwing poll would silently end the loop and leave the UI
@@ -128,25 +127,6 @@ class NativeClient(
                 _events.tryEmit(ServerEvent.Failure(t.message ?: t.toString(), "poll"))
             }
             delay(POLL_INTERVAL_MS)
-        }
-    }
-
-    /**
-     * Stores the identity the core ended up using.
-     *
-     * The native side builds or parses the key on its worker thread right after
-     * the session starts, so the first few ticks return null. Lookups stop after
-     * [IDENTITY_SEARCH_TICKS] rather than running a JNI call every 20 ms for the
-     * life of the session: once the identity exists it never changes, and a
-     * failed connect is no reason to keep asking.
-     */
-    private fun captureIdentity() {
-        if (identityTicks <= 0) return
-        identityTicks--
-        val identity = Native.nativeIdentity(ptr)
-        if (identity != null) {
-            identityTicks = 0
-            onIdentity(identity)
         }
     }
 
@@ -161,9 +141,19 @@ class NativeClient(
     private fun refreshState() {
         val snapshot = Native.nativeSnapshot(ptr) ?: return
         val parsed = json.decodeFromString<ServerState>(snapshot)
-        if (parsed.rev == lastRev) return
-        lastRev = parsed.rev
-        _state.value = parsed
+        if (parsed.rev != lastRev) {
+            lastRev = parsed.rev
+            _state.value = parsed
+        }
+        // `identityReady` is the core's signal that the key has been built. The
+        // own client id covers a library from before that flag existed: both
+        // appear only after the worker has moved past identity creation.
+        if (!identityCaptured && (parsed.identityReady || parsed.ownClientId != null)) {
+            Native.nativeIdentity(ptr)?.let {
+                identityCaptured = true
+                onIdentity(it)
+            }
+        }
     }
 
     // ── commands ────────────────────────────────────────────────────────────
@@ -275,12 +265,5 @@ class NativeClient(
     private companion object {
         /** 50 Hz keeps the member list feeling live without spinning a core. */
         const val POLL_INTERVAL_MS = 20L
-
-        /**
-         * Two seconds of looking. The identity is ready within a few milliseconds
-         * of the session starting; 100 ticks is generous slack for a slow device,
-         * and stops the extra JNI call once it is pointless.
-         */
-        const val IDENTITY_SEARCH_TICKS = 100
     }
 }

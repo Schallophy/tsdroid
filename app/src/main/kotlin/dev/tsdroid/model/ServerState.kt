@@ -1,5 +1,6 @@
 package dev.tsdroid.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -30,9 +31,20 @@ data class ServerState(
     val awayMessage: String = "",
     val users: List<User> = emptyList(),
     val channels: List<Channel> = emptyList(),
+    /**
+     * The display order computed by the native core. Empty only with a library
+     * from before the field existed; [channelTree] then falls back to sorting
+     * here.
+     */
+    @SerialName("channelTree") val tree: List<ChannelTreeEntry> = emptyList(),
     val files: List<FileEntry> = emptyList(),
     val server: Server = Server(),
     val connected: Boolean = false,
+    /**
+     * True once `nativeIdentity` returns a value. The key itself is not in the
+     * snapshot (it ends up in logs); this flag is the signal to read it once.
+     */
+    val identityReady: Boolean = false,
 ) {
     /** Voice clients only: server query connections are not people. */
     fun usersIn(channelId: Long): List<User> =
@@ -50,12 +62,17 @@ data class ServerState(
     /**
      * Channels in tree order: roots first, each followed by its descendants.
      *
-     * Siblings follow the server's own arrangement, which is a linked list, not
-     * a sort index: `order` is the id of the channel this one is placed after,
-     * and 0 means "first". Numeric sorting happens to match channels that were
-     * never reordered and breaks as soon as one is dragged elsewhere.
+     * The core already produces the display order ([tree]); it is used as given.
+     * The fallback below walks the server's own arrangement, which is a linked
+     * list, not a sort index: `order` is the id of the channel this one is
+     * placed after, and 0 means "first". It exists only for a native library
+     * from before the snapshot carried the tree.
      */
     fun channelTree(): List<ChannelNode> {
+        if (tree.isNotEmpty()) {
+            val byId = channels.associateBy { it.id }
+            return tree.mapNotNull { entry -> byId[entry.id]?.let { ChannelNode(it, entry.depth) } }
+        }
         val byParent = channels.groupBy { it.parentId }
 
         fun ordered(siblings: List<Channel>): List<Channel> {
@@ -95,6 +112,10 @@ data class ServerState(
 }
 
 data class ChannelNode(val channel: Channel, val depth: Int)
+
+/** One snapshot `channelTree` entry: a channel id plus its nesting depth. */
+@Serializable
+data class ChannelTreeEntry(val id: Long = 0, val depth: Int = 0)
 
 @Serializable
 data class User(

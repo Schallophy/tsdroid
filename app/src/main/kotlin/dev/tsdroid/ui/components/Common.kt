@@ -24,9 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -183,117 +181,41 @@ fun StatusDot(color: Color, size: Dp = 7.dp, modifier: Modifier = Modifier) {
 }
 
 /**
- * Microphone glyph.
+ * The plate the TeamSpeak icons sit on.
  *
- * Drawn by hand rather than pulled from `material-icons-extended`: the extended
- * set is ~11 000 classes for the two icons this app needs, and a hand-drawn one
- * also scales its stroke with the button.
+ * They are not tintable: the grey microphone, the blue bulb and the red cross are
+ * baked into the path colours, and the pack was drawn for a dark client. Putting
+ * them on `surfaceVariant` therefore works in the dark theme and washes them out
+ * in the light one, so the plate is one fixed dark colour in both. It reads as a
+ * badge rather than as part of the surface, which is what these are.
  */
-@Composable
-fun MicGlyph(
-    tint: Color,
-    muted: Boolean,
-    modifier: Modifier = Modifier,
-    slashColor: Color = MaterialTheme.colorScheme.error,
-) {
-    Canvas(modifier) {
-        val w = size.width
-        val h = size.height
-        val stroke = Stroke(width = w * 0.085f, cap = StrokeCap.Round)
+val IconPlate = Color(0xFF1E252E)
 
-        drawRoundRect(
-            color = tint,
-            topLeft = Offset(w * 0.35f, h * 0.10f),
-            size = Size(w * 0.30f, h * 0.44f),
-            cornerRadius = CornerRadius(w * 0.15f, w * 0.15f),
-        )
-        drawArc(
-            color = tint,
-            startAngle = 0f,
-            sweepAngle = 180f,
-            useCenter = false,
-            topLeft = Offset(w * 0.20f, h * 0.26f),
-            size = Size(w * 0.60f, h * 0.46f),
-            style = stroke,
-        )
-        drawLine(
-            color = tint,
-            start = Offset(w * 0.5f, h * 0.70f),
-            end = Offset(w * 0.5f, h * 0.86f),
-            strokeWidth = w * 0.085f,
-            cap = StrokeCap.Round,
-        )
-        drawLine(
-            color = tint,
-            start = Offset(w * 0.33f, h * 0.88f),
-            end = Offset(w * 0.67f, h * 0.88f),
-            strokeWidth = w * 0.085f,
-            cap = StrokeCap.Round,
-        )
-        if (muted) {
-            drawLine(
-                color = slashColor,
-                start = Offset(w * 0.18f, h * 0.14f),
-                end = Offset(w * 0.82f, h * 0.86f),
-                strokeWidth = w * 0.095f,
-                cap = StrokeCap.Round,
-            )
-        }
-    }
+/**
+ * Which of TeamSpeak's input icons applies, or `null` when the microphone is
+ * fine (the member list then draws the speaking ball).
+ *
+ * The order lives here once because three screens ask the same question: the
+ * member badge, the user sheet and the self-view bar. They used to answer it in
+ * two different orders, so the same person read as "muted" in the list and
+ * "device off" in the sheet.
+ *
+ * The mute button outranks the device — not because it transmits more, but
+ * because it is what the self-view button toggles. With the device first,
+ * pressing the mic while the capture device was off changed the label and
+ * nothing else.
+ */
+fun inputStatusIcon(muted: Boolean, hardwareEnabled: Boolean): Int? = when {
+    muted -> R.drawable.ts_input_muted
+    !hardwareEnabled -> R.drawable.ts_input_hardware_muted
+    else -> null
 }
 
-/** Speaker glyph, same reasoning as [MicGlyph]. */@Composable
-fun SpeakerGlyph(
-    tint: Color,
-    muted: Boolean,
-    modifier: Modifier = Modifier,
-    slashColor: Color = MaterialTheme.colorScheme.error,
-) {
-    Canvas(modifier) {
-        val w = size.width
-        val h = size.height
-        val stroke = Stroke(width = w * 0.085f, cap = StrokeCap.Round)
-
-        val body = Path().apply {
-            moveTo(w * 0.12f, h * 0.36f)
-            lineTo(w * 0.28f, h * 0.36f)
-            lineTo(w * 0.48f, h * 0.16f)
-            lineTo(w * 0.48f, h * 0.84f)
-            lineTo(w * 0.28f, h * 0.64f)
-            lineTo(w * 0.12f, h * 0.64f)
-            close()
-        }
-        drawPath(body, tint)
-
-        if (muted) {
-            drawLine(
-                color = slashColor,
-                start = Offset(w * 0.20f, h * 0.18f),
-                end = Offset(w * 0.86f, h * 0.84f),
-                strokeWidth = w * 0.095f,
-                cap = StrokeCap.Round,
-            )
-        } else {
-            drawArc(
-                color = tint,
-                startAngle = -55f,
-                sweepAngle = 110f,
-                useCenter = false,
-                topLeft = Offset(w * 0.50f, h * 0.28f),
-                size = Size(w * 0.28f, h * 0.44f),
-                style = stroke,
-            )
-            drawArc(
-                color = tint,
-                startAngle = -55f,
-                sweepAngle = 110f,
-                useCenter = false,
-                topLeft = Offset(w * 0.50f, h * 0.16f),
-                size = Size(w * 0.42f, h * 0.68f),
-                style = stroke,
-            )
-        }
-    }
+/** The output twin of [inputStatusIcon]; `null` means "you can hear them". */
+fun outputStatusIcon(deafened: Boolean, hardwareEnabled: Boolean): Int? = when {
+    deafened -> R.drawable.ts_output_muted
+    !hardwareEnabled -> R.drawable.ts_output_hardware_muted
+    else -> null
 }
 
 /**
@@ -345,11 +267,10 @@ fun ExitGlyph(tint: Color, modifier: Modifier = Modifier) {
  * draws before every name: bright while talking, dim otherwise.
  *
  * Everything shares one slot, so the states overwrite each other in a fixed
- * order: away, then deafened or a muted output device, then the mute button or
- * a muted input device. Away wins because someone who walked off is absent
- * whichever way their audio is set; the output side outranks the input side
- * because it is the rarer, more consequential one — an open mic that nobody
- * hears is worse than a mic that is simply off.
+ * order: away, then the output side, then the input side. Away wins because
+ * someone who walked off is absent whichever way their audio is set; the output
+ * side outranks the input side because it is the rarer, more consequential one —
+ * an open mic that nobody hears is worse than a mic that is simply off.
  *
  * A hardware mute uses a different icon from the mute button because it means
  * something different: the device is switched off in that client's own settings,
@@ -377,40 +298,23 @@ fun MemberStatusBadge(
         return
     }
 
-    if (deafened) {
+    // Output before input: an open mic that nobody hears is the worse of the
+    // two surprises, so it claims the slot first. Both halves come from the
+    // shared helpers, which is what keeps this badge, the user sheet and the
+    // self-view bar describing the same person the same way.
+    outputStatusIcon(deafened = deafened, hardwareEnabled = outputHardwareEnabled)?.let { icon ->
         Image(
-            painter = painterResource(R.drawable.ts_output_muted),
-            contentDescription = "已关闭听筒",
+            painter = painterResource(icon),
+            contentDescription = if (deafened) "已关闭听筒" else "已关闭扬声器设备",
             modifier = modifier.size(size),
         )
         return
     }
 
-    if (!outputHardwareEnabled) {
+    inputStatusIcon(muted = muted, hardwareEnabled = inputHardwareEnabled)?.let { icon ->
         Image(
-            painter = painterResource(R.drawable.ts_output_hardware_muted),
-            contentDescription = "已关闭扬声器设备",
-            modifier = modifier.size(size),
-        )
-        return
-    }
-
-    if (muted) {
-        Image(
-            painter = painterResource(R.drawable.ts_input_muted),
-            contentDescription = "麦克风已静音",
-            modifier = modifier.size(size),
-        )
-        return
-    }
-
-    if (!inputHardwareEnabled) {
-        // Red prohibition sign over a grey microphone: TeamSpeak's own mark for
-        // "this client's capture device is off", distinct from the X of a
-        // server-side mute so the two are not confused at a glance.
-        Image(
-            painter = painterResource(R.drawable.ts_input_hardware_muted),
-            contentDescription = "麦克风设备已关闭",
+            painter = painterResource(icon),
+            contentDescription = if (muted) "麦克风已静音" else "麦克风设备已关闭",
             modifier = modifier.size(size),
         )
         return

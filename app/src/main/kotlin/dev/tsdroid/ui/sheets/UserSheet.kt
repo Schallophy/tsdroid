@@ -109,12 +109,14 @@ fun UserSheet(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                 ) {
                     Text(
-                        // Hardware mute outranks the server flag here too: the
-                        // device being off is the reason nothing is heard, and
-                        // "麦克风静音" would wrongly imply a mute button was used.
+                        // Same precedence as the badge in the member list and
+                        // the self-view bar: the mute button first, the switched
+                        // off device second. Both mean "nothing is arriving";
+                        // picking one order everywhere keeps the row, the badge
+                        // and this sheet from answering with different words.
                         text = when {
-                            !user.inputHardwareEnabled -> "麦克风设备关闭"
                             user.inputMuted -> "麦克风静音"
+                            !user.inputHardwareEnabled -> "麦克风设备关闭"
                             else -> "麦克风开启"
                         },
                         style = MaterialTheme.typography.labelSmall,
@@ -134,8 +136,8 @@ fun UserSheet(
                 ) {
                     Text(
                         text = when {
-                            !user.outputHardwareEnabled -> "扬声器设备关闭"
                             user.outputMuted -> "不听声音"
+                            !user.outputHardwareEnabled -> "扬声器设备关闭"
                             else -> "可以听"
                         },
                         style = MaterialTheme.typography.labelSmall,

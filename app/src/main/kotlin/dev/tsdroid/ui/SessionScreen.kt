@@ -1,6 +1,7 @@
 package dev.tsdroid.ui
 
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,20 +40,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.tsdroid.R
 import dev.tsdroid.SessionStatus
 import dev.tsdroid.SessionTab
 import dev.tsdroid.SessionViewModel
 import dev.tsdroid.model.ChatScope
 import dev.tsdroid.model.User
-import dev.tsdroid.ui.components.MicGlyph
 import dev.tsdroid.ui.components.ExitGlyph
+import dev.tsdroid.ui.components.IconPlate
 import dev.tsdroid.ui.components.PillTabs
-import dev.tsdroid.ui.components.SpeakerGlyph
 import dev.tsdroid.ui.components.StatusDot
+import dev.tsdroid.ui.components.inputStatusIcon
+import dev.tsdroid.ui.components.outputStatusIcon
 import dev.tsdroid.ui.sheets.UserSheet
 
 /**
@@ -313,11 +317,14 @@ private fun MicBar(
 ) {
     // Two separate facts decide whether our voice leaves the phone: the mute
     // button (which this bar toggles) and the capture device that TeamSpeak
-    // reports. The button stays a button, so it only reflects `micEnabled`;
-    // the level ring and the label tell the whole truth, because a running
-    // meter next to a dead microphone is exactly the lie this change fixes.
+    // reports. The icon answers both, through the same helper the member list
+    // uses, so the row cannot claim "open microphone" while nothing arrives.
     val deviceOn = ui.state.inputHardwareEnabled
     val speakerDeviceOn = ui.state.outputHardwareEnabled
+    val micIcon = inputStatusIcon(muted = !ui.micEnabled, hardwareEnabled = deviceOn)
+        ?: R.drawable.ts_input_unmuted
+    val speakerIcon = outputStatusIcon(deafened = !ui.speakerEnabled, hardwareEnabled = speakerDeviceOn)
+        ?: R.drawable.ts_output_unmuted
 
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     Surface(color = MaterialTheme.colorScheme.surface) {
@@ -328,12 +335,14 @@ private fun MicBar(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
             MicButton(
-                // The button is the mute button, so it must show the mute
-                // button's state — otherwise tapping it while the device is off
-                // would look like "unmute" and change nothing. The level and the
-                // label below carry the device story instead.
-                enabled = ui.micEnabled,
+                icon = micIcon,
+                active = ui.micEnabled && deviceOn,
                 level = if (ui.micEnabled && deviceOn) level else 0f,
+                contentDescription = when {
+                    !ui.micEnabled -> "麦克风已静音"
+                    !deviceOn -> "麦克风设备已关闭"
+                    else -> "麦克风已开启"
+                },
                 onClick = onMic,
             )
 
@@ -348,11 +357,12 @@ private fun MicBar(
                 )
                 Text(
                     text = when {
-                        // The device flag outranks the mute flag: when the
-                        // capture device is off nothing is transmitted even
-                        // though the server still reports un-muted.
-                        !deviceOn -> "麦克风设备已关闭"
+                        // Same order as the icon and as [MemberStatusBadge]: the
+                        // mute button leads, the device follows. Both are true
+                        // answers to "why is nothing arriving"; picking one order
+                        // for both keeps the row from contradicting itself.
                         !ui.micEnabled -> "麦克风已静音"
+                        !deviceOn -> "麦克风设备已关闭"
                         ui.state.away -> ui.state.awayMessage.ifEmpty { "离开" }
                         else -> "按下麦克风静音自己"
                     },
@@ -368,14 +378,14 @@ private fun MicBar(
             }
 
             RoundGlyphButton(onClick = onSpeaker) {
-                SpeakerGlyph(
-                    tint = if (ui.speakerEnabled && speakerDeviceOn) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.error
+                Image(
+                    painter = painterResource(speakerIcon),
+                    contentDescription = when {
+                        !ui.speakerEnabled -> "已关闭听筒"
+                        !speakerDeviceOn -> "扬声器设备已关闭"
+                        else -> "可以听"
                     },
-                    muted = !ui.speakerEnabled || !speakerDeviceOn,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(26.dp),
                 )
             }
         }
@@ -383,30 +393,46 @@ private fun MicBar(
 }
 
 @Composable
-private fun MicButton(enabled: Boolean, level: Float, onClick: () -> Unit) {
-    val container = if (enabled) {
+private fun MicButton(
+    icon: Int,
+    active: Boolean,
+    level: Float,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    // `active` is "audio can leave the phone right now" — both the mute button
+    // and the device flag — because that is what the glow means. The icon above
+    // says which of the two stopped it.
+    val halo = if (active) {
         MaterialTheme.colorScheme.primary
     } else {
-        MaterialTheme.colorScheme.errorContainer
+        MaterialTheme.colorScheme.error
     }
-    val tint = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.error
 
     Box(contentAlignment = Alignment.Center) {
         // Two rings: a static halo, and the level, which grows with the voice.
         Box(
             modifier = Modifier
                 .size(56.dp)
-                .background(container.copy(alpha = 0.12f + level * 0.35f), CircleShape),
+                .background(halo.copy(alpha = 0.12f + level * 0.35f), CircleShape),
         )
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(46.dp)
                 .clip(CircleShape)
-                .background(container)
+                .background(IconPlate)
                 .clickable(onClick = onClick),
         ) {
-            MicGlyph(tint = tint, muted = !enabled, modifier = Modifier.size(22.dp))
+            // The icon carries its own colours from TeamSpeak's pack, so the
+            // button is a plate rather than a tinted circle. That is what makes
+            // "muted" and "device off" readable as different marks instead of
+            // the same silhouette in two colours.
+            Image(
+                painter = painterResource(icon),
+                contentDescription = contentDescription,
+                modifier = Modifier.size(26.dp),
+            )
         }
     }
     Spacer(Modifier.width(2.dp))
@@ -419,6 +445,9 @@ private fun RoundGlyphButton(onClick: () -> Unit, content: @Composable () -> Uni
         modifier = Modifier
             .size(40.dp)
             .clip(RoundedCornerShape(12.dp))
+            // Same plate as the mic button, so the two read as one pair of
+            // controls rather than a button and a floating icon.
+            .background(IconPlate)
             .clickable(onClick = onClick),
     ) {
         content()

@@ -1,5 +1,6 @@
 package dev.tsdroid.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -50,11 +52,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.tsdroid.R
 import dev.tsdroid.core.ServerConfig
 import dev.tsdroid.data.SavedServer
 import dev.tsdroid.data.ServerStore
+import dev.tsdroid.ui.components.IconPlate
 import dev.tsdroid.ui.components.MemberAvatar
-import dev.tsdroid.ui.components.MicGlyph
 
 /**
  * The first screen: address, nickname, go.
@@ -127,17 +130,21 @@ fun ConnectScreen(onConnect: (ServerConfig) -> Unit) {
         Spacer(Modifier.height(24.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // TeamSpeak's own capture icon on the same fixed dark plate the
+            // self-view uses: the bulb is a baked-in blue, so it needs a dark
+            // ground in both themes rather than the primary colour, which would
+            // swallow it.
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(52.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
+                    .background(IconPlate),
             ) {
-                MicGlyph(
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    muted = false,
-                    modifier = Modifier.size(26.dp),
+                Image(
+                    painter = painterResource(R.drawable.ts_input_unmuted),
+                    contentDescription = null,
+                    modifier = Modifier.size(30.dp),
                 )
             }
             Column(modifier = Modifier.padding(start = 14.dp)) {

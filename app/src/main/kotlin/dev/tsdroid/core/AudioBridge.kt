@@ -17,8 +17,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.concurrent.thread
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.roundToInt
 
 /**
  * Capture and playback, kept on the Android side on purpose.
@@ -192,16 +190,13 @@ class AudioBridge(context: Context) {
             }
             if (read <= 0) continue
 
-            var peak = 0
+            // Gain is applied by the core, identically on every platform. The
+            // meter scales the raw peak only for display so it still shows what
+            // will be transmitted.
+            var peak = 0f
             val gain = micGain
             for (index in 0 until read) {
-                val sample = if (gain == 1f) {
-                    buffer[index].toInt()
-                } else {
-                    (buffer[index] * gain).roundToInt().coerceIn(-32768, 32767)
-                }
-                buffer[index] = sample.toShort()
-                val magnitude = abs(sample)
+                val magnitude = abs(buffer[index].toInt()) * gain
                 if (magnitude > peak) peak = magnitude
             }
             _level.value = (peak / 32768f).coerceIn(0f, 1f)

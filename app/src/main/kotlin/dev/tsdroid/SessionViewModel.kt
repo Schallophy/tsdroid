@@ -122,6 +122,8 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             return
         }
         client = session
+        // Gain belongs to the core so every platform clips the same way.
+        session.setMicGain(settings.micGain)
         CrashLog.markPhase(app, "已创建原生会话，等待服务器响应 ${config.address}")
 
         viewModelScope.launch {
@@ -351,6 +353,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         settings.noiseSuppression = noiseSuppression
         settings.bluetoothMic = bluetoothMic
         audio.micGain = gain.coerceIn(0.2f, 4f)
+        client?.setMicGain(audio.micGain)
         audio.noiseSuppressionEnabled = noiseSuppression
         audio.bluetoothMicEnabled = bluetoothMic
         audio.refreshRoute()

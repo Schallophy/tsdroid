@@ -29,6 +29,8 @@ data class ServerState(
     val outputHardwareEnabled: Boolean = true,
     val away: Boolean = false,
     val awayMessage: String = "",
+    /** Computed by the core from the capture path; covers this client only. */
+    val ownTalking: Boolean = false,
     val users: List<User> = emptyList(),
     val channels: List<Channel> = emptyList(),
     /**

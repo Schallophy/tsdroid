@@ -60,12 +60,6 @@ import dev.tsdroid.ui.components.outputStatusIcon
 import dev.tsdroid.ui.sheets.UserSheet
 
 /**
- * Peak level that counts as speech. Room noise on a phone mic sits well below
- * this; normal talking peaks around 0.2-0.5.
- */
-private const val OwnTalkThreshold = 0.05f
-
-/**
  * The client proper: one screen, three tabs, and a control bar that never moves.
  *
  * The mic bar is fixed because it is the thing people reach for without looking;
@@ -82,13 +76,10 @@ fun SessionScreen(
     val snackbar = remember { SnackbarHostState() }
     var sheetUser by remember { mutableStateOf<User?>(null) }
 
-    // Our own voice never travels through the receive path, so the native
-    // talking list only ever names other people. The capture meter is the only
-    // signal for ourselves — and it is meaningless while muted, whether by the
-    // mute button or by the capture device being switched off.
-    val ownTalking = !ui.state.inputMuted &&
-        ui.state.inputHardwareEnabled &&
-        micLevel > OwnTalkThreshold
+    // The server never reports our own voice, so the core derives this from the
+    // capture path (gain, silence gate and a tail). The local meter is only for
+    // the level ring around the button.
+    val ownTalking = ui.state.ownTalking
 
     LaunchedEffect(ui.toast) {
         val message = ui.toast ?: return@LaunchedEffect

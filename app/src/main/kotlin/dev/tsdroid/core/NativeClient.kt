@@ -224,6 +224,9 @@ class NativeClient(
 
     fun setAudioEnabled(enabled: Boolean) = exec("audio_enabled", mapOf("enabled" to enabled))
 
+    /** Linear capture gain; the core applies it before the encoder on every platform. */
+    fun setMicGain(gain: Float) = exec("set_mic_gain", mapOf("gain" to gain))
+
     // ── voice ───────────────────────────────────────────────────────────────
 
     fun audioWrite(samples: ShortArray): Int {

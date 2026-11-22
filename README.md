@@ -59,6 +59,25 @@ The Rust sources are no longer here. `native/` has been removed; the equivalent
 code lives in the `third_party/tsbridge` submodule: `crates/core`
 (platform-neutral) and `crates/jni` (the Android shim).
 
+### The status icons
+
+`app/src/main/res/drawable/ts_*.xml` are the TeamSpeak desktop client's own
+icons, converted straight from the `dark` icon pack in a local install
+(`%APPDATA%\TS3Client\gfx\dark`): `capture`, `volume`, the two muted marks, the
+two switched-off-device marks and `away`. Path data and fills are unchanged; only
+the envelope is Android vector XML. A hand-drawn stand-in looked like one, which
+is why `MicGlyph` and `SpeakerGlyph` are gone.
+
+The fills are baked into the paths (`#a9aaac` grey, `#7289da` blue, `#c90709`
+red), so `Icon(tint = ...)`-style recolouring does nothing useful — the
+microphone, the speaker and the connect header all put them on one fixed dark
+plate (`IconPlate`) instead.
+
+Which mark applies is decided once, in `components/Common.kt`
+(`inputStatusIcon` / `outputStatusIcon`): mute button first, switched-off device
+second. Every screen uses those two functions, so the member row, the user sheet
+and the self-view cannot disagree about the same person.
+
 ## The native contract
 
 Twelve functions, and the count is fixed. The JNI symbol names are
@@ -138,17 +157,20 @@ binary.
 ## Tests
 
 `./gradlew :app:testDebugUnitTest` runs on the JVM — no emulator, no device, no
-native library. Two suites, both pinning cross-repo contracts that used to fail
-silently:
+native library. Three suites, all pinning contracts that used to fail silently:
 
 | suite | what it pins |
 |---|---|
 | `core/NativeAbiTest` | `Native.EXPECTED_ABI` against `TSBRIDGE_ABI_VERSION` in the submodule's header |
 | `model/ServerEventTest` | `ServerEvent.kt`'s 21 `type` strings and field keys against `docs/events.md` |
+| `ui/components/StatusIconTest` | the icon precedence in `inputStatusIcon` / `outputStatusIcon`: mute button first, switched-off device second |
 
-Neither can pass on one side alone: tsbridge's `event_contract.rs` proves the
-Rust and the docs agree, and `ServerEventTest` proves the docs and Kotlin agree,
-so a rename in the core fails this build without the table being copied twice.
+The first two cannot pass on one side alone: tsbridge's `event_contract.rs`
+proves the Rust and the docs agree, and `ServerEventTest` proves the docs and
+Kotlin agree, so a rename in the core fails this build without the table being
+copied twice. `StatusIconTest` is the third leg of the same idea — one precedence,
+three screens, so a change in `components/Common.kt` cannot silently desync the
+member list from the self-view.
 
 ## CI
 

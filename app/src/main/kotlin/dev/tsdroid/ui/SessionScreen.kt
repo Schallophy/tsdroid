@@ -447,6 +447,13 @@ private fun RoundGlyphButton(onClick: () -> Unit, content: @Composable () -> Uni
             .clip(RoundedCornerShape(12.dp))
             // Same plate as the mic button, so the two read as one pair of
             // controls rather than a button and a floating icon.
+            //
+            // No glow around it, unlike the microphone. The microphone's glow
+            // exists because the level ring already lives there and has to say
+            // "sound can leave" without a tintable fill; the speaker has no
+            // level to show, and its three TeamSpeak marks (X, red dot, open
+            // bulb) already differ from each other. A second red ring around
+            // them only read as a badge the button never had.
             .background(IconPlate)
             .clickable(onClick = onClick),
     ) {

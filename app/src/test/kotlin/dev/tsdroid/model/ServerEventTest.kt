@@ -64,12 +64,16 @@ class ServerEventTest {
                 "from_uid" to "bob=",
                 "message" to "hi",
                 "to_id" to 9,
+                "from_self" to true,
                 "timestamp" to 1_700_000_000L,
+                "timestamp_ms" to 1_700_000_000_123L,
             ),
         ) as ServerEvent.TextMessage
         assertEquals(ChatScope.Private, message.scope)
         assertEquals(9, message.toId)
+        assertEquals(true, message.fromSelf)
         assertEquals(1_700_000_000L, message.timestamp)
+        assertEquals(1_700_000_000_123L, message.timestampMs)
 
         val transfer = ServerEvent.from(
             mapOf(
@@ -293,7 +297,9 @@ class ServerEventTest {
             "from_uid" to "u",
             "message" to "m",
             "to_id" to 0,
+            "from_self" to false,
             "timestamp" to 1_700_000_000L,
+            "timestamp_ms" to 1_700_000_000_000L,
         ),
         "poked" to mapOf(
             "type" to "poked",

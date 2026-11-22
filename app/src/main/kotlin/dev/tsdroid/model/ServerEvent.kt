@@ -120,7 +120,9 @@ sealed interface ServerEvent {
         val fromUid: String,
         val message: String,
         val toId: Int,
+        val fromSelf: Boolean,
         val timestamp: Long,
+        val timestampMs: Long,
     ) : ServerEvent {
         override val type = "text_message"
     }
@@ -310,7 +312,9 @@ sealed interface ServerEvent {
                     fromUid = str(map, "from_uid"),
                     message = str(map, "message"),
                     toId = int(map, "to_id"),
+                    fromSelf = bool(map, "from_self"),
                     timestamp = long(map, "timestamp"),
+                    timestampMs = long(map, "timestamp_ms"),
                 )
 
                 "poked" -> Poked(

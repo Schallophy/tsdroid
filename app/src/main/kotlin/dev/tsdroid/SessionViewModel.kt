@@ -567,7 +567,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
 
     private fun appendMessage(event: ServerEvent.TextMessage) {
         val state = _ui.value.state
-        val mine = event.fromId == state.ownClientId
+        val mine = event.fromSelf || event.fromId == state.ownClientId
 
         // The server may echo our own message back as a notify; the optimistic
         // copy already in the list is the same line, so drop the duplicate.
@@ -593,7 +593,11 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             fromId = event.fromId,
             fromName = if (mine) state.nickname else event.fromName,
             text = event.message,
-            timestamp = if (event.timestamp > 0) event.timestamp * 1000 else System.currentTimeMillis(),
+            timestamp = when {
+                event.timestampMs > 0 -> event.timestampMs
+                event.timestamp > 0 -> event.timestamp * 1000
+                else -> System.currentTimeMillis()
+            },
             mine = mine,
             peerId = peerId,
         )

@@ -40,6 +40,82 @@ class StatusIconTest {
     }
 
     @Test
+    fun `the output side claims the slot before the input side`() {
+        // Everyone is muted: the speakers/headphones mark wins.
+        assertEquals(
+            R.drawable.ts_output_muted,
+            memberStatusIcon(
+                away = false, deafened = true, muted = true,
+                inputHardwareEnabled = true, outputHardwareEnabled = true,
+            ),
+        )
+        // Even a switched-off microphone yields to a muted speaker: the legend
+        // puts speakers/headphones above the microphone.
+        assertEquals(
+            R.drawable.ts_output_muted,
+            memberStatusIcon(
+                away = false, deafened = true, muted = false,
+                inputHardwareEnabled = false, outputHardwareEnabled = true,
+            ),
+        )
+        // A switched-off speaker outranks every input-side state.
+        assertEquals(
+            R.drawable.ts_output_hardware_muted,
+            memberStatusIcon(
+                away = false, deafened = false, muted = true,
+                inputHardwareEnabled = false, outputHardwareEnabled = false,
+            ),
+        )
+        // Nothing wrong on the output side: the input mark takes over,
+        // device off before mute.
+        assertEquals(
+            R.drawable.ts_input_hardware_muted,
+            memberStatusIcon(
+                away = false, deafened = false, muted = true,
+                inputHardwareEnabled = false, outputHardwareEnabled = true,
+            ),
+        )
+        assertEquals(
+            R.drawable.ts_input_muted,
+            memberStatusIcon(
+                away = false, deafened = false, muted = true,
+                inputHardwareEnabled = true, outputHardwareEnabled = true,
+            ),
+        )
+        assertNull(
+            memberStatusIcon(
+                away = false, deafened = false, muted = false,
+                inputHardwareEnabled = true, outputHardwareEnabled = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `the reader text follows the same order as the mark`() {
+        assertEquals(
+            "已关闭听筒",
+            memberStatusDescription(
+                away = false, deafened = true, muted = true,
+                inputHardwareEnabled = false, outputHardwareEnabled = true,
+            ),
+        )
+        assertEquals(
+            "麦克风设备已关闭",
+            memberStatusDescription(
+                away = false, deafened = false, muted = true,
+                inputHardwareEnabled = false, outputHardwareEnabled = true,
+            ),
+        )
+        assertEquals(
+            "麦克风已静音",
+            memberStatusDescription(
+                away = false, deafened = false, muted = true,
+                inputHardwareEnabled = true, outputHardwareEnabled = true,
+            ),
+        )
+    }
+
+    @Test
     fun `null means nothing is wrong`() {
         // null is the signal for the caller to draw the speaking ball instead.
         assertNull(inputStatusIcon(muted = false, hardwareEnabled = true))

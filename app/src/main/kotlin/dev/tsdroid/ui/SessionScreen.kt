@@ -330,8 +330,10 @@ private fun MicBar(
                 active = ui.micEnabled && deviceOn,
                 level = if (ui.micEnabled && deviceOn) level else 0f,
                 contentDescription = when {
-                    !ui.micEnabled -> "麦克风已静音"
+                    // Same order as the icon: the switched-off device is the
+                    // harder fact, so it is what the reader must hear first.
                     !deviceOn -> "麦克风设备已关闭"
+                    !ui.micEnabled -> "麦克风已静音"
                     else -> "麦克风已开启"
                 },
                 onClick = onMic,

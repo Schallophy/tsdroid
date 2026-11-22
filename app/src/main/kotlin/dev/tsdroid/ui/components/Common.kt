@@ -220,6 +220,43 @@ fun outputStatusIcon(deafened: Boolean, hardwareEnabled: Boolean): Int? = when {
 }
 
 /**
+ * The one mark a member row can show, or `null` when the speaking ball applies.
+ *
+ * The desktop client's status legend orders the marks: speakers/headphones
+ * first, then the microphone, and a switched-off device before the mute
+ * button. That means the output side always claims the slot when anything is
+ * wrong with it — even a mute is more consequential than an input device that
+ * another client switched off in its own settings.
+ */
+fun memberStatusIcon(
+    away: Boolean,
+    deafened: Boolean,
+    muted: Boolean,
+    inputHardwareEnabled: Boolean,
+    outputHardwareEnabled: Boolean,
+): Int? = when {
+    away -> R.drawable.ts_away
+    else -> outputStatusIcon(deafened = deafened, hardwareEnabled = outputHardwareEnabled)
+        ?: inputStatusIcon(muted = muted, hardwareEnabled = inputHardwareEnabled)
+}
+
+/** The reader text that belongs to [memberStatusIcon]; `null` means "just a ball". */
+fun memberStatusDescription(
+    away: Boolean,
+    deafened: Boolean,
+    muted: Boolean,
+    inputHardwareEnabled: Boolean,
+    outputHardwareEnabled: Boolean,
+): String? = when {
+    away -> "离开"
+    outputStatusIcon(deafened = deafened, hardwareEnabled = outputHardwareEnabled) != null ->
+        if (!outputHardwareEnabled) "已关闭扬声器设备" else "已关闭听筒"
+    inputStatusIcon(muted = muted, hardwareEnabled = inputHardwareEnabled) != null ->
+        if (!inputHardwareEnabled) "麦克风设备已关闭" else "麦克风已静音"
+    else -> null
+}
+
+/**
  * Disconnect glyph: a doorway with an arrow leaving it, copied stroke for
  * stroke from the logout icon TS6 Droid CN uses, so both clients read the same
  * picture for the same action.
@@ -290,32 +327,25 @@ fun MemberStatusBadge(
     size: Dp = 26.dp,
     modifier: Modifier = Modifier,
 ) {
-    if (away) {
+    // One call decides the slot so the mark and its reader text cannot disagree:
+    // away first, then output (device off before mute), then input (same order).
+    val statusIcon = memberStatusIcon(
+        away = away,
+        deafened = deafened,
+        muted = muted,
+        inputHardwareEnabled = inputHardwareEnabled,
+        outputHardwareEnabled = outputHardwareEnabled,
+    )
+    if (statusIcon != null) {
         Image(
-            painter = painterResource(R.drawable.ts_away),
-            contentDescription = "离开",
-            modifier = modifier.size(size),
-        )
-        return
-    }
-
-    // Output before input: an open mic that nobody hears is the worse of the
-    // two surprises, so it claims the slot first. Both halves come from the
-    // shared helpers, which is what keeps this badge, the user sheet and the
-    // self-view bar describing the same person the same way.
-    outputStatusIcon(deafened = deafened, hardwareEnabled = outputHardwareEnabled)?.let { icon ->
-        Image(
-            painter = painterResource(icon),
-            contentDescription = if (!outputHardwareEnabled) "已关闭扬声器设备" else "已关闭听筒",
-            modifier = modifier.size(size),
-        )
-        return
-    }
-
-    inputStatusIcon(muted = muted, hardwareEnabled = inputHardwareEnabled)?.let { icon ->
-        Image(
-            painter = painterResource(icon),
-            contentDescription = if (!inputHardwareEnabled) "麦克风设备已关闭" else "麦克风已静音",
+            painter = painterResource(statusIcon),
+            contentDescription = memberStatusDescription(
+                away = away,
+                deafened = deafened,
+                muted = muted,
+                inputHardwareEnabled = inputHardwareEnabled,
+                outputHardwareEnabled = outputHardwareEnabled,
+            ),
             modifier = modifier.size(size),
         )
         return

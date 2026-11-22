@@ -48,23 +48,47 @@ data class ServerState(
         )
 
     /**
-     * Channels in tree order: roots first, each followed by its descendants,
-     * siblings sorted by the order the server assigned.
+     * Channels in tree order: roots first, each followed by its descendants.
+     *
+     * Siblings follow the server's own arrangement, which is a linked list, not
+     * a sort index: `order` is the id of the channel this one is placed after,
+     * and 0 means "first". Numeric sorting happens to match channels that were
+     * never reordered and breaks as soon as one is dragged elsewhere.
      */
     fun channelTree(): List<ChannelNode> {
         val byParent = channels.groupBy { it.parentId }
 
+        fun ordered(siblings: List<Channel>): List<Channel> {
+            if (siblings.size <= 1) return siblings
+            val after = HashMap<Long, Channel>(siblings.size)
+            for (channel in siblings) after[channel.order] = channel
+
+            val result = ArrayList<Channel>(siblings.size)
+            val seen = HashSet<Long>(siblings.size)
+            var current = after[0L]
+            while (current != null && seen.add(current.id)) {
+                result += current
+                current = after[current.id]
+            }
+            // Duplicate or dangling order values leave channels outside the
+            // chain; showing them at the end beats hiding them.
+            for (channel in siblings) if (channel.id !in seen) result += channel
+            return result
+        }
+
         fun descendants(parent: Channel, depth: Int): List<ChannelNode> =
-            byParent[parent.id].orEmpty().sortedBy { it.order }.flatMap { child ->
+            ordered(byParent[parent.id].orEmpty()).flatMap { child ->
                 listOf(ChannelNode(child, depth + 1)) + descendants(child, depth + 1)
             }
 
-        val roots = byParent[0L].orEmpty().sortedBy { it.order }
+        val roots = ordered(byParent[0L].orEmpty())
         // Orphans (a parent we never received) would otherwise vanish entirely.
-        val orphaned = channels.filter { it.parentId != 0L && byParent[it.parentId] == null }
-            .sortedBy { it.order }
+        // Checking `byParent` is not enough: the missing parent's children are
+        // themselves a group under that key.
+        val known = channels.mapTo(HashSet(channels.size)) { it.id }
+        val orphaned = channels.filter { it.parentId != 0L && it.parentId !in known }
 
-        return (roots + orphaned).flatMap { root ->
+        return (roots + ordered(orphaned)).flatMap { root ->
             listOf(ChannelNode(root, 0)) + descendants(root, 0)
         }
     }

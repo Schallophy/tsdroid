@@ -74,9 +74,9 @@ microphone, the speaker and the connect header all put them on one fixed dark
 plate (`IconPlate`) instead.
 
 Which mark applies is decided once, in `components/Common.kt`
-(`inputStatusIcon` / `outputStatusIcon`): mute button first, switched-off device
-second. Every screen uses those two functions, so the member row, the user sheet
-and the self-view cannot disagree about the same person.
+(`inputStatusIcon` / `outputStatusIcon`): switched-off device first, mute
+button second. Every screen uses those two functions, so the member row, the
+user sheet and the self-view cannot disagree about the same person.
 
 ## The native contract
 
@@ -163,7 +163,7 @@ native library. Three suites, all pinning contracts that used to fail silently:
 |---|---|
 | `core/NativeAbiTest` | `Native.EXPECTED_ABI` against `TSBRIDGE_ABI_VERSION` in the submodule's header |
 | `model/ServerEventTest` | `ServerEvent.kt`'s 21 `type` strings and field keys against `docs/events.md` |
-| `ui/components/StatusIconTest` | the icon precedence in `inputStatusIcon` / `outputStatusIcon`: mute button first, switched-off device second |
+| `ui/components/StatusIconTest` | the icon precedence in `inputStatusIcon` / `outputStatusIcon`: switched-off device first, mute button second |
 
 The first two cannot pass on one side alone: tsbridge's `event_contract.rs`
 proves the Rust and the docs agree, and `ServerEventTest` proves the docs and

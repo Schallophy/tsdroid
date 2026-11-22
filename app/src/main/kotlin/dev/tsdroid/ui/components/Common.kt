@@ -200,21 +200,22 @@ val IconPlate = Color(0xFF1E252E)
  * two different orders, so the same person read as "muted" in the list and
  * "device off" in the sheet.
  *
- * The mute button outranks the device — not because it transmits more, but
- * because it is what the self-view button toggles. With the device first,
- * pressing the mic while the capture device was off changed the label and
- * nothing else.
+ * The switched-off device outranks the mute button: the device is the harder
+ * fact, the one that explains the silence even when the button is also down.
+ * With both true, the row says "this client cannot transmit at all" rather than
+ * "the button is down", because pressing the button would not bring the audio
+ * back.
  */
 fun inputStatusIcon(muted: Boolean, hardwareEnabled: Boolean): Int? = when {
-    muted -> R.drawable.ts_input_muted
     !hardwareEnabled -> R.drawable.ts_input_hardware_muted
+    muted -> R.drawable.ts_input_muted
     else -> null
 }
 
 /** The output twin of [inputStatusIcon]; `null` means "you can hear them". */
 fun outputStatusIcon(deafened: Boolean, hardwareEnabled: Boolean): Int? = when {
-    deafened -> R.drawable.ts_output_muted
     !hardwareEnabled -> R.drawable.ts_output_hardware_muted
+    deafened -> R.drawable.ts_output_muted
     else -> null
 }
 
@@ -305,7 +306,7 @@ fun MemberStatusBadge(
     outputStatusIcon(deafened = deafened, hardwareEnabled = outputHardwareEnabled)?.let { icon ->
         Image(
             painter = painterResource(icon),
-            contentDescription = if (deafened) "已关闭听筒" else "已关闭扬声器设备",
+            contentDescription = if (!outputHardwareEnabled) "已关闭扬声器设备" else "已关闭听筒",
             modifier = modifier.size(size),
         )
         return
@@ -314,7 +315,7 @@ fun MemberStatusBadge(
     inputStatusIcon(muted = muted, hardwareEnabled = inputHardwareEnabled)?.let { icon ->
         Image(
             painter = painterResource(icon),
-            contentDescription = if (muted) "麦克风已静音" else "麦克风设备已关闭",
+            contentDescription = if (!inputHardwareEnabled) "麦克风设备已关闭" else "麦克风已静音",
             modifier = modifier.size(size),
         )
         return

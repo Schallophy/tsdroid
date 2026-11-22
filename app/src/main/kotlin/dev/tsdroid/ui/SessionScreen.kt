@@ -358,11 +358,12 @@ private fun MicBar(
                 Text(
                     text = when {
                         // Same order as the icon and as [MemberStatusBadge]: the
-                        // mute button leads, the device follows. Both are true
-                        // answers to "why is nothing arriving"; picking one order
-                        // for both keeps the row from contradicting itself.
-                        !ui.micEnabled -> "麦克风已静音"
+                        // switched-off device leads, the mute button follows.
+                        // Both are true answers to "why is nothing arriving";
+                        // picking one order for both keeps the row from
+                        // contradicting itself.
                         !deviceOn -> "麦克风设备已关闭"
+                        !ui.micEnabled -> "麦克风已静音"
                         ui.state.away -> ui.state.awayMessage.ifEmpty { "离开" }
                         else -> "按下麦克风静音自己"
                     },
@@ -381,8 +382,8 @@ private fun MicBar(
                 Image(
                     painter = painterResource(speakerIcon),
                     contentDescription = when {
-                        !ui.speakerEnabled -> "已关闭听筒"
                         !speakerDeviceOn -> "扬声器设备已关闭"
+                        !ui.speakerEnabled -> "已关闭听筒"
                         else -> "可以听"
                     },
                     modifier = Modifier.size(26.dp),

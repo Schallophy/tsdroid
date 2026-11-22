@@ -59,6 +59,10 @@ fun FilesTab(
     val channelId = ui.filesChannelId ?: ui.state.ownChannelId
     val channelName = ui.state.channel(channelId)?.name ?: "当前频道"
     val files = channelId?.let { ui.state.filesIn(it) }.orEmpty()
+    val hints = channelId?.let { ui.state.channel(it)?.permissionHints } ?: 0L
+    // 0 means the core has not asked yet; only a stated denial hides an action.
+    val canUpload = hints == 0L || (hints and 64L) != 0L
+    val canDownload = hints == 0L || (hints and 128L) != 0L
 
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -108,7 +112,7 @@ fun FilesTab(
             } else {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
                     items(files, key = { it.path + it.name }) { file ->
-                        FileRow(file, onDownload)
+                        FileRow(file, canDownload, onDownload)
                     }
                 }
             }
@@ -130,7 +134,7 @@ fun FilesTab(
 
         Button(
             onClick = { picker.launch("*/*") },
-            enabled = ui.isOnline && channelId != null,
+            enabled = ui.isOnline && channelId != null && canUpload,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -142,12 +146,16 @@ fun FilesTab(
 }
 
 @Composable
-private fun FileRow(file: FileEntry, onDownload: (FileEntry) -> Unit) {
+private fun FileRow(
+    file: FileEntry,
+    canDownload: Boolean,
+    onDownload: (FileEntry) -> Unit,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = file.isFile) { onDownload(file) }
+            .clickable(enabled = file.isFile && canDownload) { onDownload(file) }
             .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Text(

@@ -77,7 +77,8 @@ class ServerStateTest {
               "rev": 3,
               "identityReady": true,
               "channels": [
-                { "id": 7, "parentId": 1, "name": "nested", "order": 0 }
+                { "id": 7, "parentId": 1, "name": "nested", "order": 0,
+                  "permissionHints": 192 }
               ],
               "channelTree": [ { "id": 7, "depth": 2 } ]
             }
@@ -88,6 +89,7 @@ class ServerStateTest {
         assertEquals(listOf(ChannelTreeEntry(id = 7, depth = 2)), state.tree)
         assertEquals(listOf("nested"), state.channelTree().map { it.channel.name })
         assertEquals(2, state.channelTree().first().depth)
+        assertEquals(192L, state.channel(7)?.permissionHints)
     }
 
     @Test

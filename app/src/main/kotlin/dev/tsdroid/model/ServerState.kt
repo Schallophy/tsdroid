@@ -148,6 +148,8 @@ data class Channel(
     val topic: String = "",
     /** -1 unlimited, -2 inherited, >= 0 a limit. */
     val maxClients: Int = -1,
+    /** File-operation mask from the core; 0 until a listing was requested. */
+    val permissionHints: Long = 0,
 )
 
 @Serializable

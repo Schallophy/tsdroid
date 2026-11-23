@@ -14,30 +14,48 @@ import androidx.compose.ui.unit.sp
 
 // Voice clients run at night, next to a game, on a dimmed screen: the dark
 // palette is the primary one, and amber is reserved for "someone is talking".
+//
+// The dark scheme is built as five explicit surface steps rather than black plus
+// one grey. At night a phone's panel crushes near-black levels together, so
+// "surface" and "card" that differ by 4 % are indistinguishable — the hierarchy
+// has to come from real steps. background is the page, surface the control bar,
+// surfaceContainerLow a list card, surfaceContainer a settings/account card,
+// surfaceContainerHigh a chat bubble and surfaceContainerHighest pressed/hover
+// states. Outline contrast is raised for the same reason: a 2 % border is a
+// smudge in the dark.
 private val VoiceBlue = Color(0xFF4C9EEB)
-private val VoiceBlueDeep = Color(0xFF2A6FA8)
+private val VoiceBlueDeep = Color(0xFF1D4E78)
 private val LiveAmber = Color(0xFFE8A33D)
 private val AlertRed = Color(0xFFE5484D)
 
 private val DarkScheme = darkColorScheme(
     primary = VoiceBlue,
-    onPrimary = Color(0xFF04121E),
+    onPrimary = Color(0xFF05131F),
     primaryContainer = VoiceBlueDeep,
-    onPrimaryContainer = Color(0xFFDCEEFF),
+    onPrimaryContainer = Color(0xFFD8ECFF),
     secondary = LiveAmber,
     onSecondary = Color(0xFF20160A),
     secondaryContainer = Color(0xFF4A3315),
     onSecondaryContainer = Color(0xFFFFE2B8),
-    background = Color(0xFF0E1116),
-    onBackground = Color(0xFFE6EDF3),
-    surface = Color(0xFF161B22),
-    onSurface = Color(0xFFE6EDF3),
-    surfaceVariant = Color(0xFF1E252E),
-    onSurfaceVariant = Color(0xFF9AA6B4),
-    surfaceContainer = Color(0xFF1A212A),
-    surfaceContainerHigh = Color(0xFF222B35),
-    outline = Color(0xFF3A4552),
-    outlineVariant = Color(0xFF262F3A),
+    background = Color(0xFF0E1217),
+    onBackground = Color(0xFFE8EEF5),
+    surface = Color(0xFF151B22),
+    onSurface = Color(0xFFE8EEF5),
+    surfaceVariant = Color(0xFF202A34),
+    onSurfaceVariant = Color(0xFFA9B6C4),
+    surfaceContainerLowest = Color(0xFF0A0D11),
+    surfaceContainerLow = Color(0xFF131920),
+    surfaceContainer = Color(0xFF1A222B),
+    surfaceContainerHigh = Color(0xFF222C36),
+    surfaceContainerHighest = Color(0xFF2B3642),
+    surfaceDim = Color(0xFF0E1217),
+    surfaceBright = Color(0xFF323D4A),
+    inverseSurface = Color(0xFFE8EEF5),
+    inverseOnSurface = Color(0xFF1A222B),
+    inversePrimary = Color(0xFF1F6FB2),
+    outline = Color(0xFF4C5968),
+    outlineVariant = Color(0xFF2C3743),
+    scrim = Color(0xDD000000),
     error = AlertRed,
     onError = Color(0xFF1A0608),
     errorContainer = Color(0xFF4C1A1D),
@@ -58,11 +76,20 @@ private val LightScheme = lightColorScheme(
     surface = Color(0xFFFFFFFF),
     onSurface = Color(0xFF11161C),
     surfaceVariant = Color(0xFFE7ECF3),
-    onSurfaceVariant = Color(0xFF5A6675),
-    surfaceContainer = Color(0xFFEDF1F7),
+    onSurfaceVariant = Color(0xFF4E5A68),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF0F3F8),
+    surfaceContainer = Color(0xFFE9EEF5),
     surfaceContainerHigh = Color(0xFFE2E8F1),
-    outline = Color(0xFFC3CCD8),
+    surfaceContainerHighest = Color(0xFFD6DEE9),
+    surfaceDim = Color(0xFFD9E0E9),
+    surfaceBright = Color(0xFFFFFFFF),
+    inverseSurface = Color(0xFF2B3138),
+    inverseOnSurface = Color(0xFFF0F4F8),
+    inversePrimary = Color(0xFF9CCBF5),
+    outline = Color(0xFFB7C2D0),
     outlineVariant = Color(0xFFDCE3EC),
+    scrim = Color(0xCC000000),
     error = Color(0xFFC0322F),
     onError = Color(0xFFFFFFFF),
     // Needed by the connect-error banner; without them Material falls back to its

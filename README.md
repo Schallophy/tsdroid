@@ -24,12 +24,20 @@ nothing here has to be re-derived to support another desktop.
 | **Status** | away + away message, mic mute, speaker mute — all server-visible |
 | **Voice** | Opus 24 kbps mono both ways, 20 ms frames, jitter buffer + PLC |
 | **Files** | browse a channel, download, upload, live transfer progress |
-| **Audio** | noise suppression, echo cancellation, mic gain, optional Bluetooth mic |
+| **Audio** | noise suppression, echo cancellation, mic gain, speaker boost, optional Bluetooth mic |
 | **Identity** | the session's key is written to `identity.ini`, so the UID survives a restart |
+| **Account** | myTeamSpeak login (password + optional OTP), remembered login, cloud bookmarks that fill the connect form, backup, logout; the myTS ID is announced on connect |
 
-Deliberately absent: myTeamSpeak account login, whisper (密聊), per-user volume,
-permission editing. Each of those needs either a private API or another protocol
-layer, and shipping a half-working version is worse than not shipping it.
+Deliberately absent: whisper (密聊), per-user volume, permission editing. Each of
+those needs either a private API or another protocol layer, and shipping a
+half-working version is worse than not shipping it.
+
+The account side runs on its own native handle, so signing in, reading bookmarks
+and backing them up work before any server is joined. The same handle is handed
+to the connection, where the core signs the per-connection myTeamSpeak proof
+(`clientinit`). The remembered login and sync baseline live in the app's private
+`files/account/` directory; logging out deletes the credential, and that whole
+directory is excluded from Android auto-backup and device transfer.
 
 ## Layout
 
@@ -38,13 +46,22 @@ tsdroid/
 ├── app/src/main/kotlin/dev/tsdroid/
 │   ├── core/Native.kt          the external functions
 │   ├── core/NativeClient.kt    handle ownership, 20 ms poll, command wrappers
-│   ├── core/AudioBridge.kt     AudioRecord/AudioTrack, AEC, SCO routing
-│   ├── model/                  snapshot, events, chat types (the contract)
+│   ├── core/AccountClient.kt   the account-only handle, its poll and commands
+│   ├── core/AudioBridge.kt     AudioRecord/AudioTrack, AEC, SCO routing, playback gain
+│   ├── model/                  snapshot, events, chat and account types (the contract)
 │   ├── data/                   saved servers, identity file, local settings
-│   ├── SessionViewModel.kt     session state machine
-│   └── ui/                     connect, session (3 tabs), settings
+│   ├── SessionViewModel.kt     session state machine, owns both handles
+│   └── ui/                     connect, session (3 tabs), settings, account
+├── app/libs/                   the Java half of rustls-platform-verifier (see below)
 └── third_party/tsbridge/       the core, a git submodule (pinned commit)
 ```
+
+`app/libs/rustls-platform-verifier-<version>.aar` is the Android TrustManager
+component reqwest verifies TLS through. Its version is read from the core's
+`Cargo.lock` at build time, so it cannot drift from the Rust half linked into
+`libtsbridge_jni.so`; `JNI_OnLoad` initializes it before the account's first
+HTTPS request. The AAR is vendored rather than fetched so a build does not
+depend on GitHub's raw Maven branch.
 
 The native library is not in this repository. `app/buildTsbridgeJni` compiles
 `third_party/tsbridge` with `cargo ndk` into `app/build/generated/tsbridgeJniLibs`
@@ -80,13 +97,15 @@ user sheet and the self-view cannot disagree about the same person.
 
 ## The native contract
 
-Twelve functions, and the count is fixed. The JNI symbol names are
+Fourteen functions, and the count is fixed. The JNI symbol names are
 `Java_dev_tsdroid_core_Native_<name>`, so this package path must not be renamed
 casually — `crates/jni` in tsbridge hard-codes it:
 
 | function | purpose |
 |---|---|
 | `nativeCreate` / `nativeDestroy` | session lifecycle, opaque handle |
+| `nativeCreateAccount` | an account-only handle: no address, no socket |
+| `nativeCreateWithAccount` | connect while carrying the account's myTS proof |
 | `nativeIsConnected` | connection state |
 | `nativePoll` | drain events as `HashMap[]` |
 | `nativeSnapshot` | whole state as one JSON string |
@@ -99,7 +118,8 @@ casually — `crates/jni` in tsbridge hard-codes it:
 Events and state cross the boundary as plain JDK types and JSON, so the native
 library never references an app class and does not need rebuilding when the UI's
 data classes change. Adding a feature means adding a match arm in tsbridge's
-`command.rs` and a caller in `NativeClient.kt` — never a new symbol.
+`command.rs` (or `account/mod.rs`) and a caller in the Kotlin client — only a new
+*kind* of handle needs a new symbol, which is why the account side added two.
 
 Event names and field keys are the real API: tsbridge's `docs/events.md` and
 `model/ServerEvent.kt` must change together. `tsbridge` has a test that fails when
@@ -157,12 +177,13 @@ binary.
 ## Tests
 
 `./gradlew :app:testDebugUnitTest` runs on the JVM — no emulator, no device, no
-native library. Three suites, all pinning contracts that used to fail silently:
+native library. Four suites, all pinning contracts that used to fail silently:
 
 | suite | what it pins |
 |---|---|
 | `core/NativeAbiTest` | `Native.EXPECTED_ABI` against `TSBRIDGE_ABI_VERSION` in the submodule's header |
-| `model/ServerEventTest` | `ServerEvent.kt`'s 21 `type` strings and field keys against `docs/events.md` |
+| `model/ServerEventTest` | `ServerEvent.kt`'s 22 `type` strings and field keys against `docs/events.md` |
+| `model/AccountStateTest` | the `snapshot.account` shape: bookmark fields, folder nesting, `host:port` |
 | `ui/components/StatusIconTest` | the icon precedence in `inputStatusIcon` / `outputStatusIcon`: switched-off device first, mute button second |
 
 The first two cannot pass on one side alone: tsbridge's `event_contract.rs`

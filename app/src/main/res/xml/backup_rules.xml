@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- API 30 and below. The account directory holds the remembered myTeamSpeak
+     credential, the sync baseline and pre-write backups; a restored device
+     signs in again instead of carrying those through a cloud copy. -->
+<full-backup-content>
+    <exclude domain="file" path="account/" />
+</full-backup-content>

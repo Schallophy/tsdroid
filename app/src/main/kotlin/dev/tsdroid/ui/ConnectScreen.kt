@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,8 +57,19 @@ import dev.tsdroid.R
 import dev.tsdroid.core.ServerConfig
 import dev.tsdroid.data.SavedServer
 import dev.tsdroid.data.ServerStore
+import dev.tsdroid.model.AccountState
 import dev.tsdroid.ui.components.IconPlate
 import dev.tsdroid.ui.components.MemberAvatar
+
+/** Values a cloud bookmark fills in; [notice] says what still needs typing. */
+data class ConnectPrefill(
+    val address: String,
+    val nickname: String,
+    val channel: String,
+    /** The bookmark's `sendMytsid`; null keeps the current/default choice. */
+    val announceMyts: Boolean? = null,
+    val notice: String? = null,
+)
 
 /**
  * The first screen: address, nickname, go.
@@ -68,7 +80,14 @@ import dev.tsdroid.ui.components.MemberAvatar
  * for the minority who care which room they land in.
  */
 @Composable
-fun ConnectScreen(onConnect: (ServerConfig) -> Unit) {
+fun ConnectScreen(
+    account: AccountState,
+    accountError: String?,
+    onOpenAccount: () -> Unit,
+    prefill: ConnectPrefill?,
+    onPrefillApplied: () -> Unit,
+    onConnect: (ServerConfig) -> Unit,
+) {
     val context = LocalContext.current
     val store = remember { ServerStore(context) }
     var saved by remember { mutableStateOf(store.load()) }
@@ -80,11 +99,30 @@ fun ConnectScreen(onConnect: (ServerConfig) -> Unit) {
     var channel by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var advanced by rememberSaveable { mutableStateOf(false) }
+    var announceMyts by rememberSaveable { mutableStateOf(true) }
+    var prefillNotice by remember { mutableStateOf<String?>(null) }
 
     val canConnect = address.isNotBlank() && nickname.isNotBlank()
 
+    // A bookmark from the account screen fills the form and leaves the fields
+    // editable: it is a starting point, not a locked-in destination. A password
+    // saved for the same address is restored the same way picking a recent
+    // server restores it.
+    LaunchedEffect(prefill) {
+        val incoming = prefill ?: return@LaunchedEffect
+        address = incoming.address
+        nickname = incoming.nickname
+        serverPassword = store.passwordFor(incoming.address).orEmpty()
+        channel = incoming.channel
+        if (incoming.channel.isNotBlank()) advanced = true
+        incoming.announceMyts?.let { announceMyts = it }
+        prefillNotice = incoming.notice
+        onPrefillApplied()
+    }
+
     fun submit() {
         if (!canConnect) return
+        prefillNotice = null
         val entry = SavedServer(
             address = address.trim(),
             nickname = nickname.trim(),
@@ -104,6 +142,7 @@ fun ConnectScreen(onConnect: (ServerConfig) -> Unit) {
                 channel = channel.trim(),
                 channelPassword = password,
                 identityIni = store.readIdentity(),
+                announceMyts = announceMyts,
             ),
         )
     }
@@ -157,14 +196,22 @@ fun ConnectScreen(onConnect: (ServerConfig) -> Unit) {
             }
         }
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(20.dp))
+
+        AccountEntry(
+            account = account,
+            accountError = accountError,
+            onClick = onOpenAccount,
+        )
+
+        Spacer(Modifier.height(16.dp))
 
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surface)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(16.dp),
         ) {
             OutlinedTextField(
@@ -283,6 +330,15 @@ fun ConnectScreen(onConnect: (ServerConfig) -> Unit) {
             }
         }
 
+        prefillNotice?.let { notice ->
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = notice,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
+
         Spacer(Modifier.height(26.dp))
 
         if (saved.isNotEmpty()) {
@@ -315,13 +371,69 @@ fun ConnectScreen(onConnect: (ServerConfig) -> Unit) {
 }
 
 @Composable
+private fun AccountEntry(account: AccountState, accountError: String?, onClick: () -> Unit) {
+    val loggedIn = account.loggedIn
+    val title = when {
+        loggedIn -> account.username.ifEmpty { account.email }
+        account.busy -> "myTeamSpeak"
+        else -> "登录 myTeamSpeak"
+    }
+    val subtitle = when {
+        accountError != null -> "账号服务不可用"
+        loggedIn && account.hasMytsId -> "已登录 · 身份已获取 · 管理书签"
+        loggedIn -> "已登录 · 该账号无可用身份 · 管理书签"
+        account.busy -> account.progress.ifEmpty { "正在登录…" }
+        account.lastError.isNotEmpty() -> "上次登录失败，点按查看"
+        else -> "同步云端书签，连接时展示身份"
+    }
+    val subtitleIsError = accountError != null || (!loggedIn && account.lastError.isNotEmpty())
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .clickable(onClick = onClick)
+            .padding(start = 12.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+    ) {
+        MemberAvatar(name = if (loggedIn) title.ifEmpty { "M" } else "M", size = 30.dp)
+        Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+            Text(
+                text = title.ifEmpty { "myTeamSpeak" },
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (subtitleIsError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+@Composable
 private fun SavedRow(entry: SavedServer, onPick: () -> Unit, onDelete: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .clickable(onClick = onPick)
             .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
     ) {

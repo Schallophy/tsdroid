@@ -51,6 +51,7 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
     var away by remember { mutableStateOf(false) }
     var awayMessage by remember { mutableStateOf(settings.awayMessage) }
     var gain by remember { mutableFloatStateOf(settings.micGain) }
+    var output by remember { mutableFloatStateOf(settings.outputGain) }
     var noise by remember { mutableStateOf(settings.noiseSuppression) }
     var bluetooth by remember { mutableStateOf(settings.bluetoothMic) }
 
@@ -148,6 +149,24 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
                     onValueChange = { gain = it },
                     onValueChangeFinished = { vm.applyAudioSettings(gain, noise, bluetooth) },
                     valueRange = 0.2f..4f,
+                )
+            }
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "扬声器音量 ${"%.1f".format(output)}×",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                Text(
+                    text = "拉高会整体放大别人说话的声音；超过 1.0× 时软限幅，不会破音。" +
+                        "播放走媒体音量，请同时用音量键确认媒体音量没有调低。",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Slider(
+                    value = output,
+                    onValueChange = { output = it },
+                    onValueChangeFinished = { vm.applyOutputGain(output) },
+                    valueRange = 0.5f..2f,
                 )
             }
         }

@@ -38,6 +38,11 @@ hickory-resolver / hickory-proto
   Copyright (c) 2015 The Hickory DNS Developers
   Licensed under MIT OR Apache-2.0.
 
+rustls-platform-verifier and its Android component
+  Copyright (c) the rustls-platform-verifier contributors
+  Licensed under MIT OR Apache-2.0. The Android component is packaged as an AAR
+  so reqwest can verify TLS through the system TrustManager on Android.
+
 tokio, futures, serde, serde_json, log, reqwest, rustls, ring (transitive)
   Respectively MIT OR Apache-2.0 / MIT / Apache-2.0 OR ISC, as declared in each
   crate's own metadata. A complete, machine-readable list of every transitive

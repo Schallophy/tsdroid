@@ -34,6 +34,12 @@ data class ServerConfig(
     val channelPassword: String = "",
     /** A TS3 `counterVkey` identity from a previous session, or "" for a fresh one. */
     val identityIni: String = "",
+    /**
+     * Whether to carry the signed-in account's myTeamSpeak proof. A bookmark
+     * says this per server (`sendMytsid`); a hand-typed connection defaults to
+     * "yes when signed in".
+     */
+    val announceMyts: Boolean = true,
 )
 
 /**
@@ -47,6 +53,12 @@ data class ServerConfig(
  */
 class NativeClient(
     private val config: ServerConfig,
+    /**
+     * An account-only handle, or 0 when nobody is signed in. The core signs the
+     * myTeamSpeak proof from it for this connection's handshake IV, so the
+     * account has to be alive when [start] runs.
+     */
+    private val accountPtr: Long = 0L,
     /**
      * Called once the native side has built the identity, with its TS3
      * `counterVkey` form. The caller stores it so the next launch reuses the
@@ -93,14 +105,26 @@ class NativeClient(
         }
 
         ptr = try {
-            Native.nativeCreate(
-                config.address,
-                config.identityIni,
-                config.nickname,
-                config.password.ifEmpty { null },
-                config.channel.ifEmpty { null },
-                config.channelPassword.ifEmpty { null },
-            )
+            if (accountPtr != 0L) {
+                Native.nativeCreateWithAccount(
+                    accountPtr,
+                    config.address,
+                    config.identityIni,
+                    config.nickname,
+                    config.password.ifEmpty { null },
+                    config.channel.ifEmpty { null },
+                    config.channelPassword.ifEmpty { null },
+                )
+            } else {
+                Native.nativeCreate(
+                    config.address,
+                    config.identityIni,
+                    config.nickname,
+                    config.password.ifEmpty { null },
+                    config.channel.ifEmpty { null },
+                    config.channelPassword.ifEmpty { null },
+                )
+            }
         } catch (t: Throwable) {
             // A symbol that exists but failed to resolve lands here, not at load
             // time: the JVM resolves each native method on first use.

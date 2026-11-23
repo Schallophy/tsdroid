@@ -58,6 +58,10 @@ class AudioBridge(context: Context) {
     @Volatile
     var micGain: Float = 1.0f
 
+    /** Linear playback gain applied before the write; 1.0 is untouched. */
+    @Volatile
+    var outputGain: Float = 1.0f
+
     private val _level = MutableStateFlow(0f)
 
     /** 0..1 input level, for the meter around the mic button. */
@@ -101,8 +105,16 @@ class AudioBridge(context: Context) {
         val player = try {
             AudioTrack.Builder()
                 .setAudioAttributes(
+                    // Media usage, not voice communication. On several OEM
+                    // builds (MIUI included) USAGE_VOICE_COMMUNICATION plays
+                    // through the call stream or the earpiece, and the volume
+                    // keys then move the call volume instead of media — which
+                    // is exactly the "everyone is too quiet and I cannot make
+                    // it louder" report. Capture stays VOICE_COMMUNICATION so
+                    // the platform keeps running its voice processing on the
+                    // microphone.
                     AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                         .build(),
                 )
@@ -222,6 +234,15 @@ class AudioBridge(context: Context) {
                 continue
             }
             if (!speakerEnabled) continue
+            // The gain lives here rather than in the core because it is a
+            // loudness preference of this device's output chain, not part of
+            // the protocol; capture gain is the opposite and stays in the core.
+            val gain = outputGain
+            if (gain != 1.0f) {
+                for (index in 0 until count) {
+                    buffer[index] = softClip(buffer[index] * gain)
+                }
+            }
             try {
                 track?.write(buffer, 0, count)
             } catch (t: Throwable) {
@@ -229,6 +250,20 @@ class AudioBridge(context: Context) {
                 break
             }
         }
+    }
+
+    /** Same soft-knee curve the core uses for mic gain, so boosts never wrap. */
+    private fun softClip(sample: Float): Short {
+        val limit = Short.MAX_VALUE.toFloat()
+        val value = sample / limit
+        val limited = if (value > 0.5f) {
+            0.5f + 0.5f * (1f - 1f / (1f + (value - 0.5f) * 2f))
+        } else if (value < -0.5f) {
+            -(0.5f + 0.5f * (1f - 1f / (1f + (-value - 0.5f) * 2f)))
+        } else {
+            value
+        }
+        return (limited.coerceIn(-1f, 1f) * limit).toInt().toShort()
     }
 
     private fun attachEffects(sessionId: Int) {

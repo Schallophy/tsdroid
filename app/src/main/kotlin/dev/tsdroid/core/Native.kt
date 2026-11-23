@@ -3,11 +3,12 @@ package dev.tsdroid.core
 /**
  * The entire surface of the native library.
  *
- * Twelve functions, and the count is fixed:
+ * Twelve functions plus two account-only entry points, and the count is fixed:
  *
  * | feature | crosses the boundary as |
  * |---|---|
  * | connect / state / events | `nativeCreate`, `nativeSnapshot`, `nativePoll` |
+ * | myTeamSpeak account | `nativeCreateAccount`, `nativeCreateWithAccount`, `nativeExec` |
  * | everything the UI can *do* | one [nativeExec] call with a name + JSON args |
  * | voice | the three audio calls (a 50 Hz stream does not belong in JSON) |
  * | identity | `nativeIdentity`, so the UID survives a restart |
@@ -62,7 +63,7 @@ internal object Native {
      * a session that looks connected and behaves wrongly.
      * `NativeAbiTest` fails the build if the submodule is bumped without this.
      */
-    const val EXPECTED_ABI: Int = 1
+    const val EXPECTED_ABI: Int = 2
 
     /**
      * Why the loaded library is not the one this Kotlin expects, or null when it
@@ -106,6 +107,37 @@ internal object Native {
      * generate a fresh identity.
      */
     external fun nativeCreate(
+        address: String,
+        identityIni: String,
+        nickname: String,
+        serverPassword: String?,
+        channel: String?,
+        channelPassword: String?,
+    ): Long
+
+    /**
+     * An account-only session: no address, no socket, no connection thread.
+     *
+     * The account side lives on the handle, so a login screen has to exist
+     * before anything is joined. The three paths are where the library may
+     * write: the remembered login, the sync baseline and pre-write backups.
+     * Returns 0 when the account side could not be started.
+     */
+    external fun nativeCreateAccount(
+        credentialFile: String,
+        baselineFile: String,
+        backupDir: String,
+    ): Long
+
+    /**
+     * Connects, carrying the signed-in account's myTeamSpeak proof.
+     *
+     * The proof is signed per connection over the server's handshake IV, so it
+     * comes from the live account handle. A `0` [accountPtr], or an account
+     * without a myTS identity, connects exactly like [nativeCreate].
+     */
+    external fun nativeCreateWithAccount(
+        accountPtr: Long,
         address: String,
         identityIni: String,
         nickname: String,

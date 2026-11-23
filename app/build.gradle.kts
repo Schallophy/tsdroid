@@ -46,6 +46,10 @@ abstract class CargoNdkTask : DefaultTask() {
     @get:Input
     abstract val ndkHome: Property<String>
 
+    /** The SDK root, for the CMake/ninja package that ships inside it. */
+    @get:Input
+    abstract val sdkHome: Property<String>
+
     /** Cargo's incremental state, kept outside the submodule. */
     @get:Input
     abstract val cargoTargetDir: Property<String>
@@ -94,14 +98,22 @@ abstract class CargoNdkTask : DefaultTask() {
 
     /**
      * `cmake` is not on the default Windows PATH and cargo needs it to build
-     * Opus from C source. The Android SDK's copy is optional (this machine has
-     * none), so a system CMake is the fallback that actually exists.
+     * Opus from C source. A standalone install under Program Files is the usual
+     * one; the Android SDK's `cmake/<version>` package is the fallback (and it
+     * also carries ninja, which the task asks for as the generator). Both are
+     * prepended when present — a fresh machine with only the SDK used to fail
+     * this task with "is `cmake` not installed?".
      */
     private fun toolPath(): String {
         val existing = System.getenv("PATH").orEmpty()
-        val extra = File("C:\\Program Files\\CMake\\bin")
-        val prefix = if (extra.isDirectory) extra.absolutePath else null
-        return listOfNotNull(prefix, existing).joinToString(File.pathSeparator)
+        val sdkCmakeBins = File(sdkHome.get()).resolve("cmake").listFiles()
+            ?.filter { it.isDirectory }
+            ?.sortedByDescending { it.name }
+            ?.map { it.resolve("bin") }
+            .orEmpty()
+        val candidates = listOf(File("C:\\Program Files\\CMake\\bin")) + sdkCmakeBins
+        val prefix = candidates.filter { it.isDirectory }.map { it.absolutePath }
+        return (prefix + existing).joinToString(File.pathSeparator)
     }
 }
 
@@ -148,6 +160,26 @@ fun selectedNdk(): File {
 
 val tsbridgeDir = rootProject.file("third_party/tsbridge")
 
+/**
+ * `rustls-platform-verifier` is a Rust crate whose Android half is a small
+ * prebuilt AAR. Its version has to match `rustls-platform-verifier-android` in
+ * the core's Cargo.lock — a mismatch is a runtime failure in the verifier, not
+ * a compile error — so the file name is derived from the lock instead of being
+ * typed twice.
+ */
+fun rustlsVerifierAndroidVersion(lockFile: File): String {
+    val lines = lockFile.readLines()
+    val start = lines.indexOfFirst { it.trim() == "name = \"rustls-platform-verifier-android\"" }
+    require(start >= 0) {
+        "rustls-platform-verifier-android is missing from ${lockFile.absolutePath}"
+    }
+    return lines.drop(start + 1)
+        .first { it.trim().startsWith("version = ") }
+        .substringAfter("version = ")
+        .trim()
+        .trim('"')
+}
+
 val buildTsbridgeJni = tasks.register<CargoNdkTask>("buildTsbridgeJni") {
     group = "build"
     description = "Compiles tsbridge-jni from the submodule into a jniLibs directory."
@@ -162,6 +194,7 @@ val buildTsbridgeJni = tasks.register<CargoNdkTask>("buildTsbridgeJni") {
     // Resolved when the task runs, not while Gradle configures: a checkout
     // without an Android SDK can still run `tasks`, `clean`, or a lint check.
     ndkHome.set(providers.provider { selectedNdk().absolutePath })
+    sdkHome.set(providers.provider { androidSdkDir().absolutePath })
     // Deliberately the submodule's own `target/`, not `app/build`: `gradlew clean`
     // deletes `app/build`, and throwing away the Rust dependency cache turns a
     // 80-second incremental build into a five-minute cold one. It is ignored by
@@ -243,6 +276,18 @@ android {
 }
 
 dependencies {
+    // The Kotlin/Java half of the TLS verifier reqwest uses on Android. The
+    // Rust half is inside libtsbridge_jni.so; the JNI shim initializes this
+    // component with the JVM context at load, before the account's first HTTPS
+    // request. Without it the verifier panics and a login never finishes.
+    implementation(
+        files(
+            "libs/rustls-platform-verifier-${
+                rustlsVerifierAndroidVersion(tsbridgeDir.resolve("Cargo.lock"))
+            }.aar",
+        ),
+    )
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)

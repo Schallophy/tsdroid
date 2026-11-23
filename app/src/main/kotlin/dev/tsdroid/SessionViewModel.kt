@@ -5,11 +5,14 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import dev.tsdroid.core.AccountClient
+import dev.tsdroid.core.AccountNotice
 import dev.tsdroid.core.AudioBridge
 import dev.tsdroid.core.NativeClient
 import dev.tsdroid.core.ServerConfig
 import dev.tsdroid.data.ServerStore
 import dev.tsdroid.data.Settings
+import dev.tsdroid.model.AccountState
 import dev.tsdroid.model.ChatMessage
 import dev.tsdroid.model.ChatScope
 import dev.tsdroid.model.FileEntry
@@ -22,6 +25,7 @@ import dev.tsdroid.model.User
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -75,6 +79,18 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     private val servers = ServerStore(application)
     private val audio = AudioBridge(application)
 
+    /**
+     * The myTeamSpeak side, alive for the whole app rather than for one
+     * connection: it signs in from a remembered credential before the user has
+     * picked a server, and its handle is handed to the connection so the
+     * myTS ID can be announced in `clientinit`.
+     */
+    private val account = AccountClient(application)
+
+    val accountState: StateFlow<AccountState> = account.state
+    val accountError: StateFlow<String?> = account.startError
+    val accountNotices: SharedFlow<AccountNotice> = account.notices
+
     private var client: NativeClient? = null
     private val messageKey = AtomicLong(0)
 
@@ -89,8 +105,10 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         audio.micGain = settings.micGain
+        audio.outputGain = settings.outputGain
         audio.noiseSuppressionEnabled = settings.noiseSuppression
         audio.bluetoothMicEnabled = settings.bluetoothMic
+        account.start()
     }
 
     // ── session lifecycle ───────────────────────────────────────────────────
@@ -104,7 +122,10 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         CrashLog.markPhase(app, "正在连接 ${config.address}（原生库创建前）")
         _ui.value = SessionUiState(status = SessionStatus.Connecting, config = config)
 
-        val session = NativeClient(config) { identity -> servers.writeIdentity(identity) }
+        val session = NativeClient(
+            config,
+            if (config.announceMyts) account.handle else 0L,
+        ) { identity -> servers.writeIdentity(identity) }
         val started = try {
             session.start()
         } catch (t: Throwable) {
@@ -241,6 +262,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         audio.stop()
         client?.close()
         client = null
+        account.close()
     }
 
     // ── commands ────────────────────────────────────────────────────────────
@@ -359,9 +381,33 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         audio.refreshRoute()
     }
 
+    /** Playback boost belongs to this device, so it never round-trips the core. */
+    fun applyOutputGain(gain: Float) {
+        settings.outputGain = gain
+        audio.outputGain = gain.coerceIn(0.5f, 2f)
+    }
+
     fun settings(): Settings = settings
 
     fun serverStore(): ServerStore = servers
+
+    // ── account ─────────────────────────────────────────────────────────────
+
+    /**
+     * A null return means the command was accepted; its result arrives through
+     * [accountState] and [accountNotices]. A non-null return is an argument
+     * error the caller can show without waiting for the worker.
+     */
+    fun accountLogin(email: String, password: String, otp: String = ""): String? =
+        account.login(email.trim(), password, otp.trim())
+
+    fun accountLogout(): String? = account.logout()
+
+    fun accountRefresh(): String? = account.refreshAccount()
+
+    fun accountBackup(): String? = account.backup()
+
+    fun accountHasRememberedLogin(): Boolean = account.hasRememberedLogin()
 
     // ── files ───────────────────────────────────────────────────────────────
 

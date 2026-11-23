@@ -41,6 +41,8 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.tsdroid.core.ServerConfig
+import dev.tsdroid.ui.AccountScreen
+import dev.tsdroid.ui.ConnectPrefill
 import dev.tsdroid.ui.ConnectScreen
 import dev.tsdroid.ui.SessionScreen
 import dev.tsdroid.ui.SettingsScreen
@@ -68,6 +70,8 @@ private fun App() {
     val view = LocalView.current
     val session: SessionViewModel = viewModel()
     val ui by session.ui.collectAsStateWithLifecycle()
+    val account by session.accountState.collectAsStateWithLifecycle()
+    val accountError by session.accountError.collectAsStateWithLifecycle()
 
     // The manifest declares `configChanges="…|uiMode"`, so switching the system
     // theme does not recreate the Activity — `enableEdgeToEdge()` therefore never
@@ -83,6 +87,8 @@ private fun App() {
     }
 
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    var accountOpen by rememberSaveable { mutableStateOf(false) }
+    var prefill by remember { mutableStateOf<ConnectPrefill?>(null) }
     var pendingConfig by remember { mutableStateOf<ServerConfig?>(null) }
     var crashLog by remember { mutableStateOf<String?>(null) }
 
@@ -130,7 +136,32 @@ private fun App() {
     }
 
     when {
+        // The account has its own native handle and works with no server, so
+        // this branch does not depend on the session status at all.
+        accountOpen -> {
+            BackHandler { accountOpen = false }
+            AccountScreen(
+                vm = session,
+                onBack = { accountOpen = false },
+                onUseBookmark = { bookmark, notice ->
+                    prefill = ConnectPrefill(
+                        address = bookmark.connectAddress,
+                        nickname = bookmark.nickname.ifBlank { account.username },
+                        channel = bookmark.defaultChannel,
+                        announceMyts = bookmark.sendMytsid,
+                        notice = notice,
+                    )
+                    accountOpen = false
+                },
+            )
+        }
+
         ui.status == SessionStatus.Idle -> ConnectScreen(
+            account = account,
+            accountError = accountError,
+            onOpenAccount = { accountOpen = true },
+            prefill = prefill,
+            onPrefillApplied = { prefill = null },
             onConnect = { config ->
                 if (hasMicPermission()) {
                     session.connect(config)

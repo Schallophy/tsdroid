@@ -17,6 +17,14 @@ class Settings(context: Context) {
         get() = prefs.getFloat(KEY_MIC_GAIN, 1.0f)
         set(value) = prefs.edit().putFloat(KEY_MIC_GAIN, value.coerceIn(0.2f, 4f)).apply()
 
+    /**
+     * Linear playback boost. 1.0 is untouched; above that a soft-knee limiter
+     * keeps a loud talker from wrapping around to distortion.
+     */
+    var outputGain: Float
+        get() = prefs.getFloat(KEY_OUTPUT_GAIN, 1.0f).coerceIn(0.5f, 2f)
+        set(value) = prefs.edit().putFloat(KEY_OUTPUT_GAIN, value.coerceIn(0.5f, 2f)).apply()
+
     var noiseSuppression: Boolean
         get() = prefs.getBoolean(KEY_NOISE, true)
         set(value) = prefs.edit().putBoolean(KEY_NOISE, value).apply()
@@ -32,6 +40,7 @@ class Settings(context: Context) {
 
     private companion object {
         const val KEY_MIC_GAIN = "mic_gain"
+        const val KEY_OUTPUT_GAIN = "output_gain"
         const val KEY_NOISE = "noise_suppression"
         const val KEY_BLUETOOTH_MIC = "bluetooth_mic"
         const val KEY_AWAY_MESSAGE = "away_message"

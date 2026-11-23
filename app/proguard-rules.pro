@@ -2,3 +2,7 @@
 -keepclasseswithmembernames,includedescriptorclasses class dev.tsdroid.core.Native {
     native <methods>;
 }
+
+# rustls-platform-verifier is called from Rust through JNI, which R8 cannot see;
+# without this it looks like dead code and is stripped from release builds.
+-keep, includedescriptorclasses class org.rustls.platformverifier.** { *; }

@@ -169,6 +169,19 @@ sealed interface ServerEvent {
         override val type = "transfer_error"
     }
 
+    /**
+     * One finished myTeamSpeak command. The account pane reads the same result
+     * from `snapshot.account`; this event is how a shell notices completion
+     * without comparing snapshots.
+     */
+    data class AccountStatus(
+        val command: String,
+        val ok: Boolean,
+        val message: String,
+    ) : ServerEvent {
+        override val type = "account_status"
+    }
+
     data class Unknown(override val type: String) : ServerEvent
 
     /** One line for the debug log; also the quickest way to eyeball a build. */
@@ -201,6 +214,7 @@ sealed interface ServerEvent {
         is TransferProgress -> "transfer $name ${done * 100 / total.coerceAtLeast(1)}%"
         is TransferDone -> "transfer done: $name"
         is TransferFailed -> "transfer failed: $name ($message)"
+        is AccountStatus -> if (ok) "account $command: ok" else "account $command: $message"
         is Unknown -> "? $type"
     }
 
@@ -346,6 +360,12 @@ sealed interface ServerEvent {
                 )
 
                 "transfer_error" -> TransferFailed(str(map, "name"), str(map, "message"))
+
+                "account_status" -> AccountStatus(
+                    command = str(map, "command"),
+                    ok = bool(map, "ok"),
+                    message = str(map, "message"),
+                )
 
                 else -> Unknown(type)
             }

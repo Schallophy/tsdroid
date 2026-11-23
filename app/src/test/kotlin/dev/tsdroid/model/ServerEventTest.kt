@@ -329,6 +329,12 @@ class ServerEventTest {
             "total" to 10L,
         ),
         "transfer_error" to mapOf("type" to "transfer_error", "name" to "f", "message" to "m"),
+        "account_status" to mapOf(
+            "type" to "account_status",
+            "command" to "account_login",
+            "ok" to true,
+            "message" to "",
+        ),
     )
 
     private companion object {

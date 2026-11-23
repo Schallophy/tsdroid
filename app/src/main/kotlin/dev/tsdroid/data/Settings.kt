@@ -33,6 +33,15 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_BLUETOOTH_MIC, false)
         set(value) = prefs.edit().putBoolean(KEY_BLUETOOTH_MIC, value).apply()
 
+    /**
+     * Which signed client version to announce: `latest` (default), `debug` or
+     * `ancient`. The server checks the announced text against its signature,
+     * so this is a profile name, never free text.
+     */
+    var versionProfile: String
+        get() = prefs.getString(KEY_VERSION_PROFILE, "latest").orEmpty()
+        set(value) = prefs.edit().putString(KEY_VERSION_PROFILE, value).apply()
+
     /** Away message restored on the next connect. */
     var awayMessage: String
         get() = prefs.getString(KEY_AWAY_MESSAGE, "").orEmpty()
@@ -44,5 +53,6 @@ class Settings(context: Context) {
         const val KEY_NOISE = "noise_suppression"
         const val KEY_BLUETOOTH_MIC = "bluetooth_mic"
         const val KEY_AWAY_MESSAGE = "away_message"
+        const val KEY_VERSION_PROFILE = "version_profile"
     }
 }

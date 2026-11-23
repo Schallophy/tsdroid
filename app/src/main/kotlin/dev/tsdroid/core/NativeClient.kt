@@ -32,6 +32,8 @@ data class ServerConfig(
     val channel: String = "",
     /** Unlocks the channel the client lands in; unrelated to [password]. */
     val channelPassword: String = "",
+    /** The announced client version profile: `latest`, `debug` or `ancient`. */
+    val version: String = "latest",
     /** A TS3 `counterVkey` identity from a previous session, or "" for a fresh one. */
     val identityIni: String = "",
     /**
@@ -114,6 +116,7 @@ class NativeClient(
                     config.password.ifEmpty { null },
                     config.channel.ifEmpty { null },
                     config.channelPassword.ifEmpty { null },
+                    config.version,
                 )
             } else {
                 Native.nativeCreate(
@@ -123,6 +126,7 @@ class NativeClient(
                     config.password.ifEmpty { null },
                     config.channel.ifEmpty { null },
                     config.channelPassword.ifEmpty { null },
+                    config.version,
                 )
             }
         } catch (t: Throwable) {

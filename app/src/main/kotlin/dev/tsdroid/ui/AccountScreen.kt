@@ -99,6 +99,31 @@ fun AccountScreen(
         actionError = command()
     }
 
+    /**
+     * Passwords were fetched once after login/refresh; a click is a cache
+     * lookup. A missing entry means that fetch has not succeeded yet.
+     */
+    fun choose(uuid: String, bookmark: AccountBookmark) {
+        if (!bookmark.hasServerPassword && !bookmark.hasChannelPassword) {
+            onUseBookmark(bookmark, null)
+            return
+        }
+        val secrets = vm.accountBookmarkSecrets(uuid)
+        if (secrets == null) {
+            actionError = "书签密码还没同步好，请稍后重试或点“刷新”"
+            return
+        }
+        val missing = (bookmark.hasServerPassword && secrets.serverPassword.isNullOrEmpty()) ||
+            (bookmark.hasChannelPassword && secrets.channelPassword.isNullOrEmpty())
+        onUseBookmark(
+            bookmark.copy(
+                serverPassword = secrets.serverPassword,
+                channelPassword = secrets.channelPassword,
+            ),
+            if (missing) "该书签的密码未能读取，请手动填写" else null,
+        )
+    }
+
     val busy = account.busy
     val errorLine = actionError ?: account.lastError.ifEmpty { null }
 
@@ -140,7 +165,7 @@ fun AccountScreen(
                 onRefresh = { run { vm.accountRefresh() } },
                 onBackup = { run { vm.accountBackup() } },
                 onLogout = { confirmLogout = true },
-                onUseBookmark = onUseBookmark,
+                onChooseBookmark = { uuid, bookmark -> choose(uuid, bookmark) },
             )
         } else {
             AccountSection("登录") {
@@ -255,7 +280,7 @@ private fun SignedIn(
     onRefresh: () -> Unit,
     onBackup: () -> Unit,
     onLogout: () -> Unit,
-    onUseBookmark: (AccountBookmark, String?) -> Unit,
+    onChooseBookmark: (String, AccountBookmark) -> Unit,
 ) {
     AccountSection("账号") {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -317,6 +342,13 @@ private fun SignedIn(
     }
 
     AccountSection("云书签") {
+        if (busy && account.command == "sync_list") {
+            Text(
+                text = "正在同步书签密码…",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         val rows = account.bookmarkRows()
         if (rows.isEmpty()) {
             Text(
@@ -338,16 +370,7 @@ private fun SignedIn(
                 BookmarkRow(
                     row = row,
                     onUse = { bookmark ->
-                        val notice = when {
-                            bookmark.hasServerPassword && bookmark.hasChannelPassword ->
-                                "该书签的服务器和频道都设了密码，填入后请手动补上。"
-                            bookmark.hasServerPassword ->
-                                "该书签有服务器密码，填入后请手动补上。"
-                            bookmark.hasChannelPassword ->
-                                "该书签有频道密码，填入后请手动补上。"
-                            else -> null
-                        }
-                        onUseBookmark(bookmark, notice)
+                        if (!busy) onChooseBookmark(row.uuid, bookmark)
                     },
                 )
             }

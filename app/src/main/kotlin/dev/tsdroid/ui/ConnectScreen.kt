@@ -68,6 +68,9 @@ data class ConnectPrefill(
     val channel: String,
     /** The bookmark's `sendMytsid`; null keeps the current/default choice. */
     val announceMyts: Boolean? = null,
+    /** A password revealed for this use; null falls back to the saved one. */
+    val serverPassword: String? = null,
+    val channelPassword: String? = null,
     val notice: String? = null,
 )
 
@@ -112,9 +115,14 @@ fun ConnectScreen(
         val incoming = prefill ?: return@LaunchedEffect
         address = incoming.address
         nickname = incoming.nickname
-        serverPassword = store.passwordFor(incoming.address).orEmpty()
+        // A revealed bookmark password wins; otherwise reuse the one saved for
+        // this address, the same way picking a recent server does.
+        serverPassword = incoming.serverPassword ?: store.passwordFor(incoming.address).orEmpty()
         channel = incoming.channel
-        if (incoming.channel.isNotBlank()) advanced = true
+        password = incoming.channelPassword.orEmpty()
+        if (incoming.channel.isNotBlank() || !incoming.channelPassword.isNullOrEmpty()) {
+            advanced = true
+        }
         incoming.announceMyts?.let { announceMyts = it }
         prefillNotice = incoming.notice
         onPrefillApplied()

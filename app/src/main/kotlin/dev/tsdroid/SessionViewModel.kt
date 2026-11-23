@@ -13,6 +13,7 @@ import dev.tsdroid.core.ServerConfig
 import dev.tsdroid.data.ServerStore
 import dev.tsdroid.data.Settings
 import dev.tsdroid.model.AccountState
+import dev.tsdroid.model.BookmarkSecrets
 import dev.tsdroid.model.ChatMessage
 import dev.tsdroid.model.ChatScope
 import dev.tsdroid.model.FileEntry
@@ -406,6 +407,13 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun accountRefresh(): String? = account.refreshAccount()
 
     fun accountBackup(): String? = account.backup()
+
+    /**
+     * The passwords cached after the last login/refresh, or null when the sync
+     * has not produced them (yet, or because the account read failed).
+     */
+    fun accountBookmarkSecrets(uuid: String): BookmarkSecrets? =
+        account.bookmarkSecrets(uuid)
 
     fun accountHasRememberedLogin(): Boolean = account.hasRememberedLogin()
 

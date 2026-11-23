@@ -26,7 +26,7 @@ nothing here has to be re-derived to support another desktop.
 | **Files** | browse a channel, download, upload, live transfer progress |
 | **Audio** | noise suppression, echo cancellation, mic gain, speaker boost, optional Bluetooth mic |
 | **Identity** | the session's key is written to `identity.ini`, so the UID survives a restart |
-| **Account** | myTeamSpeak login (password + optional OTP), remembered login, cloud bookmarks that fill the connect form, backup, logout; the myTS ID is announced on connect |
+| **Account** | myTeamSpeak login (password + optional OTP), remembered login, cloud bookmarks that fill the connect form (passwords read on demand), backup, logout; the myTS ID is announced on connect |
 
 Deliberately absent: whisper (密聊), per-user volume, permission editing. Each of
 those needs either a private API or another protocol layer, and shipping a
@@ -38,6 +38,12 @@ to the connection, where the core signs the per-connection myTeamSpeak proof
 (`clientinit`). The remembered login and sync baseline live in the app's private
 `files/account/` directory; logging out deletes the credential, and that whole
 directory is excluded from Android auto-backup and device transfer.
+
+Bookmark passwords are presence-only in the normal polled snapshot. After a
+login or refresh the account client reads the list once with `revealSecrets`,
+keeps the values in its own memory cache, and immediately re-lists without the
+flag; a bookmark click is then a synchronous lookup, and the secret never stays
+in the state the UI polls.
 
 ## Layout
 

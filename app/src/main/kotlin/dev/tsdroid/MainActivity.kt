@@ -149,6 +149,8 @@ private fun App() {
                         nickname = bookmark.nickname.ifBlank { account.username },
                         channel = bookmark.defaultChannel,
                         announceMyts = bookmark.sendMytsid,
+                        serverPassword = bookmark.serverPassword,
+                        channelPassword = bookmark.channelPassword,
                         notice = notice,
                     )
                     accountOpen = false

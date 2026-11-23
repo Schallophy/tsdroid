@@ -136,6 +136,17 @@ data class AccountBookmark(
     }
 }
 
+/**
+ * The two password values of one bookmark, held in memory only.
+ *
+ * The account client reads them once after a login or refresh and keeps them
+ * out of the polled snapshot; a bookmark click reads this cache synchronously.
+ */
+data class BookmarkSecrets(
+    val serverPassword: String?,
+    val channelPassword: String?,
+)
+
 @Serializable
 data class AccountHierarchy(
     val entries: List<AccountEntry> = emptyList(),

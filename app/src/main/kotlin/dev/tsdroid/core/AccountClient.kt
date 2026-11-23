@@ -2,6 +2,7 @@ package dev.tsdroid.core
 
 import android.content.Context
 import dev.tsdroid.model.AccountState
+import dev.tsdroid.model.BookmarkSecrets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -15,9 +16,13 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -50,6 +55,18 @@ class AccountClient(context: Context) : AutoCloseable {
     @Volatile
     private var ptr: Long = 0
     private var pollJob: Job? = null
+
+    /** Serialises our own sync_list calls: the password read and its scrub. */
+    private val syncMutex = Mutex()
+
+    /** Advanced when a sync_list completion arrives; waiters key off it. */
+    private val syncGeneration = MutableStateFlow(0L)
+    @Volatile
+    private var lastSyncNotice: AccountNotice? = null
+
+    /** Passwords by bookmark uuid. Memory only; never in the polled snapshot. */
+    @Volatile
+    private var secrets: Map<String, BookmarkSecrets> = emptyMap()
 
     private val accountDir = File(appContext.filesDir, "account")
     private val credentialFile = File(accountDir, "login.json")
@@ -134,19 +151,36 @@ class AccountClient(context: Context) : AutoCloseable {
         val batch = Native.nativePoll(ptr) ?: return
         for (map in batch) {
             if (map["type"] != "account_status") continue
-            _notices.tryEmit(
-                AccountNotice(
-                    command = map["command"] as? String ?: "",
-                    ok = map["ok"] as? Boolean ?: false,
-                    message = map["message"] as? String ?: "",
-                ),
+            val notice = AccountNotice(
+                command = map["command"] as? String ?: "",
+                ok = map["ok"] as? Boolean ?: false,
+                message = map["message"] as? String ?: "",
             )
+            _notices.tryEmit(notice)
+
+            if (notice.command == "sync_list") {
+                lastSyncNotice = notice
+                syncGeneration.value += 1
+            }
+            if (notice.ok && notice.command == "account_login") {
+                // A successful login invalidates whatever the previous account
+                // had; the fetch below fills it for this one.
+                secrets = emptyMap()
+                scope.launch { syncBookmarkSecrets() }
+            }
+            if (notice.ok && notice.command == "account_refresh") {
+                scope.launch { syncBookmarkSecrets() }
+            }
+            if (notice.ok && notice.command == "account_logout") {
+                secrets = emptyMap()
+            }
         }
     }
 
     private fun refresh() {
         val snapshot = Native.nativeSnapshot(ptr) ?: return
         val parsed = json.decodeFromString<SnapshotEnvelope>(snapshot).account
+        if (!parsed.loggedIn && secrets.isNotEmpty()) secrets = emptyMap()
         if (parsed != _state.value) _state.value = parsed
     }
 
@@ -185,13 +219,72 @@ class AccountClient(context: Context) : AutoCloseable {
             },
         )
 
-    fun logout(): String? = exec("account_logout")
+    fun logout(): String? {
+        val error = exec("account_logout")
+        if (error == null) secrets = emptyMap()
+        return error
+    }
 
     fun refreshAccount(): String? = exec("account_refresh", mapOf("revealSecrets" to false))
 
-    fun listBookmarks(): String? = exec("sync_list", mapOf("revealSecrets" to false))
-
     fun backup(): String? = exec("sync_backup")
+
+    /** Passwords for one bookmark, or null when the cache has no entry yet. */
+    fun bookmarkSecrets(uuid: String): BookmarkSecrets? = secrets[uuid]
+
+    /**
+     * Reads the whole item list once with passwords and keeps them here.
+     *
+     * Runs after a login or a refresh, so a bookmark click is a synchronous
+     * cache lookup. The values never stay in the polled snapshot: the follow-up
+     * list without `revealSecrets` puts it back to presence-only, while the
+     * cache above remains the only copy the UI uses.
+     */
+    private suspend fun syncBookmarkSecrets() {
+        syncMutex.withLock {
+            val notice = syncListLocked(reveal = true)
+            if (notice?.ok == true) {
+                // The account_status event is pushed after the report, so a
+                // parse here sees the revealed items instead of racing the
+                // 700 ms poll.
+                refresh()
+                val revealed = state.value
+                if (revealed.loggedIn && revealed.lastError.isEmpty()) {
+                    secrets = revealed.items.mapNotNull { item ->
+                        val bookmark = item.bookmark ?: return@mapNotNull null
+                        if (!bookmark.hasServerPassword && !bookmark.hasChannelPassword) {
+                            return@mapNotNull null
+                        }
+                        item.uuid to BookmarkSecrets(
+                            serverPassword = if (bookmark.hasServerPassword) {
+                                bookmark.serverPassword
+                            } else {
+                                null
+                            },
+                            channelPassword = if (bookmark.hasChannelPassword) {
+                                bookmark.channelPassword
+                            } else {
+                                null
+                            },
+                        )
+                    }.toMap()
+                }
+            }
+            // Presence-only for the snapshot; the cache keeps what the UI needs.
+            syncListLocked(reveal = false)
+        }
+    }
+
+    /**
+     * One sync_list while [syncMutex] is held. Returns the completion notice,
+     * or null when the command was rejected or never reported.
+     */
+    private suspend fun syncListLocked(reveal: Boolean, timeoutMs: Long = 60_000): AccountNotice? {
+        val generation = syncGeneration.value
+        if (exec("sync_list", mapOf("revealSecrets" to reveal)) != null) return null
+        withTimeoutOrNull(timeoutMs) { syncGeneration.first { it > generation } }
+        return lastSyncNotice
+    }
 
     @Synchronized
     override fun close() {

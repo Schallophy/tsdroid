@@ -301,6 +301,9 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    // The navigation bar uses Chat/Folder/ViewList, which are not in the small
+    // core icon set. R8 strips the ones this app never references in release.
+    implementation(libs.androidx.material.icons.extended)
 
     debugImplementation(libs.androidx.ui.tooling)
 

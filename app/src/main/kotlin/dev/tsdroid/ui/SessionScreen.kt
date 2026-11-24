@@ -1,6 +1,5 @@
 package dev.tsdroid.ui
 
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,7 +27,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,23 +44,22 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.tsdroid.R
 import dev.tsdroid.SessionStatus
-import dev.tsdroid.SessionTab
 import dev.tsdroid.SessionViewModel
-import dev.tsdroid.model.ChatScope
 import dev.tsdroid.model.User
 import dev.tsdroid.ui.components.ExitGlyph
 import dev.tsdroid.ui.components.IconPlate
-import dev.tsdroid.ui.components.PillTabs
 import dev.tsdroid.ui.components.StatusDot
 import dev.tsdroid.ui.components.inputStatusIcon
 import dev.tsdroid.ui.components.outputStatusIcon
 import dev.tsdroid.ui.sheets.UserSheet
 
 /**
- * The client proper: one screen, three tabs, and a control bar that never moves.
+ * The session content: the server header and the active tab's content.
  *
- * The mic bar is fixed because it is the thing people reach for without looking;
- * everything else is allowed to scroll under it.
+ * The tab selection and the microphone bar live outside this screen — the
+ * bottom navigation replaces the old in-screen pill tabs, and the mic bar is
+ * composed by the app shell above the bottom nav. What remains here is what
+ * only the session itself owns: the server header and the three tab contents.
  */
 @Composable
 fun SessionScreen(
@@ -113,56 +109,29 @@ fun SessionScreen(
                 )
             }
 
-            PillTabs(
-                items = SessionTab.entries,
-                selected = ui.tab,
-                label = {
-                    when (it) {
-                        SessionTab.Channels -> "频道"
-                        SessionTab.Chat -> "聊天"
-                        SessionTab.Files -> "文件"
-                    }
-                },
-                badge = {
-                    when (it) {
-                        SessionTab.Chat -> ui.unreadTotal
-                        else -> 0
-                    }
-                },
-                onSelect = vm::selectTab,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            )
-
             Box(modifier = Modifier.weight(1f)) {
                 when (ui.tab) {
-                    SessionTab.Channels -> ChannelsTab(
+                    dev.tsdroid.SessionTab.Channels -> ChannelsTab(
                         ui = ui,
                         ownTalking = ownTalking,
                         onJoinChannel = vm::joinChannel,
                         onSelectUser = { sheetUser = it },
                     )
 
-                    SessionTab.Chat -> ChatTab(
+                    dev.tsdroid.SessionTab.Chat -> ChatTab(
                         ui = ui,
                         onScope = vm::selectScope,
                         onSend = vm::sendMessage,
                     )
 
-                    SessionTab.Files -> FilesTab(
+                    dev.tsdroid.SessionTab.Files -> FilesTab(
                         ui = ui,
                         onRefresh = vm::refreshFiles,
                         onDownload = vm::downloadFile,
-                        onUpload = { uri: Uri -> ui.filesChannelId?.let { vm.uploadFile(uri, it) } },
+                        onUpload = { uri: android.net.Uri -> ui.filesChannelId?.let { vm.uploadFile(uri, it) } },
                     )
                 }
             }
-
-            MicBar(
-                ui = ui,
-                level = micLevel,
-                onMic = vm::toggleMic,
-                onSpeaker = vm::toggleSpeaker,
-            )
         }
     }
 
@@ -215,8 +184,8 @@ private fun ConnectErrorBanner(message: String, onRetry: () -> Unit, onEdit: () 
             horizontalArrangement = Arrangement.End,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            TextButton(onClick = onEdit) { Text("修改设置") }
-            TextButton(onClick = onRetry) { Text("重试") }
+            androidx.compose.material3.TextButton(onClick = onEdit) { Text("修改设置") }
+            androidx.compose.material3.TextButton(onClick = onRetry) { Text("重试") }
         }
     }
 }
@@ -296,11 +265,14 @@ private fun ServerHeader(
  *
  * The level ring is drawn from the capture peak rather than from server audio, so
  * it responds even when nobody else is talking. Nothing else lives here: settings
- * already has a button in the header, and a second entry point made the bar look
+ * already has a tab in the bottom nav, and a second entry point made the bar look
  * like a toolbar instead of a control people reach for without looking.
+ *
+ * Composed by the app shell above the bottom navigation bar, so it stays fixed
+ * at the bottom of the content area and never scrolls away.
  */
 @Composable
-private fun MicBar(
+fun MicBar(
     ui: dev.tsdroid.SessionUiState,
     level: Float,
     onMic: () -> Unit,

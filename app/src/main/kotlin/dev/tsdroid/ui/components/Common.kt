@@ -188,8 +188,11 @@ fun StatusDot(color: Color, size: Dp = 7.dp, modifier: Modifier = Modifier) {
  * them on `surfaceVariant` therefore works in the dark theme and washes them out
  * in the light one, so the plate is one fixed dark colour in both. It reads as a
  * badge rather than as part of the surface, which is what these are.
+ *
+ * The plate matches the neutral near-black surface steps so the icons read as
+ * marks on the same ink the rest of the app is drawn on.
  */
-val IconPlate = Color(0xFF1E252E)
+val IconPlate = Color(0xFF161618)
 
 /**
  * Which of TeamSpeak's input icons applies, or `null` when the microphone is

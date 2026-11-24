@@ -1,23 +1,31 @@
 package dev.tsdroid.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -25,6 +33,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -33,20 +42,33 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.tsdroid.SessionViewModel
-import dev.tsdroid.ui.components.formatBytes
+import dev.tsdroid.model.AccountBookmark
+import dev.tsdroid.model.AccountRow
+import dev.tsdroid.model.AccountState
+import dev.tsdroid.ui.components.MemberAvatar
 
 /**
- * Session settings, grouped by what they affect rather than by data type.
+ * Settings, grouped into five sections: 通用 / 语音 / 聊天 / 文件 / 账号.
  *
- * The audio group explains its trade-off inline: the Bluetooth microphone option
- * forces the phone into call mode, which narrow-bands everything else it plays —
- * a setting people should turn on knowingly.
+ * Each section is one rounded container, the same card language the rest of
+ * the app uses. The account is the last section: it holds the login, the
+ * read-only identity display and the bookmark management — the identity is
+ * never a choice the user makes here, it is simply shown as the one the
+ * client automatically adopted.
  */
 @Composable
 fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
+    val account by vm.accountState.collectAsStateWithLifecycle()
     val settings = remember { vm.settings() }
+
     var nickname by remember { mutableStateOf("") }
     var away by remember { mutableStateOf(false) }
     var awayMessage by remember { mutableStateOf(settings.awayMessage) }
@@ -55,14 +77,53 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
     var noise by remember { mutableStateOf(settings.noiseSuppression) }
     var bluetooth by remember { mutableStateOf(settings.bluetoothMic) }
     var token by remember { mutableStateOf(settings.privilegeKey) }
+    var filesEnabled by remember { mutableStateOf(settings.filesTabEnabled) }
+
+    // Account action notices
+    var actionError by remember { mutableStateOf<String?>(null) }
+    var actionInfo by remember { mutableStateOf<String?>(null) }
+    var confirmLogout by remember { mutableStateOf(false) }
+
+    // Email/password for the login form inside the account section
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var otp by remember { mutableStateOf("") }
+    var showOtp by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        vm.accountNotices.collect { notice ->
+            if (notice.ok) {
+                actionError = null
+                actionInfo = when (notice.command) {
+                    "account_login" -> "已登录 myTeamSpeak"
+                    "account_resume" -> "已从本机凭据恢复登录"
+                    "account_logout" -> "已退出登录，本机记住的凭据已删除"
+                    "account_refresh" -> "已从账号服务器刷新"
+                    "sync_backup" -> notice.message.ifEmpty { "备份完成" }
+                    else -> null
+                }
+            } else {
+                actionInfo = null
+                actionError = notice.message.ifEmpty { "账号操作失败" }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        // Keep `pickedIdentity` current without waiting for a connect.
+        run { vm.accountRefresh() }
+    }
+
+    fun run(command: () -> String?) {
+        actionInfo = null
+        actionError = command()
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            // Settings is reached from the session screen, which is edge-to-edge;
-            // without these the title sits under the status bar and the last row
-            // under the gesture bar.
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
             .imePadding(),
@@ -77,7 +138,8 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
             Text("设置", style = MaterialTheme.typography.titleLarge)
         }
 
-        Section("身份") {
+        // ── 通用 ──────────────────────────────────────────────────────────
+        Section("通用") {
             OutlinedTextField(
                 value = nickname,
                 onValueChange = { nickname = it },
@@ -97,9 +159,11 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
                     modifier = Modifier.align(Alignment.CenterVertically),
                 )
             }
-        }
 
-        Section("服务器权限") {
+            Text(
+                text = "服务器权限",
+                style = MaterialTheme.typography.labelLarge,
+            )
             Text(
                 text = "首次连接兑换权限密钥（服务器启动日志里的 token=…）。它只对这一次生效，" +
                     "把密钥对应的分组授予当前 UID；之后权限就绑在这个身份上。",
@@ -117,38 +181,65 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            // Clearing saved passwords lives in General: it is a
+            // once-in-a-while action, and putting it next to the password field
+            // on the home screen invites mis-taps that force a retype.
+            val store = remember { vm.serverStore() }
+            var hasSaved by remember { mutableStateOf(store.hasPasswords()) }
+            var confirmClear by remember { mutableStateOf(false) }
             Text(
-                text = "当前身份所在分组：" +
-                    (vm.ui.value.state.ownServerGroups.joinToString("、") { it.name }
-                        .ifEmpty { "未连接或没有" }),
-                style = MaterialTheme.typography.labelSmall,
+                text = "服务器密码用 Android Keystore 持有的密钥加密后存放在本机。换机、抹机或从备份恢复后密文解不开，会当作没保存过，需要重新输入。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(
+                onClick = { confirmClear = true },
+                enabled = hasSaved,
+            ) {
+                Text(if (hasSaved) "清除已保存的密码" else "没有保存的密码")
+            }
+            if (confirmClear) {
+                AlertDialog(
+                    onDismissRequest = { confirmClear = false },
+                    title = { Text("清除已保存的密码？") },
+                    text = { Text("下次连接这些服务器要重新输入密码。服务器地址和昵称不受影响。") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                store.clearPasswords()
+                                hasSaved = false
+                                confirmClear = false
+                            },
+                        ) { Text("清除") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { confirmClear = false }) { Text("取消") }
+                    },
+                )
+            }
+
+            Text("关于", style = MaterialTheme.typography.labelLarge)
+            Text(
+                text = "协议核心：Rust + tsclientlib（钉在固定提交）",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "语音：Opus 24 kbps 单声道，采集与播放由 Android 音频栈负责",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "本应用包含 tsclientlib（Apache-2.0 OR MIT）与 Opus（BSD）等第三方组件，" +
+                    "完整许可见安装包 assets/licenses/NOTICE",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        Section("状态") {
-            ToggleRow(
-                label = "离开",
-                hint = "别人会看到你处于离开状态",
-                checked = away,
-                onChange = {
-                    away = it
-                    vm.setAway(it, awayMessage)
-                },
-            )
-            if (away) {
-                OutlinedTextField(
-                    value = awayMessage,
-                    onValueChange = { awayMessage = it },
-                    label = { Text("离开说明") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Button(onClick = { vm.setAway(true, awayMessage) }) { Text("更新说明") }
-            }
-        }
-
-        Section("音频") {
+        // ── 语音 ──────────────────────────────────────────────────────────
+        Section("语音") {
             ToggleRow(
                 label = "麦克风降噪",
                 hint = "系统级噪声抑制，开会时更干净",
@@ -199,71 +290,415 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
             }
         }
 
-        Section("安全") {
-            // Clearing lives here rather than on the connect screen: it is a
-            // once-in-a-while action, and putting it next to the password field
-            // invites mis-taps that force a retype.
-            val store = remember { vm.serverStore() }
-            var hasSaved by remember { mutableStateOf(store.hasPasswords()) }
-            var confirmClear by remember { mutableStateOf(false) }
-
-            Text(
-                text = "服务器密码用 Android Keystore 持有的密钥加密后存放在本机。换机、抹机或从备份恢复后密文解不开，会当作没保存过，需要重新输入。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        // ── 聊天 ──────────────────────────────────────────────────────────
+        Section("聊天") {
+            ToggleRow(
+                label = "离开",
+                hint = "别人会看到你处于离开状态",
+                checked = away,
+                onChange = {
+                    away = it
+                    vm.setAway(it, awayMessage)
+                },
             )
-            TextButton(
-                onClick = { confirmClear = true },
-                enabled = hasSaved,
-            ) {
-                Text(if (hasSaved) "清除已保存的密码" else "没有保存的密码")
-            }
-            if (confirmClear) {
-                AlertDialog(
-                    onDismissRequest = { confirmClear = false },
-                    title = { Text("清除已保存的密码？") },
-                    text = { Text("下次连接这些服务器要重新输入密码。服务器地址和昵称不受影响。") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                store.clearPasswords()
-                                hasSaved = false
-                                confirmClear = false
-                            },
-                        ) { Text("清除") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { confirmClear = false }) { Text("取消") }
-                    },
+            if (away) {
+                OutlinedTextField(
+                    value = awayMessage,
+                    onValueChange = { awayMessage = it },
+                    label = { Text("离开说明") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
                 )
+                Button(onClick = { vm.setAway(true, awayMessage) }) { Text("更新说明") }
             }
         }
 
-        Section("关于") {
+        // ── 文件 ──────────────────────────────────────────────────────────
+        Section("文件") {
             Text(
-                text = "协议核心：Rust + tsclientlib（钉在固定提交）",
+                text = "文件传输是低频功能，默认不在底部导航中显示文件入口。打开后，连接服务器时可浏览和收发当前频道的文件。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            ToggleRow(
+                label = "显示文件入口",
+                hint = "在底部导航栏中加入「文件」标签",
+                checked = filesEnabled,
+                onChange = {
+                    filesEnabled = it
+                    settings.filesTabEnabled = it
+                },
+            )
+        }
+
+        // ── 账号 ──────────────────────────────────────────────────────────
+        AccountSection(
+            vm = vm,
+            account = account,
+            email = email,
+            password = password,
+            otp = otp,
+            showOtp = showOtp,
+            passwordVisible = passwordVisible,
+            actionError = actionError,
+            actionInfo = actionInfo,
+            onEmailChange = { email = it },
+            onPasswordChange = { password = it },
+            onOtpChange = { otp = it },
+            onShowOtpChange = { showOtp = it },
+            onPasswordVisibleChange = { passwordVisible = it },
+            onLogin = { run { vm.accountLogin(email, password, otp) } },
+            onRefresh = { run { vm.accountRefresh() } },
+            onBackup = { run { vm.accountBackup() } },
+            onLogout = { confirmLogout = true },
+            onDeleteBookmark = { uuid -> run { vm.accountDeleteBookmark(uuid) } },
+            confirmLogout = confirmLogout,
+            onConfirmLogout = {
+                confirmLogout = false
+                run { vm.accountLogout() }
+            },
+            onDismissLogout = { confirmLogout = false },
+        )
+
+    }
+}
+
+/**
+ * The account section: login, read-only identity, and bookmark management.
+ *
+ * The identity is never a choice here. The client adopts it automatically from
+ * the account's bookmark for the server, and this section only *shows* the
+ * result — 「账号身份「AutumnKoi」」 — with no list, no selector, no button.
+ * Bookmark deletion lives here too: the home screen is for connecting, not for
+ * managing what is saved.
+ */
+@Composable
+private fun AccountSection(
+    vm: SessionViewModel,
+    account: AccountState,
+    email: String,
+    password: String,
+    otp: String,
+    showOtp: Boolean,
+    passwordVisible: Boolean,
+    actionError: String?,
+    actionInfo: String?,
+    onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onOtpChange: (String) -> Unit,
+    onShowOtpChange: (Boolean) -> Unit,
+    onPasswordVisibleChange: (Boolean) -> Unit,
+    onLogin: () -> Unit,
+    onRefresh: () -> Unit,
+    onBackup: () -> Unit,
+    onLogout: () -> Unit,
+    onDeleteBookmark: (String) -> Unit,
+    confirmLogout: Boolean,
+    onConfirmLogout: () -> Unit,
+    onDismissLogout: () -> Unit,
+) {
+    val busy = account.busy
+    val errorLine = actionError ?: account.lastError.ifEmpty { null }
+
+    Section("账号") {
+        if (account.loggedIn) {
+            // Signed in: show the read-only identity and account info.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MemberAvatar(name = account.username.ifEmpty { account.email }, size = 38.dp)
+                Column(modifier = Modifier.padding(start = 12.dp)) {
+                    Text(
+                        text = account.username.ifEmpty { account.email },
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = account.email,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            // The identity is shown, not chosen. The client adopts it
+            // automatically; this line states the fact.
             Text(
-                text = "语音：Opus 24 kbps 单声道，采集与播放由 Android 音频栈负责",
+                text = if (account.username.isNotEmpty()) {
+                    "账号身份「${account.username}」"
+                } else {
+                    "账号身份「${account.email}」"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+
+            Text(
+                text = if (account.hasMytsId) {
+                    "myTeamSpeak 身份已获取：连接服务器时会展示名称和徽章。"
+                } else {
+                    "这个账号没有可用的 myTeamSpeak 身份：服务器不会展示徽章，" +
+                        "连接本身不受影响。"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = if (account.hasMytsId) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+            if (account.uuid.isNotEmpty()) {
+                SelectionContainer {
+                    Text(
+                        text = "UUID ${account.uuid}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (busy) InlineBusy(account)
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onRefresh, enabled = !busy) { Text("刷新") }
+                TextButton(onClick = onBackup, enabled = !busy) { Text("备份") }
+                TextButton(onClick = onLogout, enabled = !busy) { Text("退出登录") }
+            }
+
+            StatusLines(errorLine = errorLine, infoLine = actionInfo)
+
+            if (account.lastBackup.isNotEmpty()) {
+                Text(
+                    text = "上次备份：${account.lastBackup}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            // Bookmark management: list with delete. The home screen is for
+            // connecting; deleting a saved bookmark is management, and lives here.
+            Text(
+                text = "云书签",
+                style = MaterialTheme.typography.labelLarge,
+            )
+            val rows = account.bookmarkRows()
+            if (rows.isEmpty()) {
+                Text(
+                    text = if (busy) "正在读取书签…" else "账号里没有可用的书签。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    rows.forEach { row ->
+                        if (row.folder) {
+                            Text(
+                                text = row.name.ifEmpty { "文件夹" },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = (row.depth * 14).dp, top = 4.dp),
+                            )
+                        } else {
+                            BookmarkManageRow(
+                                row = row,
+                                onDelete = { onDeleteBookmark(row.uuid) },
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            // Not signed in: the login form.
+            Text(
+                text = "登录后可以读取云端书签、备份同步项；连接服务器时会展示你的 " +
+                    "myTeamSpeak 身份。登录凭据只保存在本应用的私有目录，退出登录即删除。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            OutlinedTextField(
+                value = email,
+                onValueChange = onEmailChange,
+                label = { Text("邮箱") },
+                singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = KeyboardType.Email,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = onPasswordChange,
+                label = { Text("密码") },
+                singleLine = true,
+                visualTransformation = if (passwordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                ),
+                trailingIcon = {
+                    TextButton(onClick = { onPasswordVisibleChange(!passwordVisible) }) {
+                        Text(
+                            text = if (passwordVisible) "隐藏" else "显示",
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (showOtp) {
+                OutlinedTextField(
+                    value = otp,
+                    onValueChange = onOtpChange,
+                    label = { Text("两步验证码") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                TextButton(onClick = { onShowOtpChange(true) }) { Text("需要两步验证码？") }
+            }
+            if (busy) InlineBusy(account)
+            Button(
+                onClick = onLogin,
+                enabled = email.isNotBlank() && password.isNotBlank() && !busy,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            ) {
+                Text(if (busy) "正在登录…" else "登录")
+            }
+            StatusLines(errorLine = errorLine, infoLine = actionInfo)
+        }
+    }
+
+    if (confirmLogout) {
+        AlertDialog(
+            onDismissRequest = onDismissLogout,
+            title = { Text("退出 myTeamSpeak 账号？") },
+            text = { Text("会删除本机记住的登录，云端书签和服务器数据不受影响。") },
+            confirmButton = {
+                TextButton(onClick = onConfirmLogout) { Text("退出登录") }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissLogout) { Text("取消") }
+            },
+        )
+    }
+}
+
+@Composable
+private fun BookmarkManageRow(row: AccountRow, onDelete: () -> Unit) {
+    val bookmark = row.bookmark ?: return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(start = (8 + row.depth * 14).dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                // tsclientlib is Apache-2.0 OR MIT and is compiled into the
-                // shipped .so, so the notice has to travel with the APK. The
-                // files live in assets/licenses and are copied from tsbridge,
-                // whose NOTICE is the single source of truth.
-                text = "本应用包含 tsclientlib（Apache-2.0 OR MIT）与 Opus（BSD）等第三方组件，" +
-                    "完整许可见安装包 assets/licenses/NOTICE",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = bookmark.name.ifEmpty { bookmark.address },
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = bookmark.connectAddress,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (bookmark.nickname.isNotEmpty()) {
+                    Text(
+                        text = "· ${bookmark.nickname}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+                if (bookmark.hasServerPassword || bookmark.hasChannelPassword) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = "书签带有密码",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(11.dp),
+                    )
+                }
+            }
+        }
+        IconButton(onClick = onDelete) {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = "删除书签",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp),
             )
         }
     }
 }
 
+@Composable
+private fun InlineBusy(account: AccountState) {
+    LinearProgressIndicator(
+        modifier = Modifier.fillMaxWidth().height(2.dp),
+    )
+    Text(
+        text = account.progress.ifEmpty { "正在${commandLabel(account.command)}…" },
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+private fun commandLabel(command: String): String = when (command) {
+    "account_login" -> "登录"
+    "account_logout" -> "退出登录"
+    "account_refresh" -> "刷新"
+    "sync_list" -> "读取书签"
+    "sync_backup" -> "备份"
+    "sync_bookmark_create" -> "创建书签"
+    "sync_delete" -> "删除同步项"
+    "sync_restore" -> "恢复"
+    "sync_merge" -> "比对"
+    else -> "处理"
+}
+
+@Composable
+private fun StatusLines(errorLine: String?, infoLine: String?) {
+    if (errorLine != null) {
+        Text(
+            text = errorLine,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+    if (infoLine != null) {
+        Text(
+            text = infoLine,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+/**
+ * A settings section: a label and one rounded container.
+ *
+ * The container sits one surface step above the page in both palettes, so a
+ * group reads as a card instead of blending into the background — the same
+ * language the home screen and bookmark cards use.
+ */
 @Composable
 private fun Section(title: String, content: @Composable () -> Unit) {
     Column(
@@ -281,9 +716,7 @@ private fun Section(title: String, content: @Composable () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                // surfaceContainer sits one step above the page in both palettes,
-                // so a group reads as a card instead of blending into the page.
+                .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(14.dp),
         ) {

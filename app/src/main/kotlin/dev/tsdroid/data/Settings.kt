@@ -73,6 +73,17 @@ class Settings(context: Context) {
         get() = prefs.getString(KEY_AWAY_MESSAGE, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_AWAY_MESSAGE, value).apply()
 
+    /**
+     * Whether the file browser tab appears in the bottom navigation.
+     *
+     * File transfer is a minority feature: keeping it off by default leaves the
+     * navigation clean, and the setting lives in the file section of Settings so
+     * turning it on is a deliberate act.
+     */
+    var filesTabEnabled: Boolean
+        get() = prefs.getBoolean(KEY_FILES_TAB, false)
+        set(value) = prefs.edit().putBoolean(KEY_FILES_TAB, value).apply()
+
     private companion object {
         const val KEY_MIC_GAIN = "mic_gain"
         const val KEY_OUTPUT_GAIN = "output_gain"
@@ -82,5 +93,6 @@ class Settings(context: Context) {
         const val KEY_VERSION_PROFILE = "version_profile"
         const val KEY_PRIVILEGE_KEY = "privilege_key"
         const val KEY_IDENTITY_PREFIX = "identity_for_v2_"
+        const val KEY_FILES_TAB = "files_tab_enabled"
     }
 }

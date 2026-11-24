@@ -359,6 +359,16 @@ class AccountClient(context: Context) : AutoCloseable {
     fun bookmarkSecrets(uuid: String): BookmarkSecrets? = secrets[uuid]
 
     /**
+     * Deletes one bookmark from the cloud account.
+     *
+     * The core's `sync_delete` takes the item uuid and its class; a bookmark is
+     * `BOOKMARK`. The deletion is reflected in the next snapshot, which the UI
+     * already polls.
+     */
+    fun deleteBookmark(uuid: String): String? =
+        exec("sync_delete", mapOf("uuid" to uuid, "class" to "BOOKMARK"))
+
+    /**
      * Reads the whole item list once with passwords and keeps them here.
      *
      * Runs after a login or a refresh, so a bookmark click is a synchronous

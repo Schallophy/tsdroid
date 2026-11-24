@@ -43,6 +43,21 @@ enum class SessionStatus { Idle, Connecting, Online, Disconnected, Failed }
 
 enum class SessionTab { Channels, Chat, Files }
 
+/**
+ * The bottom navigation destinations.
+ *
+ * Home and Settings exist with or without a connection; the three session
+ * tabs only mean anything once a server is joined, and show a "connect first"
+ * state otherwise.
+ */
+enum class NavTab(val label: String) {
+    Home("首页"),
+    Channels("频道"),
+    Chat("聊天"),
+    Files("文件"),
+    Settings("设置"),
+}
+
 data class SessionUiState(
     val status: SessionStatus = SessionStatus.Idle,
     val config: ServerConfig? = null,
@@ -101,6 +116,24 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     private val _ui = MutableStateFlow(SessionUiState())
     val ui: StateFlow<SessionUiState> = _ui.asStateFlow()
 
+    /**
+     * The bottom-navigation destination.
+     *
+     * Kept in the ViewModel rather than in a composable so it survives
+     * recomposition and rotation: tapping a tab is a decision that should not
+     * be lost when the screen redraws.
+     */
+    private val _navTab = MutableStateFlow(NavTab.Home)
+    val navTab: StateFlow<NavTab> = _navTab.asStateFlow()
+
+    /**
+     * Whether the file tab appears in the bottom bar.
+     *
+     * Read from settings on demand: the toggle lives in Settings, and the bar
+     * simply follows it. Changing it does not require a restart.
+     */
+    val filesTabEnabled: Boolean get() = settings.filesTabEnabled
+
     val micLevel = audio.level
     val audioError = audio.error
 
@@ -147,6 +180,11 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         // Gain belongs to the core so every platform clips the same way.
         session.setMicGain(settings.micGain)
         CrashLog.markPhase(app, "已创建原生会话，等待服务器响应 ${config.address}")
+
+        // A successful connection lands on the channel list: that is where the
+        // user expects to see people and where the mic bar's context lives.
+        _navTab.value = NavTab.Channels
+        selectTab(SessionTab.Channels)
 
         viewModelScope.launch {
             session.state.collect { state ->
@@ -230,6 +268,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun leave() {
         if (client == null) {
             _ui.value = SessionUiState()
+            _navTab.value = NavTab.Home
             return
         }
         goodbyePending = true
@@ -240,6 +279,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
                 goodbyePending = false
                 cleanupSession()
                 _ui.value = SessionUiState()
+                _navTab.value = NavTab.Home
             }
         }
     }
@@ -279,6 +319,20 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Switches the bottom-navigation destination.
+     *
+     * Selecting a session tab also selects the matching [SessionTab], so the
+     * two stay in step: the bar is the entry point, the in-session pills are
+     * not needed once the bar exists.
+     */
+    fun selectNavTab(tab: NavTab) {
+        _navTab.value = tab
+        if (tab == NavTab.Channels) selectTab(SessionTab.Channels)
+        else if (tab == NavTab.Chat) selectTab(SessionTab.Chat)
+        else if (tab == NavTab.Files) selectTab(SessionTab.Files)
+    }
+
     fun selectScope(scope: ChatScope) {
         _ui.update {
             it.copy(
@@ -300,6 +354,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
                 unreadPrivate = it.unreadPrivate - user.id,
             )
         }
+        _navTab.value = NavTab.Chat
     }
 
     fun sendMessage(text: String) {
@@ -342,6 +397,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         client?.joinChannel(channelId, password)
         // The file browser follows you: it always shows the channel you are in.
         _ui.update { it.copy(tab = SessionTab.Channels, filesChannelId = channelId, filesLoading = true) }
+        _navTab.value = NavTab.Channels
         client?.listFiles(channelId)
     }
 
@@ -414,6 +470,9 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
      */
     fun accountBookmarkSecrets(uuid: String): BookmarkSecrets? =
         account.bookmarkSecrets(uuid)
+
+    /** Deletes one bookmark from the cloud account. Null means accepted. */
+    fun accountDeleteBookmark(uuid: String): String? = account.deleteBookmark(uuid)
 
     fun accountIdentities(): List<dev.tsdroid.model.AccountIdentity> = account.accountIdentities
 

@@ -15,12 +15,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
@@ -41,11 +47,11 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.tsdroid.core.ServerConfig
-import dev.tsdroid.ui.AccountScreen
-import dev.tsdroid.ui.ConnectPrefill
-import dev.tsdroid.ui.ConnectScreen
+import dev.tsdroid.ui.HomeScreen
+import dev.tsdroid.ui.MicBar
 import dev.tsdroid.ui.SessionScreen
 import dev.tsdroid.ui.SettingsScreen
+import dev.tsdroid.ui.components.BottomNav
 import dev.tsdroid.ui.theme.TSDroidTheme
 
 class MainActivity : ComponentActivity() {
@@ -61,8 +67,15 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Three screens, one state machine: no navigation library for something this
- * shallow — the session decides which screen exists.
+ * One shell, five destinations.
+ *
+ * The bottom navigation bar is the spine: every screen is one tap away, and the
+ * bar never moves. The microphone bar stacks directly above it when a session
+ * is live — two fixed layers at the bottom, the content scrolls above them.
+ *
+ * The state machine is still the session's: the connection status decides what
+ * the session tabs show (live content or a "connect first" prompt), while Home
+ * and Settings exist with or without a connection.
  */
 @Composable
 private fun App() {
@@ -72,6 +85,8 @@ private fun App() {
     val ui by session.ui.collectAsStateWithLifecycle()
     val account by session.accountState.collectAsStateWithLifecycle()
     val accountError by session.accountError.collectAsStateWithLifecycle()
+    val navTab by session.navTab.collectAsStateWithLifecycle()
+    val filesEnabled = session.filesTabEnabled
 
     // The manifest declares `configChanges="…|uiMode"`, so switching the system
     // theme does not recreate the Activity — `enableEdgeToEdge()` therefore never
@@ -86,11 +101,7 @@ private fun App() {
         }
     }
 
-    var settingsOpen by rememberSaveable { mutableStateOf(false) }
-    var accountOpen by rememberSaveable { mutableStateOf(false) }
-    var prefill by remember { mutableStateOf<ConnectPrefill?>(null) }
-    var pendingConfig by remember { mutableStateOf<ServerConfig?>(null) }
-    var crashLog by remember { mutableStateOf<String?>(null) }
+    var crashLog by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Read once, before anything else can fail again: the trace of the previous
     // run is the only evidence a field crash leaves behind.
@@ -116,6 +127,8 @@ private fun App() {
         Manifest.permission.RECORD_AUDIO,
     ) == PackageManager.PERMISSION_GRANTED
 
+    var pendingConfig by rememberSaveable { mutableStateOf<ServerConfig?>(null) }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -124,7 +137,7 @@ private fun App() {
         if (!granted) {
             session.setToast("没有录音权限，语音功能将不可用")
         }
-        config?.let(session::adoptAccountIdentityAndConnect)
+        config?.let { session.adoptAccountIdentityAndConnect(it) }
     }
 
     // Ask once, before the socket exists: the bridge cannot open the microphone
@@ -135,62 +148,147 @@ private fun App() {
         }
     }
 
-    when {
-        // The account has its own native handle and works with no server, so
-        // this branch does not depend on the session status at all.
-        accountOpen -> {
-            BackHandler { accountOpen = false }
-            AccountScreen(
-                vm = session,
-                onBack = { accountOpen = false },
-                onSyncIdentity = { session.accountSyncIdentity()?.let { session.setToast(it) } },
-                onUseIdentity = { session.useAccountIdentity(it) },
-                onUseBookmark = { bookmark, notice ->
-                    prefill = ConnectPrefill(
-                        address = bookmark.connectAddress,
-                        nickname = bookmark.nickname.ifBlank { account.username },
-                        channel = bookmark.defaultChannel,
-                        announceMyts = bookmark.sendMytsid,
-                        serverPassword = bookmark.serverPassword,
-                        channelPassword = bookmark.channelPassword,
-                        notice = notice,
+    val snackbar = remember { SnackbarHostState() }
+    val micLevel by session.micLevel.collectAsStateWithLifecycle()
+
+    LaunchedEffect(ui.toast) {
+        val message = ui.toast ?: return@LaunchedEffect
+        snackbar.showSnackbar(message)
+        session.clearToast()
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
+        bottomBar = {
+            BottomNav(
+                current = navTab,
+                filesEnabled = filesEnabled,
+                chatUnread = ui.unreadTotal,
+                onSelect = { session.selectNavTab(it) },
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            when (navTab) {
+                dev.tsdroid.NavTab.Home -> {
+                    HomeScreen(
+                        account = account,
+                        accountError = accountError,
+                        onConnect = { config ->
+                            if (hasMicPermission()) {
+                                // The account knows which identity this server was
+                                // joined with; adopting it here is what brings the
+                                // right UID (and its groups) back without asking
+                                // the user.
+                                session.adoptAccountIdentityAndConnect(config)
+                            } else {
+                                pendingConfig = config
+                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        },
+                        onConnectBookmark = { row ->
+                            val bookmark = row.bookmark
+                            if (bookmark != null) {
+                                // Bookmarks carry their own passwords from the cloud
+                                // sync. Resolve them synchronously from the cache the
+                                // account client filled after the last login/refresh.
+                                val secrets = session.accountBookmarkSecrets(row.uuid)
+                                val missing = (bookmark.hasServerPassword && secrets?.serverPassword.isNullOrEmpty()) ||
+                                    (bookmark.hasChannelPassword && secrets?.channelPassword.isNullOrEmpty())
+                                val config = ServerConfig(
+                                    address = bookmark.connectAddress,
+                                    nickname = bookmark.nickname.ifBlank { account.username },
+                                    password = secrets?.serverPassword.orEmpty(),
+                                    channel = bookmark.defaultChannel,
+                                    channelPassword = secrets?.channelPassword.orEmpty(),
+                                    identityIni = session.serverStore().readIdentity(),
+                                    announceMyts = bookmark.sendMytsid,
+                                    version = session.settings().versionProfile,
+                                    token = session.settings().privilegeKey,
+                                )
+                                if (hasMicPermission()) {
+                                    if (missing) {
+                                        session.setToast("该书签的密码未能读取，请手动填写")
+                                    }
+                                    session.adoptAccountIdentityAndConnect(config)
+                                } else {
+                                    pendingConfig = config
+                                    if (missing) {
+                                        session.setToast("该书签的密码未能读取，请手动填写")
+                                    }
+                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }
+                            }
+                        },
+                        onOpenSettings = { session.selectNavTab(dev.tsdroid.NavTab.Settings) },
                     )
-                    accountOpen = false
-                },
-            )
-        }
-
-        ui.status == SessionStatus.Idle -> ConnectScreen(
-            account = account,
-            accountError = accountError,
-            onOpenAccount = { accountOpen = true },
-            prefill = prefill,
-            onPrefillApplied = { prefill = null },
-            onConnect = { config ->
-                if (hasMicPermission()) {
-                    // The account knows which identity this server was joined
-                    // with; adopting it here is what brings the right UID (and
-                    // its groups) back without asking the user.
-                    session.adoptAccountIdentityAndConnect(config)
-                } else {
-                    pendingConfig = config
-                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 }
-            },
-        )
 
-        settingsOpen -> {
-            BackHandler { settingsOpen = false }
-            SettingsScreen(vm = session, onBack = { settingsOpen = false })
+                dev.tsdroid.NavTab.Settings -> SettingsScreen(
+                    vm = session,
+                    onBack = { session.selectNavTab(dev.tsdroid.NavTab.Home) },
+                )
+
+                dev.tsdroid.NavTab.Channels,
+                dev.tsdroid.NavTab.Chat,
+                dev.tsdroid.NavTab.Files -> {
+                    if (ui.status == SessionStatus.Idle) {
+                        // The session tabs need a connection. Show the prompt
+                        // instead of empty content.
+                        ConnectFirstPrompt(onConnect = { session.selectNavTab(dev.tsdroid.NavTab.Home) })
+                    } else {
+                        SessionScreen(
+                            vm = session,
+                            onOpenSettings = { session.selectNavTab(dev.tsdroid.NavTab.Settings) },
+                            onLeave = { session.leave() },
+                        )
+                        // The mic bar stacks directly above the bottom nav.
+                        MicBar(
+                            ui = ui,
+                            level = micLevel,
+                            onMic = session::toggleMic,
+                            onSpeaker = session::toggleSpeaker,
+                        )
+                    }
+                }
+            }
         }
+    }
+}
 
-        else -> {
-            BackHandler { session.leave() }
-            SessionScreen(
-                vm = session,
-                onOpenSettings = { settingsOpen = true },
-                onLeave = { session.leave() },
-            )
+/**
+ * Shown when a session tab is selected but no server is connected.
+ *
+ * The bottom nav is always there, so the user can tap it without thinking —
+ * this state catches that and points them at the home screen instead of showing
+ * an empty channel list.
+ */
+@Composable
+private fun ConnectFirstPrompt(onConnect: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(32.dp),
+    ) {
+        Text(
+            text = "还没有连接服务器",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "在首页填写服务器地址连接，或从书签中选一个。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        TextButton(onClick = onConnect, modifier = Modifier.padding(top = 16.dp)) {
+            Text("去首页")
         }
     }
 }
@@ -213,8 +311,8 @@ private fun CrashReportDialog(trace: String, onCopy: () -> Unit, onDismiss: () -
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
-                    modifier = androidx.compose.ui.Modifier
-                        .heightIn(max = 420.dp)
+                    modifier = Modifier
+                        .padding(0.dp)
                         .verticalScroll(rememberScrollState()),
                 )
             }

@@ -32,8 +32,14 @@ data class ServerConfig(
     val channel: String = "",
     /** Unlocks the channel the client lands in; unrelated to [password]. */
     val channelPassword: String = "",
-    /** The announced client version profile: `latest`, `debug` or `ancient`. */
-    val version: String = "latest",
+    /**
+     * The announced client version, as a version number (`3.6.3`). Paired with
+     * [platform]; the native side resolves the pair to the full version text and
+     * its signature, since the server compares that text byte for byte.
+     */
+    val version: String = "3.6.3",
+    /** The platform to announce with [version] (`Windows`, `OS X`, `Linux`, …). */
+    val platform: String = "Windows",
     /** A privilege key to redeem on first connect; empty for none. */
     val token: String = "",
     /** A TS3 `counterVkey` identity from a previous session, or "" for a fresh one. */
@@ -119,6 +125,7 @@ class NativeClient(
                     config.channel.ifEmpty { null },
                     config.channelPassword.ifEmpty { null },
                     config.version,
+                    config.platform,
                     config.token,
                 )
             } else {
@@ -130,6 +137,7 @@ class NativeClient(
                     config.channel.ifEmpty { null },
                     config.channelPassword.ifEmpty { null },
                     config.version,
+                    config.platform,
                     config.token,
                 )
             }

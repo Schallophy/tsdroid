@@ -276,6 +276,20 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     /** Same action as [leave]; the header button reads "disconnect". */
     fun disconnect() = leave()
 
+    /** True when a session exists that a reconnect would replace. */
+    fun isLive(): Boolean = client != null
+
+    /**
+     * Reconnects now, after a setting that only applies to a fresh connection
+     * changed (the announced client version). The current session is torn down
+     * and rebuilt with the same config, so the new setting is announced in
+     * `clientinit`.
+     */
+    fun reconnectNow() {
+        val config = _ui.value.config ?: return
+        connect(config)
+    }
+
     /**
      * Retries the last attempt with the same settings.
      *

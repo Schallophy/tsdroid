@@ -93,7 +93,6 @@ fun HomeScreen(
     var advanced by rememberSaveable { mutableStateOf(false) }
     var tempExpanded by rememberSaveable { mutableStateOf(false) }
     var announceMyts by rememberSaveable { mutableStateOf(true) }
-    var versionProfile by rememberSaveable { mutableStateOf(settings.versionProfile) }
 
     val canConnect = address.isNotBlank() && nickname.isNotBlank()
 
@@ -111,7 +110,8 @@ fun HomeScreen(
                 channelPassword = channelPassword,
                 identityIni = store.readIdentity(),
                 announceMyts = announceMyts,
-                version = versionProfile,
+                version = settings.clientVersion,
+                platform = settings.clientPlatform,
             ),
         )
     }
@@ -273,13 +273,6 @@ fun HomeScreen(
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                VersionProfilePicker(
-                    value = versionProfile,
-                    onValue = {
-                        versionProfile = it
-                        settings.versionProfile = it
-                    },
-                )
                 OutlinedTextField(
                     value = channelPassword,
                     onValueChange = { channelPassword = it },
@@ -411,60 +404,5 @@ private fun BookmarkCard(row: AccountRow, onUse: () -> Unit) {
                 )
             }
         }
-    }
-}
-
-/**
- * Which signed client version to announce.
- *
- * The server compares the text with its signature, so free text is refused
- * outright (`ClientHacked`) and the only options are the profiles the core
- * ships. Each is a chip rather than a free field: typing "4.0.0" would just
- * fail the connection, and on an official server repeated attempts get the IP
- * banned.
- */
-@Composable
-private fun VersionProfilePicker(value: String, onValue: (String) -> Unit) {
-    val options = listOf(
-        "latest" to "最新 3.6.3",
-        "debug" to "调试版 3.?",
-        "ancient" to "远古 0.0.1",
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            text = "对外显示的客户端版本",
-            style = MaterialTheme.typography.labelLarge,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            for ((key, label) in options) {
-                val active = key == value
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(
-                            if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
-                            else MaterialTheme.colorScheme.surfaceContainerHigh,
-                        )
-                        .clickable { onValue(key) }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (active) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                }
-            }
-        }
-        Text(
-            text = "版本号必须对上官方签名，只能从这几项里选；乱填会被服务器当成改包拒连，反复试还可能封 IP。",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }

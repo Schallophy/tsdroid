@@ -63,7 +63,7 @@ internal object Native {
      * a session that looks connected and behaves wrongly.
      * `NativeAbiTest` fails the build if the submodule is bumped without this.
      */
-    const val EXPECTED_ABI: Int = 4
+    const val EXPECTED_ABI: Int = 5
 
     /**
      * Why the loaded library is not the one this Kotlin expects, or null when it
@@ -106,9 +106,13 @@ internal object Native {
      * `identityIni` is the `counterVkey` string from a previous session, or "" to
      * generate a fresh identity.
      *
-     * `version` picks the announced client version (`latest`, `debug`,
-     * `ancient`). The server checks it against its signature, so only those
-     * built-in profiles connect.
+     * `version` + `platform` pick the announced client version. `version` is a
+     * version number (`3.6.3`) and `platform` one of the signed platforms
+     * (`Windows`, `OS X`, `Linux`, `Android`, …); the native side resolves the
+     * pair to the full version text and its signature. The server compares that
+     * text with the signature byte for byte, so only a pair that names a signed
+     * table entry connects. [nativeVersionPlatforms] and [nativeVersionSuggest]
+     * list what the table offers.
      *
      * `token` is a privilege key redeemed on first connect; it grants its
      * groups to this UID once. Empty means none.
@@ -121,6 +125,7 @@ internal object Native {
         channel: String?,
         channelPassword: String?,
         version: String,
+        platform: String,
         token: String,
     ): Long
 
@@ -154,6 +159,7 @@ internal object Native {
         channel: String?,
         channelPassword: String?,
         version: String,
+        platform: String,
         token: String,
     ): Long
 
@@ -190,4 +196,29 @@ internal object Native {
     external fun nativeAudioReset(ptr: Long)
 
     external fun nativeDisconnect(ptr: Long)
+
+    /**
+     * The platforms that have a signed version entry, comma-separated.
+     *
+     * The platform dropdown is built from this, so a choice can never name a
+     * platform with no signature (which the server would refuse).
+     */
+    external fun nativeVersionPlatforms(): String
+
+    /**
+     * Version numbers the platform offers, comma-separated, newest build first.
+     *
+     * `prefix` filters by version-number prefix; empty returns every number the
+     * platform has. Each number appears once even when several builds share it.
+     */
+    external fun nativeVersionSuggest(prefix: String, platform: String): String
+
+    /**
+     * The exact text the server will see for this choice — `platform · version
+     * text` — or "" when the pair names no signed entry.
+     *
+     * Shown under the field so the user can see the build suffix they never
+     * typed, and so an impossible choice is visible before it is saved.
+     */
+    external fun nativeVersionResolve(version: String, platform: String): String
 }

@@ -77,6 +77,11 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
     var noise by remember { mutableStateOf(settings.noiseSuppression) }
     var bluetooth by remember { mutableStateOf(settings.bluetoothMic) }
     var filesEnabled by remember { mutableStateOf(settings.filesTabEnabled) }
+    var clientVersion by remember { mutableStateOf(settings.clientVersion) }
+    var clientPlatform by remember { mutableStateOf(settings.clientPlatform) }
+    // Set when the version changed while a session is live: the choice only
+    // takes effect on the next connection, so offer an immediate reconnect.
+    var pendingReconnect by remember { mutableStateOf(false) }
 
     // Account action notices
     var actionError by remember { mutableStateOf<String?>(null) }
@@ -119,6 +124,21 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
         actionError = command()
     }
 
+    /**
+     * Saves the version choice and, when a session is live, offers a reconnect.
+     *
+     * The version is announced only in `clientinit`, so it cannot change on an
+     * open connection; the dialog asks whether to drop and rejoin now or keep
+     * the setting for the next connection.
+     */
+    fun saveVersion(version: String, platform: String) {
+        clientVersion = version
+        clientPlatform = platform
+        settings.clientVersion = version
+        settings.clientPlatform = platform
+        if (vm.isLive()) pendingReconnect = true
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -138,6 +158,21 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
 
         // ── 通用 ──────────────────────────────────────────────────────────
         Section("通用") {
+            // The announced client version. Global: one choice for every server.
+            // Only the version number is typed; the platform is picked from the
+            // signed platforms, and the native side resolves the pair to the full
+            // signed text.
+            Text(
+                text = "客户端版本",
+                style = MaterialTheme.typography.labelLarge,
+            )
+            VersionSettings(
+                version = clientVersion,
+                platform = clientPlatform,
+                onVersionChange = { saveVersion(it, clientPlatform) },
+                onPlatformChange = { saveVersion(clientVersion, it) },
+            )
+
             // Clearing saved passwords lives in General: it is a
             // once-in-a-while action, and putting it next to the password field
             // on the home screen invites mis-taps that force a retype.
@@ -318,6 +353,30 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
             onDismissLogout = { confirmLogout = false },
         )
 
+    }
+
+    // The version is announced only in `clientinit`, so a change on a live
+    // session needs a reconnect to take effect. Asking beats silently dropping
+    // the call, and "取消" keeps the setting for the next connection.
+    if (pendingReconnect) {
+        AlertDialog(
+            onDismissRequest = { pendingReconnect = false },
+            title = { Text("版本改动需要重连才生效") },
+            text = {
+                Text("客户端版本只在连接时声明一次，当前连接不会改变。要现在断开重连吗？取消则保留设置，下次连接生效。")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingReconnect = false
+                        vm.reconnectNow()
+                    },
+                ) { Text("立即重连") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingReconnect = false }) { Text("取消") }
+            },
+        )
     }
 }
 

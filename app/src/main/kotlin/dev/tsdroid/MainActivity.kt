@@ -193,7 +193,8 @@ private fun App() {
                                     channelPassword = secrets?.channelPassword.orEmpty(),
                                     identityIni = session.serverStore().readIdentity(),
                                     announceMyts = bookmark.sendMytsid,
-                                    version = session.settings().versionProfile,
+                                    version = session.settings().clientVersion,
+                                    platform = session.settings().clientPlatform,
                                 )
                 if (hasMicPermission()) {
                                     if (missing) {

@@ -34,13 +34,22 @@ class Settings(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_BLUETOOTH_MIC, value).apply()
 
     /**
-     * Which signed client version to announce: `latest` (default), `debug` or
-     * `ancient`. The server checks the announced text against its signature,
-     * so this is a profile name, never free text.
+     * The client version number announced to servers (`3.6.3`). Paired with
+     * [clientPlatform]; the native side resolves the pair to the full signed
+     * version text. Global: one choice applies to every server.
      */
-    var versionProfile: String
-        get() = prefs.getString(KEY_VERSION_PROFILE, "latest").orEmpty()
-        set(value) = prefs.edit().putString(KEY_VERSION_PROFILE, value).apply()
+    var clientVersion: String
+        get() = prefs.getString(KEY_CLIENT_VERSION, DEFAULT_VERSION).orEmpty()
+        set(value) = prefs.edit().putString(KEY_CLIENT_VERSION, value.trim()).apply()
+
+    /**
+     * The platform announced with [clientVersion]. Only platforms with a signed
+     * entry are accepted by the native side; the settings screen offers exactly
+     * those.
+     */
+    var clientPlatform: String
+        get() = prefs.getString(KEY_CLIENT_PLATFORM, DEFAULT_PLATFORM).orEmpty()
+        set(value) = prefs.edit().putString(KEY_CLIENT_PLATFORM, value).apply()
 
     /**
      * A privilege key redeemed on the next connect, then cleared by the user.
@@ -90,9 +99,14 @@ class Settings(context: Context) {
         const val KEY_NOISE = "noise_suppression"
         const val KEY_BLUETOOTH_MIC = "bluetooth_mic"
         const val KEY_AWAY_MESSAGE = "away_message"
-        const val KEY_VERSION_PROFILE = "version_profile"
+        const val KEY_CLIENT_VERSION = "client_version"
+        const val KEY_CLIENT_PLATFORM = "client_platform"
         const val KEY_PRIVILEGE_KEY = "privilege_key"
         const val KEY_IDENTITY_PREFIX = "identity_for_v2_"
         const val KEY_FILES_TAB = "files_tab_enabled"
+
+        /** `3.6.3` + `Windows`: the standard signed tuple, unchanged from before. */
+        const val DEFAULT_VERSION = "3.6.3"
+        const val DEFAULT_PLATFORM = "Windows"
     }
 }

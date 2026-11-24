@@ -91,6 +91,7 @@ fun AccountScreen(
                 actionError = null
                 actionInfo = when (notice.command) {
                     "account_login" -> "已登录 myTeamSpeak"
+                    "account_resume" -> "已从本机凭据恢复登录"
                     "account_logout" -> "已退出登录，本机记住的凭据已删除"
                     "account_refresh" -> "已从账号服务器刷新"
                     "sync_backup" -> notice.message.ifEmpty { "备份完成" }
@@ -136,7 +137,8 @@ fun AccountScreen(
     val busy = account.busy
     val errorLine = actionError ?: account.lastError.ifEmpty { null }
     val hasRemembered = vm.accountHasRememberedLogin()
-    val isAutoLoggingIn = hasRemembered && !account.loggedIn && busy && account.command == "account_login"
+    val isAutoLoggingIn = hasRemembered && !account.loggedIn && busy &&
+        (account.command == "account_login" || account.command == "account_resume")
 
     Column(
         modifier = Modifier

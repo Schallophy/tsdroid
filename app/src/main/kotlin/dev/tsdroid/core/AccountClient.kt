@@ -113,11 +113,16 @@ class AccountClient(context: Context) : AutoCloseable {
     fun hasRememberedLogin(): Boolean = credentialFile.isFile
 
     /**
-     * Starts the account side and silently reuses a remembered login.
+     * Starts the account side and silently restores a remembered login.
      *
-     * The remembered login is only attempted when its file exists: a first
-     * launch calling a bare login would otherwise surface the core's "nothing
-     * is remembered" as an error on a screen the user has not even opened.
+     * `account_resume` is local: the file a login wrote carries the session, the
+     * account key and the myTS identity, so a second launch shows "signed in"
+     * immediately — no round-trip, and it works offline. A session the server has
+     * since retired is renewed by the first read or `identity_pick`, not here.
+     *
+     * The resume is only attempted when its file exists: a first launch calling
+     * it would otherwise surface "nothing is remembered" on a screen the user has
+     * not even opened.
      */
     @Synchronized
     fun start(): Boolean {
@@ -149,7 +154,7 @@ class AccountClient(context: Context) : AutoCloseable {
 
         pollJob = scope.launch { pollLoop() }
         if (hasRememberedLogin()) {
-            exec("account_login")
+            exec("account_resume")
         }
         return true
     }
@@ -190,9 +195,9 @@ class AccountClient(context: Context) : AutoCloseable {
                 lastIdentityNotice = notice
                 identityGeneration.value += 1
             }
-            if (notice.ok && notice.command == "account_login") {
-                // A successful login invalidates whatever the previous account
-                // had; the fetch below fills it for this one.
+            if (notice.ok && (notice.command == "account_login" || notice.command == "account_resume")) {
+                // A successful login/resume invalidates whatever the previous
+                // account had; the fetch below fills it for this one.
                 secrets = emptyMap()
                 scope.launch { syncBookmarkSecrets() }
             }

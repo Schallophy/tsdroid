@@ -15,6 +15,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -174,7 +175,8 @@ private fun App() {
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            when (navTab) {
+            Box(modifier = Modifier.weight(1f)) {
+                when (navTab) {
                 dev.tsdroid.NavTab.Home -> {
                     HomeScreen(
                         account = account,
@@ -244,18 +246,23 @@ private fun App() {
                     } else {
                         SessionScreen(
                             vm = session,
-                            onOpenSettings = { session.selectNavTab(dev.tsdroid.NavTab.Settings) },
                             onLeave = { session.leave() },
-                        )
-                        // The mic bar stacks directly above the bottom nav.
-                        MicBar(
-                            ui = ui,
-                            level = micLevel,
-                            onMic = session::toggleMic,
-                            onSpeaker = session::toggleSpeaker,
                         )
                     }
                 }
+            }
+            }
+
+            // The mic bar is stacked directly above the bottom nav, and it stays
+            // there whenever a session is live — Home and Settings included, so
+            // muting is never more than one tap away.
+            if (ui.status != SessionStatus.Idle) {
+                MicBar(
+                    ui = ui,
+                    level = micLevel,
+                    onMic = session::toggleMic,
+                    onSpeaker = session::toggleSpeaker,
+                )
             }
         }
     }

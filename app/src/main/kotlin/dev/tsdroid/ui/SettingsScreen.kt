@@ -29,6 +29,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -124,7 +125,6 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding()
             .verticalScroll(rememberScrollState())
             .imePadding(),
     ) {
@@ -268,6 +268,7 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
                     onValueChange = { gain = it },
                     onValueChangeFinished = { vm.applyAudioSettings(gain, noise, bluetooth) },
                     valueRange = 0.2f..4f,
+                    colors = sliderColors(),
                 )
             }
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -286,6 +287,7 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
                     onValueChange = { output = it },
                     onValueChangeFinished = { vm.applyOutputGain(output) },
                     valueRange = 0.5f..2f,
+                    colors = sliderColors(),
                 )
             }
         }
@@ -744,3 +746,21 @@ private fun ToggleRow(
         Switch(checked = checked, onCheckedChange = onChange)
     }
 }
+
+/**
+ * The slider track, in the near-black palette.
+ *
+ * Material's defaults paint the inactive track with the secondary container —
+ * amber here, because amber is reserved for "someone is talking" — which made a
+ * gain slider look like a live signal. The track is a control, not a voice
+ * state, so it uses neutral container steps and the blue accent only for what
+ * the thumb has actually set.
+ */
+@Composable
+private fun sliderColors() = SliderDefaults.colors(
+    thumbColor = MaterialTheme.colorScheme.primary,
+    activeTrackColor = MaterialTheme.colorScheme.primary,
+    inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+    activeTickColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.4f),
+    inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+)

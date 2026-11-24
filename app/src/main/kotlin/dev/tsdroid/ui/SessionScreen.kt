@@ -64,12 +64,10 @@ import dev.tsdroid.ui.sheets.UserSheet
 @Composable
 fun SessionScreen(
     vm: SessionViewModel,
-    onOpenSettings: () -> Unit,
     onLeave: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
-    val micLevel by vm.micLevel.collectAsStateWithLifecycle()
-    val snackbar = remember { SnackbarHostState() }
     var sheetUser by remember { mutableStateOf<User?>(null) }
 
     // The server never reports our own voice, so the core derives this from the
@@ -77,60 +75,44 @@ fun SessionScreen(
     // the level ring around the button.
     val ownTalking = ui.state.ownTalking
 
-    LaunchedEffect(ui.toast) {
-        val message = ui.toast ?: return@LaunchedEffect
-        snackbar.showSnackbar(message)
-        vm.clearToast()
-    }
+    Column(modifier = modifier.fillMaxSize()) {
+        ServerHeader(
+            title = ui.state.server.name.ifEmpty { ui.config?.address.orEmpty() },
+            subtitle = statusLine(ui.status, ui.state.server.clientsOnline, ui.state.server.maxClients),
+            connected = ui.status == SessionStatus.Online,
+            onDisconnect = vm::disconnect,
+            onLeave = onLeave,
+        )
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbar) },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            ServerHeader(
-                title = ui.state.server.name.ifEmpty { ui.config?.address.orEmpty() },
-                subtitle = statusLine(ui.status, ui.state.server.clientsOnline, ui.state.server.maxClients),
-                connected = ui.status == SessionStatus.Online,
-                onSettings = onOpenSettings,
-                onDisconnect = vm::disconnect,
-                onLeave = onLeave,
+        if (ui.status == SessionStatus.Failed) {
+            ConnectErrorBanner(
+                message = ui.lastError ?: "连接失败",
+                onRetry = vm::reconnect,
+                onEdit = onLeave,
             )
+        }
 
-            if (ui.status == SessionStatus.Failed) {
-                ConnectErrorBanner(
-                    message = ui.lastError ?: "连接失败",
-                    onRetry = vm::reconnect,
-                    onEdit = onLeave,
+        Box(modifier = Modifier.weight(1f)) {
+            when (ui.tab) {
+                dev.tsdroid.SessionTab.Channels -> ChannelsTab(
+                    ui = ui,
+                    ownTalking = ownTalking,
+                    onJoinChannel = vm::joinChannel,
+                    onSelectUser = { sheetUser = it },
                 )
-            }
 
-            Box(modifier = Modifier.weight(1f)) {
-                when (ui.tab) {
-                    dev.tsdroid.SessionTab.Channels -> ChannelsTab(
-                        ui = ui,
-                        ownTalking = ownTalking,
-                        onJoinChannel = vm::joinChannel,
-                        onSelectUser = { sheetUser = it },
-                    )
+                dev.tsdroid.SessionTab.Chat -> ChatTab(
+                    ui = ui,
+                    onScope = vm::selectScope,
+                    onSend = vm::sendMessage,
+                )
 
-                    dev.tsdroid.SessionTab.Chat -> ChatTab(
-                        ui = ui,
-                        onScope = vm::selectScope,
-                        onSend = vm::sendMessage,
-                    )
-
-                    dev.tsdroid.SessionTab.Files -> FilesTab(
-                        ui = ui,
-                        onRefresh = vm::refreshFiles,
-                        onDownload = vm::downloadFile,
-                        onUpload = { uri: android.net.Uri -> ui.filesChannelId?.let { vm.uploadFile(uri, it) } },
-                    )
-                }
+                dev.tsdroid.SessionTab.Files -> FilesTab(
+                    ui = ui,
+                    onRefresh = vm::refreshFiles,
+                    onDownload = vm::downloadFile,
+                    onUpload = { uri: android.net.Uri -> ui.filesChannelId?.let { vm.uploadFile(uri, it) } },
+                )
             }
         }
     }
@@ -203,7 +185,6 @@ private fun ServerHeader(
     title: String,
     subtitle: String,
     connected: Boolean,
-    onSettings: () -> Unit,
     onDisconnect: () -> Unit,
     onLeave: () -> Unit,
 ) {
@@ -240,13 +221,6 @@ private fun ServerHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        }
-        IconButton(onClick = onSettings) {
-            Icon(
-                Icons.Default.Settings,
-                contentDescription = "设置",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
         // The desktop client buries disconnect in a menu; on a phone that is
         // one tap too many for the action you reach for when things go wrong.

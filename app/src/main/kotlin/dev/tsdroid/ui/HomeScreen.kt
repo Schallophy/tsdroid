@@ -128,7 +128,6 @@ fun HomeScreen(
                     ),
                 ),
             )
-            .systemBarsPadding()
             .verticalScroll(rememberScrollState())
             .imePadding()
             .padding(horizontal = 20.dp),

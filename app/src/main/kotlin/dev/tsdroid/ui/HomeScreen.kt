@@ -91,7 +91,7 @@ fun HomeScreen(
     var channel by rememberSaveable { mutableStateOf("") }
     var channelPassword by rememberSaveable { mutableStateOf("") }
     var advanced by rememberSaveable { mutableStateOf(false) }
-    var tempExpanded by rememberSaveable { mutableStateOf(true) }
+    var tempExpanded by rememberSaveable { mutableStateOf(false) }
     var announceMyts by rememberSaveable { mutableStateOf(true) }
     var versionProfile by rememberSaveable { mutableStateOf(settings.versionProfile) }
 

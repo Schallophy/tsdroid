@@ -308,7 +308,6 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
             onPasswordVisibleChange = { passwordVisible = it },
             onLogin = { run { vm.accountLogin(email, password, otp) } },
             onRefresh = { run { vm.accountRefresh() } },
-            onBackup = { run { vm.accountBackup() } },
             onLogout = { confirmLogout = true },
             onDeleteBookmark = { uuid -> run { vm.accountDeleteBookmark(uuid) } },
             confirmLogout = confirmLogout,
@@ -349,7 +348,6 @@ private fun AccountSection(
     onPasswordVisibleChange: (Boolean) -> Unit,
     onLogin: () -> Unit,
     onRefresh: () -> Unit,
-    onBackup: () -> Unit,
     onLogout: () -> Unit,
     onDeleteBookmark: (String) -> Unit,
     confirmLogout: Boolean,
@@ -401,21 +399,10 @@ private fun AccountSection(
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = onRefresh, enabled = !busy) { Text("刷新") }
-                TextButton(onClick = onBackup, enabled = !busy) { Text("备份") }
                 TextButton(onClick = onLogout, enabled = !busy) { Text("退出登录") }
             }
 
             StatusLines(errorLine = errorLine, infoLine = actionInfo)
-
-            if (account.lastBackup.isNotEmpty()) {
-                Text(
-                    text = "上次备份：${account.lastBackup}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
 
             // Bookmark management: list with delete. The home screen is for
             // connecting; deleting a saved bookmark is management, and lives here.

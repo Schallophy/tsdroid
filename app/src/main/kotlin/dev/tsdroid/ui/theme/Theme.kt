@@ -1,12 +1,21 @@
 package dev.tsdroid.ui.theme
 
+import androidx.compose.foundation.IndicationNodeFactory
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.node.DelegatableNode
+import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -152,11 +161,49 @@ private val AppTypography = Typography(
     ),
 )
 
+/**
+ * No press highlight, anywhere.
+ *
+ * A voice client is operated by feel, often while a game has focus, and a ripple
+ * or state overlay flashing on every tap reads as the screen reacting to
+ * something the user did not intend. Two locals are needed because Material
+ * splits the job:
+ *
+ * * `LocalIndication` covers `Modifier.clickable` — the custom cards, the
+ *   navigation bar, the member rows.
+ * * `LocalRippleConfiguration` covers Material's own buttons, chips, tabs and
+ *   icon buttons, which draw the ripple from the material3-ripple module
+ *   instead of reading `LocalIndication`. `null` is the documented "no ripple"
+ *   value.
+ *
+ * Buttons keep their enabled/disabled colours, and selected states (a tab, a
+ * scope chip) still change colour — only the transient highlight under the
+ * finger is gone.
+ */
+private object NoIndication : IndicationNodeFactory {
+    override fun create(interactionSource: InteractionSource): DelegatableNode =
+        object : Modifier.Node(), DrawModifierNode {
+            override fun ContentDrawScope.draw() {
+                drawContent()
+            }
+        }
+
+    override fun hashCode(): Int = 0
+
+    override fun equals(other: Any?): Boolean = other === this
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun TSDroidTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) DarkScheme else LightScheme,
-        typography = AppTypography,
-        content = content,
-    )
+    CompositionLocalProvider(
+        LocalIndication provides NoIndication,
+        LocalRippleConfiguration provides null,
+    ) {
+        MaterialTheme(
+            colorScheme = if (isSystemInDarkTheme()) DarkScheme else LightScheme,
+            typography = AppTypography,
+            content = content,
+        )
+    }
 }

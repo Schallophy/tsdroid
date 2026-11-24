@@ -66,18 +66,16 @@ import dev.tsdroid.ui.components.MemberAvatar
  * client automatically adopted.
  */
 @Composable
-fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
+fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Unit) {
     val account by vm.accountState.collectAsStateWithLifecycle()
     val settings = remember { vm.settings() }
 
-    var nickname by remember { mutableStateOf("") }
     var away by remember { mutableStateOf(false) }
     var awayMessage by remember { mutableStateOf(settings.awayMessage) }
     var gain by remember { mutableFloatStateOf(settings.micGain) }
     var output by remember { mutableFloatStateOf(settings.outputGain) }
     var noise by remember { mutableStateOf(settings.noiseSuppression) }
     var bluetooth by remember { mutableStateOf(settings.bluetoothMic) }
-    var token by remember { mutableStateOf(settings.privilegeKey) }
     var filesEnabled by remember { mutableStateOf(settings.filesTabEnabled) }
 
     // Account action notices
@@ -140,48 +138,6 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
 
         // ── 通用 ──────────────────────────────────────────────────────────
         Section("通用") {
-            OutlinedTextField(
-                value = nickname,
-                onValueChange = { nickname = it },
-                label = { Text("新昵称") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = { vm.setNickname(nickname) },
-                    enabled = nickname.isNotBlank(),
-                ) { Text("改昵称") }
-                Text(
-                    text = "当前身份只在本机，导出功能还没做",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                )
-            }
-
-            Text(
-                text = "服务器权限",
-                style = MaterialTheme.typography.labelLarge,
-            )
-            Text(
-                text = "首次连接兑换权限密钥（服务器启动日志里的 token=…）。它只对这一次生效，" +
-                    "把密钥对应的分组授予当前 UID；之后权限就绑在这个身份上。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            OutlinedTextField(
-                value = token,
-                onValueChange = {
-                    token = it
-                    settings.privilegeKey = it.trim()
-                },
-                label = { Text("权限密钥") },
-                placeholder = { Text("留空表示不兑换") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
             // Clearing saved passwords lives in General: it is a
             // once-in-a-while action, and putting it next to the password field
             // on the home screen invites mis-taps that force a retype.
@@ -337,6 +293,7 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
         AccountSection(
             vm = vm,
             account = account,
+            accountError = accountError,
             email = email,
             password = password,
             otp = otp,
@@ -366,18 +323,18 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
 }
 
 /**
- * The account section: login, read-only identity, and bookmark management.
+ * The account section: login, account info, and bookmark management.
  *
- * The identity is never a choice here. The client adopts it automatically from
- * the account's bookmark for the server, and this section only *shows* the
- * result — 「账号身份「AutumnKoi」」 — with no list, no selector, no button.
- * Bookmark deletion lives here too: the home screen is for connecting, not for
- * managing what is saved.
+ * The identity is never a choice here and is not shown as one: the client
+ * adopts it automatically, and this section only manages the login and the
+ * saved bookmarks. Bookmark deletion lives here too: the home screen is for
+ * connecting, not for managing what is saved.
  */
 @Composable
 private fun AccountSection(
     vm: SessionViewModel,
     account: AccountState,
+    accountError: String?,
     email: String,
     password: String,
     otp: String,
@@ -400,11 +357,18 @@ private fun AccountSection(
     onDismissLogout: () -> Unit,
 ) {
     val busy = account.busy
-    val errorLine = actionError ?: account.lastError.ifEmpty { null }
+    val errorLine = actionError ?: accountError ?: account.lastError.ifEmpty { null }
 
     Section("账号") {
+        if (accountError != null) {
+            Text(
+                text = accountError,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         if (account.loggedIn) {
-            // Signed in: show the read-only identity and account info.
+            // Signed in: the account's identity and the actions on it.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 MemberAvatar(name = account.username.ifEmpty { account.email }, size = 38.dp)
                 Column(modifier = Modifier.padding(start = 12.dp)) {
@@ -422,32 +386,6 @@ private fun AccountSection(
                 }
             }
 
-            // The identity is shown, not chosen. The client adopts it
-            // automatically; this line states the fact.
-            Text(
-                text = if (account.username.isNotEmpty()) {
-                    "账号身份「${account.username}」"
-                } else {
-                    "账号身份「${account.email}」"
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-
-            Text(
-                text = if (account.hasMytsId) {
-                    "myTeamSpeak 身份已获取：连接服务器时会展示名称和徽章。"
-                } else {
-                    "这个账号没有可用的 myTeamSpeak 身份：服务器不会展示徽章，" +
-                        "连接本身不受影响。"
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = if (account.hasMytsId) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
             if (account.uuid.isNotEmpty()) {
                 SelectionContainer {
                     Text(

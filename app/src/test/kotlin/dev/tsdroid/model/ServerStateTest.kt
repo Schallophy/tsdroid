@@ -103,4 +103,24 @@ class ServerStateTest {
 
         assertEquals(listOf("A", "orphan"), state.channelTree().map { it.channel.name })
     }
+
+    @Test
+    fun snapshotCarriesThePrivilegeKeyRequest() {
+        // The core reports `virtualserver_ask_for_privilegekey` as
+        // `server.askPrivilegeKey`; the token dialog is driven by this flag, so a
+        // silent rename on either side would make the dialog never appear (or
+        // appear on every server). The default must be false: most servers never
+        // ask.
+        val json = Json { ignoreUnknownKeys = true }
+
+        val asking = json.decodeFromString<ServerState>(
+            """{ "server": { "name": "S", "askPrivilegeKey": true } }""",
+        )
+        assertTrue(asking.server.askPrivilegeKey)
+
+        val quiet = json.decodeFromString<ServerState>(
+            """{ "server": { "name": "S" } }""",
+        )
+        assertEquals(false, quiet.server.askPrivilegeKey)
+    }
 }

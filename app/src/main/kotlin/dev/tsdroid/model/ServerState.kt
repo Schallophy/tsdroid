@@ -179,6 +179,8 @@ data class Server(
     val clientsOnline: Int = 0,
     val maxClients: Int = 0,
     val welcomeMessage: String = "",
+    /** The server asks for a privilege key; the token dialog belongs on this flag. */
+    val askPrivilegeKey: Boolean = false,
 )
 
 /** One server group, by id and name. */

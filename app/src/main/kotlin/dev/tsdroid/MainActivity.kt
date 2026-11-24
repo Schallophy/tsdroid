@@ -2,14 +2,11 @@ package dev.tsdroid
 
 import android.Manifest
 import android.app.Activity
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,12 +15,13 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -40,9 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -102,25 +98,13 @@ private fun App() {
         }
     }
 
-    var crashLog by rememberSaveable { mutableStateOf<String?>(null) }
+    var tokenPromptAddress by remember { mutableStateOf<String?>(null) }
+    var tokenText by remember { mutableStateOf("") }
 
-    // Read once, before anything else can fail again: the trace of the previous
-    // run is the only evidence a field crash leaves behind.
-    LaunchedEffect(Unit) {
-        crashLog = CrashLog.read(context)
-    }
-
-    crashLog?.let { trace ->
-        CrashReportDialog(
-            trace = trace,
-            onCopy = {
-                val clipboard = context.getSystemService(ClipboardManager::class.java)
-                clipboard?.setPrimaryClip(ClipData.newPlainText("crash", trace))
-                CrashLog.clear(context)
-                crashLog = null
-            },
-            onDismiss = { crashLog = null },
-        )
+    // A skipped prompt is remembered for that connection only: leaving the
+    // server forgets it, so the next attempt asks again.
+    LaunchedEffect(ui.status) {
+        if (ui.status == SessionStatus.Idle) tokenPromptAddress = null
     }
 
     fun hasMicPermission(): Boolean = ContextCompat.checkSelfPermission(
@@ -180,7 +164,6 @@ private fun App() {
                 dev.tsdroid.NavTab.Home -> {
                     HomeScreen(
                         account = account,
-                        accountError = accountError,
                         onConnect = { config ->
                             if (hasMicPermission()) {
                                 // The account knows which identity this server was
@@ -211,9 +194,8 @@ private fun App() {
                                     identityIni = session.serverStore().readIdentity(),
                                     announceMyts = bookmark.sendMytsid,
                                     version = session.settings().versionProfile,
-                                    token = session.settings().privilegeKey,
                                 )
-                                if (hasMicPermission()) {
+                if (hasMicPermission()) {
                                     if (missing) {
                                         session.setToast("该书签的密码未能读取，请手动填写")
                                     }
@@ -233,6 +215,7 @@ private fun App() {
 
                 dev.tsdroid.NavTab.Settings -> SettingsScreen(
                     vm = session,
+                    accountError = accountError,
                     onBack = { session.selectNavTab(dev.tsdroid.NavTab.Home) },
                 )
 
@@ -266,6 +249,52 @@ private fun App() {
             }
         }
     }
+
+    // The privilege-key dialog: it appears only when the server itself asks for
+    // a token (`virtualserver_ask_for_privilegekey`), exactly like the official
+    // client. Asking once per connection; a skip stays skipped until the next
+    // server or a fresh connect.
+    if (
+        ui.status != SessionStatus.Idle &&
+        ui.state.server.askPrivilegeKey &&
+        ui.config?.address != tokenPromptAddress
+    ) {
+        AlertDialog(
+            onDismissRequest = { tokenPromptAddress = ui.config?.address },
+            title = { Text("服务器要求权限密钥") },
+            text = {
+                Column {
+                    Text(
+                        text = "这台服务器要求输入权限密钥（启动日志里的 token=…）才会授予分组。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    androidx.compose.material3.OutlinedTextField(
+                        value = tokenText,
+                        onValueChange = { tokenText = it },
+                        label = { Text("权限密钥") },
+                        singleLine = true,
+                        modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        tokenPromptAddress = ui.config?.address
+                        session.reconnectWithToken(tokenText.trim())
+                        tokenText = ""
+                    },
+                    enabled = tokenText.isNotBlank(),
+                ) { Text("兑换并重连") }
+            },
+            dismissButton = {
+                TextButton(onClick = { tokenPromptAddress = ui.config?.address }) {
+                    Text("跳过")
+                }
+            },
+        )
+    }
 }
 
 /**
@@ -298,35 +327,6 @@ private fun ConnectFirstPrompt(onConnect: () -> Unit) {
             Text("去首页")
         }
     }
-}
-
-/**
- * Shows the previous run's stack trace.
- *
- * Selectable rather than a plain `Text` so it can be copied by hand, and with a
- * one-tap copy button because the usual next step is pasting it into a chat.
- */
-@Composable
-private fun CrashReportDialog(trace: String, onCopy: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("上次运行崩溃了") },
-        text = {
-            SelectionContainer {
-                Text(
-                    text = trace,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    modifier = Modifier
-                        .padding(0.dp)
-                        .verticalScroll(rememberScrollState()),
-                )
-            }
-        },
-        confirmButton = { TextButton(onClick = onCopy) { Text("复制并清除") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("关闭") } },
-    )
 }
 
 /** Walks the context chain: `setContent` hands out a themed wrapper, not the Activity. */

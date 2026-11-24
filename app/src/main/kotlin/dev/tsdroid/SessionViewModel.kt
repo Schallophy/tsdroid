@@ -150,10 +150,6 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun connect(config: ServerConfig) {
         goodbyePending = false
         cleanupSession()
-        val app = getApplication<Application>()
-        // Breadcrumb: if the process dies from here on without a Java stack,
-        // the next launch reports this line instead of "it just closed".
-        CrashLog.markPhase(app, "正在连接 ${config.address}（原生库创建前）")
         _ui.value = SessionUiState(status = SessionStatus.Connecting, config = config)
 
         val session = NativeClient(
@@ -169,7 +165,6 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             false
         }
         if (!started) {
-            CrashLog.clearPhase(app)
             _ui.value = _ui.value.copy(
                 status = SessionStatus.Failed,
                 lastError = session.startError ?: "无法建立连接",
@@ -179,7 +174,6 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         client = session
         // Gain belongs to the core so every platform clips the same way.
         session.setMicGain(settings.micGain)
-        CrashLog.markPhase(app, "已创建原生会话，等待服务器响应 ${config.address}")
 
         // A successful connection lands on the channel list: that is where the
         // user expects to see people and where the mic bar's context lives.
@@ -188,9 +182,6 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch {
             session.state.collect { state ->
-                if (state.connected) {
-                    CrashLog.markPhase(app, "已连接 ${state.server.name}（${config.address}）")
-                }
                 _ui.update { current ->
                     current.copy(
                         state = state,
@@ -252,8 +243,6 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         audio.stop()
         client?.close()
         client = null
-        // Reaching here with no crash means the last run ended on purpose.
-        CrashLog.clearPhase(getApplication())
     }
 
     /**
@@ -296,6 +285,19 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun reconnect() {
         val config = _ui.value.config ?: return
         connect(config)
+    }
+
+    /**
+     * Reconnects with a privilege key the server asked for.
+     *
+     * The key is single-use and never stored: it rides into `clientinit` on the
+     * new connection and is gone from memory when that connection ends. This is
+     * what the official client's token dialog does after the server reports
+     * `ask_for_privilegekey`.
+     */
+    fun reconnectWithToken(token: String) {
+        val config = _ui.value.config ?: return
+        connect(config.copy(token = token.trim()))
     }
 
     override fun onCleared() {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -64,6 +65,9 @@ fun BottomNav(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceContainer)
+            // The gesture bar is drawn over the app; the bar must not sit under
+            // it, or the labels are half-covered and unreachable.
+            .navigationBarsPadding()
             .padding(horizontal = 6.dp, vertical = 4.dp),
     ) {
         for (tab in tabs) {

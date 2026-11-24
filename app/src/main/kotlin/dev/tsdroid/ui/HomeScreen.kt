@@ -22,8 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -76,7 +76,6 @@ import dev.tsdroid.ui.components.MemberAvatar
 @Composable
 fun HomeScreen(
     account: AccountState,
-    accountError: String?,
     onConnect: (ServerConfig) -> Unit,
     onConnectBookmark: (AccountRow) -> Unit,
     onOpenSettings: () -> Unit,
@@ -92,6 +91,7 @@ fun HomeScreen(
     var channel by rememberSaveable { mutableStateOf("") }
     var channelPassword by rememberSaveable { mutableStateOf("") }
     var advanced by rememberSaveable { mutableStateOf(false) }
+    var tempExpanded by rememberSaveable { mutableStateOf(true) }
     var announceMyts by rememberSaveable { mutableStateOf(true) }
     var versionProfile by rememberSaveable { mutableStateOf(settings.versionProfile) }
 
@@ -112,7 +112,6 @@ fun HomeScreen(
                 identityIni = store.readIdentity(),
                 announceMyts = announceMyts,
                 version = versionProfile,
-                token = settings.privilegeKey,
             ),
         )
     }
@@ -150,44 +149,48 @@ fun HomeScreen(
             }
             Column(modifier = Modifier.padding(start = 14.dp)) {
                 Text(text = "TS Droid", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    text = "TeamSpeak 3 / 6 客户端",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
 
         Spacer(Modifier.height(20.dp))
 
-        AccountStatusEntry(
-            account = account,
-            accountError = accountError,
-            onOpenSettings = onOpenSettings,
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        // Temporary connect card — the always-visible entry point.
+        // Temporary connect card — the always-visible entry point, collapsible
+        // so the bookmark list can reclaim the screen when it is not in use.
         Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(16.dp),
         ) {
-            Text(
-                text = "临时连接",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = "填一次就连，不会保存服务器和密码。要记住的连接用下方的书签。",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { tempExpanded = !tempExpanded },
+            ) {
+                Text(
+                    text = "临时连接",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    // Arrow without a shaft: the point is the only direction cue.
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = if (tempExpanded) "收起" else "展开",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .rotate(if (tempExpanded) 180f else 0f),
+                )
+            }
 
+            if (tempExpanded) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                ) {
             OutlinedTextField(
                 value = address,
                 onValueChange = { address = it },
@@ -245,14 +248,12 @@ fun HomeScreen(
                 modifier = Modifier.clickable { advanced = !advanced },
             ) {
                 Icon(
-                    imageVector = if (advanced) {
-                        Icons.Default.KeyboardArrowDown
-                    } else {
-                        Icons.AutoMirrored.Filled.KeyboardArrowRight
-                    },
+                    imageVector = Icons.Filled.ArrowDropDown,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier
+                        .size(18.dp)
+                        .rotate(if (advanced) 180f else 0f),
                 )
                 Text(
                     text = "更多选项",
@@ -305,6 +306,8 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth().height(48.dp),
             ) {
                 Text("连接", fontWeight = FontWeight.SemiBold)
+            }
+                }
             }
         }
 
@@ -368,73 +371,6 @@ fun HomeScreen(
         }
 
         Spacer(Modifier.height(32.dp))
-    }
-}
-
-/**
- * The account status, shown as a compact entry.
- *
- * Tapping it opens Settings, where the account and its management live. This
- * is not a separate screen: the account is one section of Settings, and the
- * entry here is the shortcut to it.
- */
-@Composable
-private fun AccountStatusEntry(
-    account: AccountState,
-    accountError: String?,
-    onOpenSettings: () -> Unit,
-) {
-    val loggedIn = account.loggedIn
-    val title = when {
-        loggedIn -> account.username.ifEmpty { account.email }
-        account.busy -> "myTeamSpeak"
-        else -> "未登录 myTeamSpeak"
-    }
-    val subtitle = when {
-        accountError != null -> "账号服务不可用"
-        loggedIn && account.hasMytsId -> "已登录 · 身份已获取"
-        loggedIn -> "已登录 · 该账号无可用身份"
-        account.busy -> account.progress.ifEmpty { "正在登录…" }
-        account.lastError.isNotEmpty() -> "上次登录失败"
-        else -> "登录后可同步云端书签"
-    }
-    val subtitleIsError = accountError != null || (!loggedIn && account.lastError.isNotEmpty())
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .clickable(onClick = onOpenSettings)
-            .padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
-    ) {
-        MemberAvatar(name = if (loggedIn) title.ifEmpty { "M" } else "M", size = 30.dp)
-        Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.labelSmall,
-                color = if (subtitleIsError) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp),
-        )
     }
 }
 

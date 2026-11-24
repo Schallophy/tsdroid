@@ -124,7 +124,7 @@ private fun App() {
         if (!granted) {
             session.setToast("没有录音权限，语音功能将不可用")
         }
-        config?.let(session::connect)
+        config?.let(session::adoptAccountIdentityAndConnect)
     }
 
     // Ask once, before the socket exists: the bridge cannot open the microphone
@@ -168,7 +168,10 @@ private fun App() {
             onPrefillApplied = { prefill = null },
             onConnect = { config ->
                 if (hasMicPermission()) {
-                    session.connect(config)
+                    // The account knows which identity this server was joined
+                    // with; adopting it here is what brings the right UID (and
+                    // its groups) back without asking the user.
+                    session.adoptAccountIdentityAndConnect(config)
                 } else {
                     pendingConfig = config
                     permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)

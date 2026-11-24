@@ -42,6 +42,12 @@ data class AccountState(
      * admin rights are bound to the UID it produces.
      */
     val identities: List<AccountIdentity> = emptyList(),
+    /**
+     * The identity `identity_pick` chose for the address it was asked about.
+     * `value` is empty when the account is ambiguous, which the UI explains
+     * instead of making the user choose between two keys.
+     */
+    val pickedIdentity: AccountIdentity? = null,
 ) {
     val hasMytsId: Boolean get() = mytsId.isNotEmpty()
 
@@ -124,6 +130,8 @@ data class AccountBookmark(
     val autoconnect: Boolean = false,
     val sendMytsid: Boolean = false,
     val hotkeyProfile: String = "",
+    /** The IDENTITY item this bookmark was created with, or empty. */
+    val identityUuid: String = "",
     val hasServerPassword: Boolean = false,
     val hasChannelPassword: Boolean = false,
     /** Only present when the listing was fetched with `revealSecrets`. */

@@ -245,6 +245,13 @@ class AccountClient(context: Context) : AutoCloseable {
      * this account keeps the UID. The library validates the string and writes
      * nothing when the item already holds it.
      */
+    /**
+     * Asks the account which identity the given server knows this user by.
+     * Read-only; the answer arrives in [state].`pickedIdentity`.
+     */
+    fun pickIdentity(address: String): String? =
+        exec("identity_pick", mapOf("address" to address))
+
     fun importIdentity(identity: String, uuid: String? = null): String? =
         exec(
             "identity_import",

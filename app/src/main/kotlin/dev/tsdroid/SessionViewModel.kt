@@ -418,6 +418,35 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun accountIdentities(): List<dev.tsdroid.model.AccountIdentity> = account.accountIdentities
 
     /**
+     * Adopts the identity the account says this server knows, then connects.
+     *
+     * This is the automatic choice: the account's bookmark for this address
+     * names the key the official client used, so the user never picks one. When
+     * the account cannot decide (several identities, none named for this
+     * server), the connection goes ahead with whatever identity is already
+     * local and the caller is told why the rights may be missing.
+     */
+    fun adoptAccountIdentityAndConnect(config: ServerConfig) {
+        val error = account.pickIdentity(config.address)
+        if (error != null) {
+            setToast("账号里选不出这台服务器用的身份：$error")
+            connect(config)
+            return
+        }
+        val picked = account.state.value.pickedIdentity
+        val value = picked?.value.orEmpty()
+        if (value.isEmpty()) {
+            connect(config)
+            return
+        }
+        if (servers.readIdentity() != value) {
+            servers.writeIdentity(value)
+            setToast("已采用账号里的身份「${picked?.name ?: "默认"}」，这台服务器的权限会跟过来")
+        }
+        connect(config.copy(identityIni = value))
+    }
+
+    /**
      * Writes the identity this app is using into the account so server groups
      * and admin rights survive a reinstall. Null means accepted; an error is
      * the immediate argument/session problem.

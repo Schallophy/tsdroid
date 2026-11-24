@@ -80,6 +80,12 @@ fun AccountScreen(
     var confirmLogout by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        // Cheap and read-only: keeps `pickedIdentity` (and thus the "this
+        // server knows you as …" line) current without waiting for a connect.
+        run { vm.accountRefresh() }
+    }
+
+    LaunchedEffect(Unit) {
         vm.accountNotices.collect { notice ->
             if (notice.ok) {
                 actionError = null
@@ -352,13 +358,27 @@ private fun SignedIn(
 
     AccountSection("身份") {
         Text(
-            text = "服务器把权限绑在 UID 上，UID 来自本机身份。把本机身份存进账号，换设备/重装后就能取回同一个 UID；也可以反过来采用账号里已有的身份。",
+            text = "服务器把权限绑在 UID 上，UID 来自本机身份。连接时客户端会自动采用账号里这台服务器用过的身份；下面的列表只用于核对或手动改。",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        val picked = account.pickedIdentity
+        if (picked != null && picked.value.isNotEmpty()) {
+            Text(
+                text = "这台服务器认你为「${picked.name.ifEmpty { picked.nickname.ifEmpty { "该身份" } }}」，" +
+                    "连接时会自动用它。",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = onSyncIdentity, enabled = !busy) {
                 Text("把本机身份存进账号")
+            }
+            if (picked != null && picked.value.isNotEmpty()) {
+                TextButton(onClick = { onUseIdentity(picked.value) }, enabled = !busy) {
+                    Text("立即采用")
+                }
             }
         }
         val stored = accountIdentities

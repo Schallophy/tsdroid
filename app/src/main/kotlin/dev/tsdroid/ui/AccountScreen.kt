@@ -135,6 +135,8 @@ fun AccountScreen(
 
     val busy = account.busy
     val errorLine = actionError ?: account.lastError.ifEmpty { null }
+    val hasRemembered = vm.accountHasRememberedLogin()
+    val isAutoLoggingIn = hasRemembered && !account.loggedIn && busy && account.command == "account_login"
 
     Column(
         modifier = Modifier
@@ -160,6 +162,23 @@ fun AccountScreen(
                     text = startError.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
+                )
+            }
+            return@Column
+        }
+
+        if (isAutoLoggingIn) {
+            AccountSection("正在自动登录") {
+                Text(
+                    text = "检测到本机已记住的登录凭据，正在自动登录…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                InlineBusy(account)
+                Text(
+                    text = "若连接失败或超时，下方会显示手动登录表单。",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             return@Column
@@ -251,10 +270,13 @@ fun AccountScreen(
                 }
                 StatusLines(errorLine = errorLine, infoLine = actionInfo)
                 Text(
-                    text = if (vm.accountHasRememberedLogin()) {
-                        "本机已记住上次登录；下次启动会自动登录。"
-                    } else {
-                        "登录成功后会在本机记住一个凭据，下次启动自动登录。"
+                    text = when {
+                        hasRemembered && errorLine != null ->
+                            "自动登录失败。填写密码重新登录，或返回应用列表等待网络恢复后重试。"
+                        hasRemembered ->
+                            "本机已记住上次登录，下次启动会自动登录。"
+                        else ->
+                            "登录成功后会在本机记住一个凭据，下次启动自动登录。"
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

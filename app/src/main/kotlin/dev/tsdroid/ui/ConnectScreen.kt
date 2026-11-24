@@ -156,6 +156,7 @@ fun ConnectScreen(
                 identityIni = store.readIdentity(),
                 announceMyts = announceMyts,
                 version = versionProfile,
+                token = settings.privilegeKey,
             ),
         )
     }

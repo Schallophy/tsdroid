@@ -54,6 +54,7 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
     var output by remember { mutableFloatStateOf(settings.outputGain) }
     var noise by remember { mutableStateOf(settings.noiseSuppression) }
     var bluetooth by remember { mutableStateOf(settings.bluetoothMic) }
+    var token by remember { mutableStateOf(settings.privilegeKey) }
 
     Column(
         modifier = Modifier
@@ -96,6 +97,33 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
                     modifier = Modifier.align(Alignment.CenterVertically),
                 )
             }
+        }
+
+        Section("服务器权限") {
+            Text(
+                text = "首次连接兑换权限密钥（服务器启动日志里的 token=…）。它只对这一次生效，" +
+                    "把密钥对应的分组授予当前 UID；之后权限就绑在这个身份上。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedTextField(
+                value = token,
+                onValueChange = {
+                    token = it
+                    settings.privilegeKey = it.trim()
+                },
+                label = { Text("权限密钥") },
+                placeholder = { Text("留空表示不兑换") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = "当前身份所在分组：" +
+                    (vm.ui.value.state.ownServerGroups.joinToString("、") { it.name }
+                        .ifEmpty { "未连接或没有" }),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         Section("状态") {

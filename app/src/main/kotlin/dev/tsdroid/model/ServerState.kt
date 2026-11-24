@@ -32,6 +32,11 @@ data class ServerState(
     /** Computed by the core from the capture path; covers this client only. */
     val ownTalking: Boolean = false,
     val users: List<User> = emptyList(),
+    /**
+     * The groups **this** client holds, already joined with their names.
+     * "Am I an admin here" is answered here, not by guessing from the user list.
+     */
+    val ownServerGroups: List<GroupEntry> = emptyList(),
     val channels: List<Channel> = emptyList(),
     /**
      * The display order computed by the native core. Empty only with a library
@@ -135,6 +140,10 @@ data class User(
     val awayMessage: String = "",
     val description: String = "",
     val talking: Boolean = false,
+    /** Server group ids this member holds. Empty for someone with none. */
+    val serverGroups: List<Long> = emptyList(),
+    /** Raw `client_badges` (e.g. `overwolf=0`); empty when the server sent none. */
+    val badges: String = "",
 )
 
 @Serializable
@@ -171,3 +180,7 @@ data class Server(
     val maxClients: Int = 0,
     val welcomeMessage: String = "",
 )
+
+/** One server group, by id and name. */
+@Serializable
+data class GroupEntry(val id: Long = 0, val name: String = "")

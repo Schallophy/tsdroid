@@ -42,6 +42,14 @@ class Settings(context: Context) {
         get() = prefs.getString(KEY_VERSION_PROFILE, "latest").orEmpty()
         set(value) = prefs.edit().putString(KEY_VERSION_PROFILE, value).apply()
 
+    /**
+     * A privilege key redeemed on the next connect, then cleared by the user.
+     * Single-use on the server, so keeping it around does nothing.
+     */
+    var privilegeKey: String
+        get() = prefs.getString(KEY_PRIVILEGE_KEY, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_PRIVILEGE_KEY, value).apply()
+
     /** Away message restored on the next connect. */
     var awayMessage: String
         get() = prefs.getString(KEY_AWAY_MESSAGE, "").orEmpty()
@@ -54,5 +62,6 @@ class Settings(context: Context) {
         const val KEY_BLUETOOTH_MIC = "bluetooth_mic"
         const val KEY_AWAY_MESSAGE = "away_message"
         const val KEY_VERSION_PROFILE = "version_profile"
+        const val KEY_PRIVILEGE_KEY = "privilege_key"
     }
 }

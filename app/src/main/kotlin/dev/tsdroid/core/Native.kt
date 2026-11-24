@@ -63,7 +63,7 @@ internal object Native {
      * a session that looks connected and behaves wrongly.
      * `NativeAbiTest` fails the build if the submodule is bumped without this.
      */
-    const val EXPECTED_ABI: Int = 3
+    const val EXPECTED_ABI: Int = 4
 
     /**
      * Why the loaded library is not the one this Kotlin expects, or null when it
@@ -109,6 +109,9 @@ internal object Native {
      * `version` picks the announced client version (`latest`, `debug`,
      * `ancient`). The server checks it against its signature, so only those
      * built-in profiles connect.
+     *
+     * `token` is a privilege key redeemed on first connect; it grants its
+     * groups to this UID once. Empty means none.
      */
     external fun nativeCreate(
         address: String,
@@ -118,6 +121,7 @@ internal object Native {
         channel: String?,
         channelPassword: String?,
         version: String,
+        token: String,
     ): Long
 
     /**
@@ -150,6 +154,7 @@ internal object Native {
         channel: String?,
         channelPassword: String?,
         version: String,
+        token: String,
     ): Long
 
     external fun nativeDestroy(ptr: Long)

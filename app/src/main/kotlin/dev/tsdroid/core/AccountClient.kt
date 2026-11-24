@@ -68,6 +68,14 @@ class AccountClient(context: Context) : AutoCloseable {
     @Volatile
     private var secrets: Map<String, BookmarkSecrets> = emptyMap()
 
+    /**
+     * The account's stored identities, as last read. A returning install uses
+     * one of these to keep the UID its server rights are bound to.
+     */
+    @Volatile
+    var accountIdentities: List<dev.tsdroid.model.AccountIdentity> = emptyList()
+        private set
+
     private val accountDir = File(appContext.filesDir, "account")
     private val credentialFile = File(accountDir, "login.json")
     private val baselineFile = File(accountDir, "sync-baseline.json")
@@ -181,6 +189,9 @@ class AccountClient(context: Context) : AutoCloseable {
         val snapshot = Native.nativeSnapshot(ptr) ?: return
         val parsed = json.decodeFromString<SnapshotEnvelope>(snapshot).account
         if (!parsed.loggedIn && secrets.isNotEmpty()) secrets = emptyMap()
+        if (parsed.loggedIn && parsed.identities != accountIdentities) {
+            accountIdentities = parsed.identities
+        }
         if (parsed != _state.value) _state.value = parsed
     }
 
@@ -228,6 +239,20 @@ class AccountClient(context: Context) : AutoCloseable {
     fun refreshAccount(): String? = exec("account_refresh", mapOf("revealSecrets" to false))
 
     fun backup(): String? = exec("sync_backup")
+
+    /**
+     * Copies an identity into the account, so another install signing in with
+     * this account keeps the UID. The library validates the string and writes
+     * nothing when the item already holds it.
+     */
+    fun importIdentity(identity: String, uuid: String? = null): String? =
+        exec(
+            "identity_import",
+            buildMap {
+                put("identity", identity)
+                if (!uuid.isNullOrBlank()) put("uuid", uuid)
+            },
+        )
 
     /** Passwords for one bookmark, or null when the cache has no entry yet. */
     fun bookmarkSecrets(uuid: String): BookmarkSecrets? = secrets[uuid]

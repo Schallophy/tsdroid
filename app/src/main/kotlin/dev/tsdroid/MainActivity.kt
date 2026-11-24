@@ -143,6 +143,8 @@ private fun App() {
             AccountScreen(
                 vm = session,
                 onBack = { accountOpen = false },
+                onSyncIdentity = { session.accountSyncIdentity()?.let { session.setToast(it) } },
+                onUseIdentity = { session.useAccountIdentity(it) },
                 onUseBookmark = { bookmark, notice ->
                     prefill = ConnectPrefill(
                         address = bookmark.connectAddress,

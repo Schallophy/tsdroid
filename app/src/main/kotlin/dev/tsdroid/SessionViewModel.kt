@@ -415,6 +415,25 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun accountBookmarkSecrets(uuid: String): BookmarkSecrets? =
         account.bookmarkSecrets(uuid)
 
+    fun accountIdentities(): List<dev.tsdroid.model.AccountIdentity> = account.accountIdentities
+
+    /**
+     * Writes the identity this app is using into the account so server groups
+     * and admin rights survive a reinstall. Null means accepted; an error is
+     * the immediate argument/session problem.
+     */
+    fun accountSyncIdentity(): String? {
+        val identity = servers.readIdentity()
+        if (identity.isBlank()) return "本机还没有身份"
+        return account.importIdentity(identity)
+    }
+
+    /** Adopts one of the account's identities locally, so this install uses its UID. */
+    fun useAccountIdentity(value: String) {
+        servers.writeIdentity(value)
+        setToast("已改用账号里的身份，下次连接生效")
+    }
+
     fun accountHasRememberedLogin(): Boolean = account.hasRememberedLogin()
 
     // ── files ───────────────────────────────────────────────────────────────

@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.tsdroid.SessionViewModel
 import dev.tsdroid.model.AccountBookmark
+import dev.tsdroid.model.AccountIdentity
 import dev.tsdroid.model.AccountRow
 import dev.tsdroid.model.AccountState
 import dev.tsdroid.ui.components.MemberAvatar
@@ -62,6 +63,8 @@ import dev.tsdroid.ui.components.MemberAvatar
 fun AccountScreen(
     vm: SessionViewModel,
     onBack: () -> Unit,
+    onSyncIdentity: () -> Unit,
+    onUseIdentity: (String) -> Unit,
     onUseBookmark: (AccountBookmark, String?) -> Unit,
 ) {
     val account by vm.accountState.collectAsStateWithLifecycle()
@@ -160,11 +163,14 @@ fun AccountScreen(
             SignedIn(
                 account = account,
                 busy = busy,
+                accountIdentities = account.identities,
                 errorLine = errorLine,
                 infoLine = actionInfo,
                 onRefresh = { run { vm.accountRefresh() } },
                 onBackup = { run { vm.accountBackup() } },
                 onLogout = { confirmLogout = true },
+                onSyncIdentity = onSyncIdentity,
+                onUseIdentity = onUseIdentity,
                 onChooseBookmark = { uuid, bookmark -> choose(uuid, bookmark) },
             )
         } else {
@@ -280,7 +286,10 @@ private fun SignedIn(
     onRefresh: () -> Unit,
     onBackup: () -> Unit,
     onLogout: () -> Unit,
+    onSyncIdentity: () -> Unit,
+    onUseIdentity: (String) -> Unit,
     onChooseBookmark: (String, AccountBookmark) -> Unit,
+    accountIdentities: List<AccountIdentity>,
 ) {
     AccountSection("账号") {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -339,6 +348,55 @@ private fun SignedIn(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+    }
+
+    AccountSection("身份") {
+        Text(
+            text = "服务器把权限绑在 UID 上，UID 来自本机身份。把本机身份存进账号，换设备/重装后就能取回同一个 UID；也可以反过来采用账号里已有的身份。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = onSyncIdentity, enabled = !busy) {
+                Text("把本机身份存进账号")
+            }
+        }
+        val stored = accountIdentities
+        if (stored.isEmpty()) {
+            Text(
+                text = "账号里还没有可读的身份项。先在官方客户端登录一次，它会创建一条。",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            stored.forEach { identity ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = identity.name.ifEmpty { identity.nickname.ifEmpty { "身份" } },
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            text = if (identity.default) "默认身份" else "备用身份",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    TextButton(
+                        onClick = { onUseIdentity(identity.value) },
+                        enabled = !busy,
+                    ) { Text("采用") }
+                }
+            }
+        }
+        StatusLines(errorLine = errorLine, infoLine = infoLine)
     }
 
     AccountSection("云书签") {

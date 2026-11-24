@@ -36,6 +36,12 @@ data class AccountState(
     /** The myTeamSpeak ID in base64; empty means servers see no badge/name. */
     val mytsId: String = "",
     val mytsPublicKey: String = "",
+    /**
+     * The `IDENTITY` items the account stores. Their `value` is the
+     * `counterVkey` a returning install must reuse, because server groups and
+     * admin rights are bound to the UID it produces.
+     */
+    val identities: List<AccountIdentity> = emptyList(),
 ) {
     val hasMytsId: Boolean get() = mytsId.isNotEmpty()
 
@@ -163,4 +169,14 @@ data class AccountEntry(
     val name: String = "",
     val folderFor: String? = null,
     val isFolder: Boolean = false,
+)
+
+@Serializable
+data class AccountIdentity(
+    val uuid: String = "",
+    val name: String = "",
+    val nickname: String = "",
+    val default: Boolean = false,
+    /** The `counterVkey` string itself. */
+    val value: String = "",
 )

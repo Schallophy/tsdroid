@@ -427,6 +427,13 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
      * local and the caller is told why the rights may be missing.
      */
     fun adoptAccountIdentityAndConnect(config: ServerConfig) {
+        // A server already seen with a known identity costs no round trip: the
+        // first successful connection stored the winner.
+        settings.identityForServer(config.address)?.let { known ->
+            connect(config.copy(identityIni = known))
+            return
+        }
+
         val error = account.pickIdentity(config.address)
         if (error != null) {
             setToast("账号里选不出这台服务器用的身份：$error")
@@ -439,6 +446,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             connect(config)
             return
         }
+        settings.rememberIdentityForServer(config.address, value)
         if (servers.readIdentity() != value) {
             servers.writeIdentity(value)
             setToast("已采用账号里的身份「${picked?.name ?: "默认"}」，这台服务器的权限会跟过来")

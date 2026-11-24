@@ -130,8 +130,12 @@ data class AccountBookmark(
     val autoconnect: Boolean = false,
     val sendMytsid: Boolean = false,
     val hotkeyProfile: String = "",
-    /** The IDENTITY item this bookmark was created with, or empty. */
-    val identityUuid: String = "",
+    /**
+     * The *name* of the identity this bookmark was created with, or empty.
+     * Measured on a real settings.db: the official client writes `Default`
+     * here, i.e. the IDENTITY item's own name, not a uuid.
+     */
+    val identityName: String = "",
     val hasServerPassword: Boolean = false,
     val hasChannelPassword: Boolean = false,
     /** Only present when the listing was fetched with `revealSecrets`. */

@@ -50,6 +50,20 @@ class Settings(context: Context) {
         get() = prefs.getString(KEY_PRIVILEGE_KEY, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_PRIVILEGE_KEY, value).apply()
 
+    /**
+     * The identity that worked on a server, per address.
+     *
+     * Which identity a server knows cannot always be read from the account
+     * (two identities may share a name), so the first successful connection
+     * records the winner and later connects reuse it without probing.
+     */
+    fun identityForServer(address: String): String? =
+        prefs.getString(KEY_IDENTITY_PREFIX + address.lowercase(), null)?.takeIf { it.isNotEmpty() }
+
+    fun rememberIdentityForServer(address: String, identity: String) {
+        prefs.edit().putString(KEY_IDENTITY_PREFIX + address.lowercase(), identity).apply()
+    }
+
     /** Away message restored on the next connect. */
     var awayMessage: String
         get() = prefs.getString(KEY_AWAY_MESSAGE, "").orEmpty()
@@ -63,5 +77,6 @@ class Settings(context: Context) {
         const val KEY_AWAY_MESSAGE = "away_message"
         const val KEY_VERSION_PROFILE = "version_profile"
         const val KEY_PRIVILEGE_KEY = "privilege_key"
+        const val KEY_IDENTITY_PREFIX = "identity_for_"
     }
 }

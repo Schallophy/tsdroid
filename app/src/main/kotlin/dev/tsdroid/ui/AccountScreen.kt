@@ -365,7 +365,7 @@ private fun SignedIn(
         val picked = account.pickedIdentity
         if (picked != null && picked.value.isNotEmpty()) {
             Text(
-                text = "这台服务器认你为「${picked.name.ifEmpty { picked.nickname.ifEmpty { "该身份" } }}」，" +
+                text = "这台服务器认你为「${picked.nickname.ifEmpty { picked.name.ifEmpty { "该身份" } }}」，" +
                     "连接时会自动用它。",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
@@ -400,7 +400,7 @@ private fun SignedIn(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = identity.name.ifEmpty { identity.nickname.ifEmpty { "身份" } },
+                            text = identity.nickname.ifEmpty { identity.name.ifEmpty { "身份" } },
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(

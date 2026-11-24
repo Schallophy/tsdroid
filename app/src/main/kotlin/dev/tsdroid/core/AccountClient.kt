@@ -34,6 +34,17 @@ import java.io.File
 data class AccountNotice(val command: String, val ok: Boolean, val message: String)
 
 /**
+ * The outcome of `identity_pick`. [value] is empty when nothing could be
+ * chosen; [error] then says why, in a form the connect screen can show.
+ */
+data class PickedIdentity(
+    val value: String,
+    val name: String,
+    val nickname: String,
+    val error: String? = null,
+)
+
+/**
  * The myTeamSpeak side, on its own native handle.
  *
  * An account has nothing to do with a server connection: signing in, reading
@@ -63,6 +74,11 @@ class AccountClient(context: Context) : AutoCloseable {
     private val syncGeneration = MutableStateFlow(0L)
     @Volatile
     private var lastSyncNotice: AccountNotice? = null
+
+    /** Same idea for `identity_pick`: the result is read from the snapshot. */
+    private val identityGeneration = MutableStateFlow(0L)
+    @Volatile
+    private var lastIdentityNotice: AccountNotice? = null
 
     /** Passwords by bookmark uuid. Memory only; never in the polled snapshot. */
     @Volatile
@@ -170,6 +186,10 @@ class AccountClient(context: Context) : AutoCloseable {
                 lastSyncNotice = notice
                 syncGeneration.value += 1
             }
+            if (notice.command == "identity_pick") {
+                lastIdentityNotice = notice
+                identityGeneration.value += 1
+            }
             if (notice.ok && notice.command == "account_login") {
                 // A successful login invalidates whatever the previous account
                 // had; the fetch below fills it for this one.
@@ -248,7 +268,76 @@ class AccountClient(context: Context) : AutoCloseable {
     /**
      * Asks the account which identity the given server knows this user by.
      * Read-only; the answer arrives in [state].`pickedIdentity`.
+     *
+     * The command is asynchronous on the native side, so reading the snapshot
+     * immediately after `exec` returns the *previous* pick (or none at all).
+     * This waits for the matching completion event and then reads the snapshot.
      */
+    suspend fun pickIdentityAndWait(address: String, timeoutMs: Long = 30_000): PickedIdentity {
+        if (ptr == 0L) return PickedIdentity("", "", "", "账号服务未启动")
+        // Serialise with the password fetch that follows a login: the account
+        // side runs one command at a time and would reject the pick as "already
+        // running sync_list" if it landed in that window.
+        return syncMutex.withLock {
+            refresh()
+            val idle = withTimeoutOrNull(60_000) {
+                state.first { !it.busy }
+                true
+            } ?: false
+            if (!idle) {
+                return@withLock PickedIdentity("", "", "", "账号正忙，请稍后再试")
+            }
+
+            val generation = identityGeneration.value
+            var rejection = exec("identity_pick", mapOf("address" to address))
+            // The snapshot can lag a command that was just dispatched; retry a
+            // few times instead of falling back to a local identity.
+            var attempts = 0
+            while (rejection != null && rejection.contains("already running") && attempts < 5) {
+                delay(300)
+                refresh()
+                rejection = exec("identity_pick", mapOf("address" to address))
+                attempts++
+            }
+            if (rejection != null) return@withLock PickedIdentity("", "", "", rejection)
+
+            val notice = withTimeoutOrNull(timeoutMs) {
+                identityGeneration.first { it > generation }
+                lastIdentityNotice
+            } ?: return@withLock PickedIdentity("", "", "", "读取账号身份超时")
+            refresh()
+            if (!notice.ok) {
+                return@withLock PickedIdentity(
+                    "",
+                    "",
+                    "",
+                    notice.message.ifEmpty { "账号里没有能对上这台服务器的身份" },
+                )
+            }
+            val picked = state.value.pickedIdentity
+                ?: return@withLock PickedIdentity("", "", "", "账号里没有可用的身份")
+            if (picked.value.isEmpty()) {
+                return@withLock PickedIdentity("", "", "", "账号里没有能对上这台服务器的身份")
+            }
+            PickedIdentity(picked.value, picked.name, picked.nickname)
+        }
+    }
+
+    /**
+     * Waits for the login `start` kicked off from a remembered credential.
+     *
+     * A user can tap connect before the automatic login finishes; picking an
+     * identity then fails with "not signed in" and the connection would silently
+     * lose both the UID and the badge. This closes that window.
+     */
+    suspend fun awaitLogin(timeoutMs: Long = 45_000): Boolean {
+        if (state.value.loggedIn) return true
+        if (!hasRememberedLogin()) return false
+        return withTimeoutOrNull(timeoutMs) {
+            state.first { it.loggedIn || (!it.busy && it.lastError.isNotEmpty()) }.loggedIn
+        } ?: false
+    }
+
     fun pickIdentity(address: String): String? =
         exec("identity_pick", mapOf("address" to address))
 

@@ -421,37 +421,54 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
      * Adopts the identity the account says this server knows, then connects.
      *
      * This is the automatic choice: the account's bookmark for this address
-     * names the key the official client used, so the user never picks one. When
-     * the account cannot decide (several identities, none named for this
-     * server), the connection goes ahead with whatever identity is already
-     * local and the caller is told why the rights may be missing.
+     * names the key the official client used, and when that is missing the
+     * identity nickname matching the account name decides. When the account
+     * cannot decide (several identities, none matching), the connection goes
+     * ahead with whatever identity is already local and the caller is told why
+     * the rights may be missing.
      */
     fun adoptAccountIdentityAndConnect(config: ServerConfig) {
         // A server already seen with a known identity costs no round trip: the
-        // first successful connection stored the winner.
+        // first successful connection stored the winner. If the account's
+        // identity list is loaded, check it still contains that key; a stale
+        // cache from an older build must not keep shadowing the account.
         settings.identityForServer(config.address)?.let { known ->
-            connect(config.copy(identityIni = known))
-            return
+            val identities = account.accountIdentities
+            if (identities.isEmpty() || identities.any { it.value == known }) {
+                connect(config.copy(identityIni = known))
+                return
+            }
         }
 
-        val error = account.pickIdentity(config.address)
-        if (error != null) {
-            setToast("账号里选不出这台服务器用的身份：$error")
-            connect(config)
-            return
+        viewModelScope.launch {
+            // The auto-login may still be in flight when connect is tapped.
+            if (account.hasRememberedLogin() && !account.state.value.loggedIn) {
+                setToast("正在等待账号登录，以取回这台服务器的身份…")
+                if (!account.awaitLogin()) {
+                    setToast("账号还没登录成功，本次连接不带账号身份")
+                    connect(config)
+                    return@launch
+                }
+            }
+            if (!account.state.value.loggedIn) {
+                connect(config)
+                return@launch
+            }
+
+            val picked = account.pickIdentityAndWait(config.address)
+            if (picked.error != null) {
+                setToast("账号里选不出这台服务器用的身份：${picked.error}")
+                connect(config)
+                return@launch
+            }
+            settings.rememberIdentityForServer(config.address, picked.value)
+            if (servers.readIdentity() != picked.value) {
+                servers.writeIdentity(picked.value)
+                val label = picked.nickname.ifEmpty { picked.name.ifEmpty { "默认" } }
+                setToast("已采用账号里的身份「$label」，这台服务器的权限会跟过来")
+            }
+            connect(config.copy(identityIni = picked.value))
         }
-        val picked = account.state.value.pickedIdentity
-        val value = picked?.value.orEmpty()
-        if (value.isEmpty()) {
-            connect(config)
-            return
-        }
-        settings.rememberIdentityForServer(config.address, value)
-        if (servers.readIdentity() != value) {
-            servers.writeIdentity(value)
-            setToast("已采用账号里的身份「${picked?.name ?: "默认"}」，这台服务器的权限会跟过来")
-        }
-        connect(config.copy(identityIni = value))
     }
 
     /**

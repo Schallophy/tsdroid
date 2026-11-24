@@ -56,6 +56,10 @@ class Settings(context: Context) {
      * Which identity a server knows cannot always be read from the account
      * (two identities may share a name), so the first successful connection
      * records the winner and later connects reuse it without probing.
+     *
+     * The key carries a generation on purpose: entries written before the
+     * identity pick was awaited may name the wrong key, and one of those would
+     * otherwise shadow the correct account identity forever.
      */
     fun identityForServer(address: String): String? =
         prefs.getString(KEY_IDENTITY_PREFIX + address.lowercase(), null)?.takeIf { it.isNotEmpty() }
@@ -77,6 +81,6 @@ class Settings(context: Context) {
         const val KEY_AWAY_MESSAGE = "away_message"
         const val KEY_VERSION_PROFILE = "version_profile"
         const val KEY_PRIVILEGE_KEY = "privilege_key"
-        const val KEY_IDENTITY_PREFIX = "identity_for_"
+        const val KEY_IDENTITY_PREFIX = "identity_for_v2_"
     }
 }

@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.tsdroid.SessionViewModel
 import dev.tsdroid.core.Native
+import dev.tsdroid.data.AudioFocusAction
 import dev.tsdroid.model.AccountBookmark
 import dev.tsdroid.model.AccountRow
 import dev.tsdroid.model.AccountState
@@ -78,6 +80,8 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
     var noise by remember { mutableStateOf(settings.noiseSuppression) }
     var bluetooth by remember { mutableStateOf(settings.bluetoothMic) }
     var filesEnabled by remember { mutableStateOf(settings.filesTabEnabled) }
+    var keepInBackground by remember { mutableStateOf(settings.keepInBackground) }
+    var focusAction by remember { mutableStateOf(settings.audioFocusAction) }
     var clientVersion by remember { mutableStateOf(settings.clientVersion) }
     var clientPlatform by remember { mutableStateOf(settings.clientPlatform) }
     // Set when the version changed while a session is live: the choice only
@@ -267,6 +271,22 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
                 onChange = {
                     bluetooth = it
                     vm.applyAudioSettings(gain, noise, it)
+                },
+            )
+            ToggleRow(
+                label = "切后台不断开",
+                hint = "划掉最近任务后继续通话",
+                checked = keepInBackground,
+                onChange = {
+                    keepInBackground = it
+                    settings.keepInBackground = it
+                },
+            )
+            FocusActionRow(
+                value = focusAction,
+                onChange = {
+                    focusAction = it
+                    settings.audioFocusAction = it
                 },
             )
             Column(modifier = Modifier.fillMaxWidth()) {
@@ -697,6 +717,92 @@ private fun Section(title: String, content: @Composable () -> Unit) {
                 .padding(14.dp),
         ) {
             content()
+        }
+    }
+}
+
+@Composable
+private fun FocusActionRow(value: String, onChange: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val label = when (value) {
+        AudioFocusAction.MUTE_SELF -> "只静音自己"
+        AudioFocusAction.DISCONNECT -> "断开连接"
+        AudioFocusAction.IGNORE -> "不处理"
+        else -> "静音自己并暂停声音"
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { open = true },
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = "来电时", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = "更改",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+    if (open) {
+        AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text("来电时") },
+            text = {
+                Column {
+                    FocusOption("静音自己并暂停声音", value, AudioFocusAction.MUTE_BOTH) {
+                        onChange(it); open = false
+                    }
+                    FocusOption("只静音自己", value, AudioFocusAction.MUTE_SELF) {
+                        onChange(it); open = false
+                    }
+                    FocusOption("断开连接", value, AudioFocusAction.DISCONNECT) {
+                        onChange(it); open = false
+                    }
+                    FocusOption("不处理", value, AudioFocusAction.IGNORE) {
+                        onChange(it); open = false
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { open = false }) { Text("取消") }
+            },
+        )
+    }
+}
+
+@Composable
+private fun FocusOption(label: String, current: String, value: String, onPick: (String) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onPick(value) }
+            .padding(vertical = 10.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (value == current) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+            modifier = Modifier.weight(1f),
+        )
+        if (value == current) {
+            Icon(
+                Icons.Default.Check,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }

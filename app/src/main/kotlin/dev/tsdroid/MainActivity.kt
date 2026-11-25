@@ -2,7 +2,9 @@ package dev.tsdroid
 
 import android.Manifest
 import android.app.Activity
+import android.content.Intent
 import android.content.Context
+import android.os.Build
 import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -125,11 +127,46 @@ private fun App() {
         config?.let { session.adoptAccountIdentityAndConnect(it) }
     }
 
+    // Android 13+ hides the ongoing call notification without this. It is asked
+    // once before the first connect, because that is when the notification
+    // starts to exist; a refusal does not block the call, it just means no
+    // notification.
+    val notificationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { /* either way, the session proceeds */ }
+
+    fun askNotificationPermissionOnce() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
     // Ask once, before the socket exists: the bridge cannot open the microphone
     // later without it, and a prompt in the middle of a call is worse than one here.
     LaunchedEffect(Unit) {
         if (!hasMicPermission()) {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    // A one-time nudge toward exempting the app from battery optimisation. It is
+    // the difference between "stays connected" and "dies an hour later" on ROMs
+    // that kill background processes hard; skipping it changes nothing else.
+    LaunchedEffect(Unit) {
+        val settings = session.settings()
+        if (!settings.batteryHintShown) {
+            settings.batteryHintShown = true
+            val pm = context.getSystemService(android.os.PowerManager::class.java)
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                runCatching {
+                    context.startActivity(
+                        Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+                    )
+                }
+            }
         }
     }
 
@@ -165,6 +202,7 @@ private fun App() {
                     HomeScreen(
                         account = account,
                         onConnect = { config ->
+                            askNotificationPermissionOnce()
                             if (hasMicPermission()) {
                                 // The account knows which identity this server was
                                 // joined with; adopting it here is what brings the
@@ -177,6 +215,7 @@ private fun App() {
                             }
                         },
                         onConnectBookmark = { row ->
+                            askNotificationPermissionOnce()
                             val bookmark = row.bookmark
                             if (bookmark != null) {
                                 // Bookmarks carry their own passwords from the cloud

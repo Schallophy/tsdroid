@@ -9,6 +9,18 @@ import android.content.Context
  * session start, with no reactivity requirement beyond restarting the audio
  * bridge by hand.
  */
+/** What to do when another app takes the audio focus. */
+object AudioFocusAction {
+    /** Mute our microphone and pause the others' audio; restore when focus returns. */
+    const val MUTE_BOTH = "mute_both"
+    /** Mute our microphone only. */
+    const val MUTE_SELF = "mute_self"
+    /** Drop the connection. */
+    const val DISCONNECT = "disconnect"
+    /** Do nothing. */
+    const val IGNORE = "ignore"
+}
+
 class Settings(context: Context) {
 
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -93,6 +105,33 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(KEY_FILES_TAB, false)
         set(value) = prefs.edit().putBoolean(KEY_FILES_TAB, value).apply()
 
+    /**
+     * Keep the session alive when the app is swiped off the recent-tasks list.
+     *
+     * On, the foreground service survives the swipe and the notification is the
+     * way back; off, the swipe ends the call like closing any other app.
+     */
+    var keepInBackground: Boolean
+        get() = prefs.getBoolean(KEY_KEEP_BACKGROUND, true)
+        set(value) = prefs.edit().putBoolean(KEY_KEEP_BACKGROUND, value).apply()
+
+    /**
+     * What to do when another app takes the audio focus (a call, navigation).
+     *
+     * One of [AudioFocusAction.MUTE_BOTH], [AudioFocusAction.MUTE_SELF],
+     * [AudioFocusAction.DISCONNECT], [AudioFocusAction.IGNORE]. The first is the
+     * default because leaking the microphone into a phone call is the worst
+     * outcome.
+     */
+    var audioFocusAction: String
+        get() = prefs.getString(KEY_FOCUS_ACTION, AudioFocusAction.MUTE_BOTH).orEmpty()
+        set(value) = prefs.edit().putString(KEY_FOCUS_ACTION, value).apply()
+
+    /** Whether the one-time battery-optimisation hint has been shown. */
+    var batteryHintShown: Boolean
+        get() = prefs.getBoolean(KEY_BATTERY_HINT, false)
+        set(value) = prefs.edit().putBoolean(KEY_BATTERY_HINT, value).apply()
+
     private companion object {
         const val KEY_MIC_GAIN = "mic_gain"
         const val KEY_OUTPUT_GAIN = "output_gain"
@@ -104,9 +143,13 @@ class Settings(context: Context) {
         const val KEY_PRIVILEGE_KEY = "privilege_key"
         const val KEY_IDENTITY_PREFIX = "identity_for_v2_"
         const val KEY_FILES_TAB = "files_tab_enabled"
+        const val KEY_KEEP_BACKGROUND = "keep_in_background"
+        const val KEY_FOCUS_ACTION = "audio_focus_action"
+        const val KEY_BATTERY_HINT = "battery_hint_shown"
 
         /** `3.6.3` + `Windows`: the standard signed tuple, unchanged from before. */
         const val DEFAULT_VERSION = "3.6.3"
         const val DEFAULT_PLATFORM = "Windows"
+
     }
 }

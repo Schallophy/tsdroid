@@ -1,6 +1,11 @@
 package dev.tsdroid
 
 import android.app.Application
+import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.os.PowerManager
 import android.net.Uri
 import android.provider.OpenableColumns
 import dev.tsdroid.core.AccountClient
@@ -8,6 +13,7 @@ import dev.tsdroid.core.AccountNotice
 import dev.tsdroid.core.AudioBridge
 import dev.tsdroid.core.NativeClient
 import dev.tsdroid.core.ServerConfig
+import dev.tsdroid.data.AudioFocusAction
 import dev.tsdroid.data.ServerStore
 import dev.tsdroid.data.Settings
 import dev.tsdroid.model.AccountState
@@ -64,6 +70,18 @@ class SessionController(
      * not start). The service uses it to stop itself; the UI does not care.
      */
     var onSessionEnded: (() -> Unit)? = null
+
+    /** Called whenever something the notification shows (mic, speaker) changes. */
+    var onStateChanged: (() -> Unit)? = null
+
+    private val audioManager = app.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var focusRequest: AudioFocusRequest? = null
+    private var focusListener: AudioManager.OnAudioFocusChangeListener? = null
+
+    /** Set while another app holds focus and our chosen action muted us. */
+    private var micMutedByFocus = false
+    private var speakerPausedByFocus = false
 
     private val audio = AudioBridge(app)
 
@@ -130,6 +148,8 @@ class SessionController(
         goodbyePending = false
         reconnectAfterGoodbye = null
         cleanupSession()
+        acquireWakeLock()
+        requestAudioFocus()
         _ui.value = SessionUiState(status = SessionStatus.Connecting, config = config)
 
         val session = NativeClient(
@@ -331,10 +351,108 @@ class SessionController(
     /** Stops the session: audio, the native client and the collectors. */
     fun shutdown() {
         goodbyePending = false
+        releaseWakeLock()
+        abandonAudioFocus()
         audio.stop()
         client?.close()
         client = null
         scope.cancel()
+    }
+
+    // ── background keep-alive ───────────────────────────────────────────────
+
+    /**
+     * Holds a partial wake lock while a session exists.
+     *
+     * The foreground service keeps the process alive; it does not keep the CPU
+     * awake. On a locked screen the system would otherwise let the 20 ms audio
+     * tick drift, which shows up as stuttering audio. Released in [shutdown].
+     */
+    private fun acquireWakeLock() {
+        if (wakeLock?.isHeld == true) return
+        val manager = app.getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = manager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "tsdroid:voice").apply {
+            setReferenceCounted(false)
+            acquire()
+        }
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let { if (it.isHeld) it.release() }
+        wakeLock = null
+    }
+
+    /**
+     * Asks for voice-communication audio focus and reacts to losing it.
+     *
+     * A phone call taking focus must not leave our microphone sending to the
+     * server. What happens then is the user's choice in settings; the default is
+     * to mute our mic and pause the others' audio, restoring both when focus
+     * comes back.
+     */
+    private fun requestAudioFocus() {
+        val listener = AudioManager.OnAudioFocusChangeListener { change ->
+            when (change) {
+                AudioManager.AUDIOFOCUS_LOSS,
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> onFocusLost()
+                AudioManager.AUDIOFOCUS_GAIN -> onFocusGained()
+            }
+        }
+        focusListener = listener
+        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build(),
+            )
+            .setOnAudioFocusChangeListener(listener)
+            .build()
+        focusRequest = request
+        audioManager.requestAudioFocus(request)
+    }
+
+    private fun abandonAudioFocus() {
+        focusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+        focusRequest = null
+        focusListener = null
+        micMutedByFocus = false
+        speakerPausedByFocus = false
+    }
+
+    private fun onFocusLost() {
+        when (settings.audioFocusAction) {
+            AudioFocusAction.IGNORE -> Unit
+            AudioFocusAction.DISCONNECT -> leave()
+            AudioFocusAction.MUTE_SELF -> {
+                if (_ui.value.micEnabled) {
+                    micMutedByFocus = true
+                    toggleMic()
+                }
+            }
+            else -> {
+                if (_ui.value.micEnabled) {
+                    micMutedByFocus = true
+                    toggleMic()
+                }
+                if (_ui.value.speakerEnabled) {
+                    speakerPausedByFocus = true
+                    toggleSpeaker()
+                }
+            }
+        }
+    }
+
+    private fun onFocusGained() {
+        if (micMutedByFocus) {
+            micMutedByFocus = false
+            if (!_ui.value.micEnabled) toggleMic()
+        }
+        if (speakerPausedByFocus) {
+            speakerPausedByFocus = false
+            if (!_ui.value.speakerEnabled) toggleSpeaker()
+        }
     }
 
     // ── commands ────────────────────────────────────────────────────────────
@@ -437,6 +555,7 @@ class SessionController(
         audio.micEnabled = enabled
         client?.setInputMuted(!enabled)
         _ui.update { it.copy(micEnabled = enabled) }
+        onStateChanged?.invoke()
     }
 
     fun toggleSpeaker() {
@@ -444,6 +563,7 @@ class SessionController(
         audio.speakerEnabled = enabled
         client?.setOutputMuted(!enabled)
         _ui.update { it.copy(speakerEnabled = enabled) }
+        onStateChanged?.invoke()
     }
 
     fun setAway(away: Boolean, message: String = "") {

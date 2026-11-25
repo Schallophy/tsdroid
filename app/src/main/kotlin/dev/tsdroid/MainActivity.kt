@@ -84,6 +84,8 @@ private fun App() {
     val session: SessionViewModel = viewModel()
     val ui by session.ui.collectAsStateWithLifecycle()
     val account by session.accountState.collectAsStateWithLifecycle()
+    val accountSettled by session.accountSettled.collectAsStateWithLifecycle()
+    val bookmarksFresh by session.bookmarksFresh.collectAsStateWithLifecycle()
     val accountError by session.accountError.collectAsStateWithLifecycle()
     val navTab by session.navTab.collectAsStateWithLifecycle()
     val filesEnabled = session.filesTabEnabled
@@ -215,6 +217,8 @@ private fun App() {
                 dev.tsdroid.NavTab.Home -> {
                     HomeScreen(
                         account = account,
+                        accountSettled = accountSettled,
+                        bookmarksFresh = bookmarksFresh,
                         onConnect = { config ->
                             askNotificationPermissionOnce()
                             if (hasMicPermission()) {

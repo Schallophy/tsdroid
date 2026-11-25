@@ -46,6 +46,10 @@ class BookmarkCache(context: Context) {
      *
      * A cache that no longer parses is dropped rather than kept: a schema change
      * should cost one launch's list, not every launch's.
+     *
+     * A signed-in state with an empty list is kept: it still answers "whose
+     * account is this", and letting it through means a launch shows the home
+     * screen rather than asking the user to sign in again.
      */
     fun load(): AccountState? {
         if (!file.isFile) return null
@@ -55,7 +59,7 @@ class BookmarkCache(context: Context) {
             runCatching { file.delete() }
             return null
         }
-        if (!snapshot.loggedIn || snapshot.items.isEmpty()) return null
+        if (!snapshot.loggedIn) return null
         return AccountState(
             loggedIn = true,
             email = snapshot.email,
@@ -74,11 +78,12 @@ class BookmarkCache(context: Context) {
     /**
      * Records the state to draw next launch.
      *
-     * Only a signed-in state with items is worth keeping; writing an empty one
-     * would make the next launch flash an empty list over a good cache.
+     * Callers only hand a state that came from a real read, so an empty list is
+     * recorded too: if the user deleted every bookmark, the next launch must not
+     * resurrect the old rows from a stale cache.
      */
     fun save(state: AccountState) {
-        if (!state.loggedIn || state.items.isEmpty()) return
+        if (!state.loggedIn) return
         val snapshot = Snapshot(
             loggedIn = true,
             email = state.email,

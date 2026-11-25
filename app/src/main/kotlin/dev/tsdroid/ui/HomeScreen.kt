@@ -93,6 +93,8 @@ import dev.tsdroid.ui.components.MemberAvatar
 @Composable
 fun HomeScreen(
     account: AccountState,
+    accountSettled: Boolean,
+    bookmarksFresh: Boolean,
     onConnect: (ServerConfig) -> Unit,
     onConnectBookmark: (AccountRow) -> Unit,
     onOpenSettings: () -> Unit,
@@ -105,8 +107,8 @@ fun HomeScreen(
     val store = remember { ServerStore(context) }
     val settings = remember { Settings(context) }
 
-    // The scratch form survives a relaunch; the password does not (it is a
-    // secret, and ServerStore keeps those encrypted per address).
+    // The scratch form survives a relaunch, passwords included: ServerStore keeps
+    // those encrypted, so what is on disk is ciphertext tied to this device.
     var address by rememberSaveable { mutableStateOf(settings.draftAddress) }
     var nickname by rememberSaveable { mutableStateOf(settings.draftNickname) }
     var serverPassword by rememberSaveable { mutableStateOf(store.draftSecret("server").orEmpty()) }
@@ -361,7 +363,10 @@ fun HomeScreen(
 
         if (account.loggedIn) {
             val rows = account.bookmarkRows()
-            if (rows.isEmpty()) {
+            if (rows.isEmpty() && !bookmarksFresh) {
+                // Nothing to say yet: the list has not been read this launch and
+                // the cache had no rows either.
+            } else if (rows.isEmpty()) {
                 Text(
                     text = "账号里没有可用的书签。",
                     style = MaterialTheme.typography.bodySmall,
@@ -377,7 +382,10 @@ fun HomeScreen(
                     onMove = onMoveBookmark,
                 )
             }
-        } else {
+        } else if (accountSettled) {
+            // Only once the launch has actually found no remembered login: before
+            // that the blank state simply means "still restoring", and prompting
+            // would flash "sign in" over a list that is about to appear.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

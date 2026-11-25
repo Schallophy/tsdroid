@@ -111,48 +111,68 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
      * The override is keyed by item uuid so an unrelated change from the account
      * still comes through.
      */
-    val accountState: StateFlow<AccountState> = combine(account.state, localBookmarkEdits) { state, edits ->
-        // Until the first real read lands, the live state is a bare "signed in"
-        // with no items. The cached list is what was on screen last time, so it
-        // stands in: the rows are there at the first frame, and the read replaces
-        // them when it arrives.
-        val base = if (state.items.isEmpty() && state.loggedIn) cachedAccount ?: state else state
-        if (edits.isEmpty()) {
-            base
-        } else {
-            val items = base.items.mapNotNull { item ->
-                when (val edit = edits[item.uuid]) {
-                    is BookmarkEdit.Removed -> null
-                    is BookmarkEdit.Patched -> {
-                        val bookmark = item.bookmark ?: return@mapNotNull item
-                        item.copy(
-                            bookmark = bookmark.copy(
-                                name = edit.name,
-                                address = edit.address,
-                                port = edit.port,
-                                nickname = edit.nickname,
-                            ),
-                        )
-                    }
-                    null -> item
-                }
+    val accountState: StateFlow<AccountState> =
+        combine(account.state, account.settled, account.itemsFresh, localBookmarkEdits) { state, settled, fresh, edits ->
+            // Before the list has been read this launch, an empty live list
+            // means "not read yet", not "no bookmarks". The cache is what was on
+            // screen last time: it stands in until the read lands, and only the
+            // read can replace it — including with an empty result.
+            // The cache speaks only for a launch that may still be signed in:
+            // either the sign-in question is unanswered, or it answered yes.
+            val mayBeSignedIn = !settled || state.loggedIn
+            val base = if (mayBeSignedIn && !fresh && state.items.isEmpty()) {
+                cachedAccount ?: state
+            } else {
+                state
             }
-            base.copy(items = items)
-        }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, cachedAccount ?: account.state.value)
+            if (edits.isEmpty()) {
+                base
+            } else {
+                val items = base.items.mapNotNull { item ->
+                    when (val edit = edits[item.uuid]) {
+                        is BookmarkEdit.Removed -> null
+                        is BookmarkEdit.Patched -> {
+                            val bookmark = item.bookmark ?: return@mapNotNull item
+                            item.copy(
+                                bookmark = bookmark.copy(
+                                    name = edit.name,
+                                    address = edit.address,
+                                    port = edit.port,
+                                    nickname = edit.nickname,
+                                ),
+                            )
+                        }
+                        null -> item
+                    }
+                }
+                base.copy(items = items)
+            }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, cachedAccount ?: account.state.value)
 
     val accountError: StateFlow<String?> = account.startError
     val accountNotices: SharedFlow<AccountNotice> = account.notices
 
+    /** False while a launch still has to find out whether a login is remembered. */
+    val accountSettled: StateFlow<Boolean> = account.settled
+
+    /** False until the bookmark list has been read from the account this launch. */
+    val bookmarksFresh: StateFlow<Boolean> = account.itemsFresh
+
     init {
         // Keep the cache current: every state the UI would render is what the
-        // next launch should draw.
+        // next launch should draw. It follows the account only once settled —
+        // the blank state at the start of a launch is not a logout, and clearing
+        // on it would delete the very cache being restored. A read that agrees
+        // with the account is worth keeping even when it is empty, so a deletion
+        // does not leave the old rows to reappear next launch.
         viewModelScope.launch {
-            account.state.collect { state ->
-                if (!state.loggedIn) {
-                    bookmarkCache.clear()
-                } else if (state.items.isNotEmpty()) {
-                    bookmarkCache.save(state)
+            combine(account.state, account.settled, account.itemsFresh) { state, settled, fresh ->
+                Triple(state, settled, fresh)
+            }.collect { (state, settled, fresh) ->
+                when {
+                    !settled -> Unit
+                    !state.loggedIn -> bookmarkCache.clear()
+                    fresh -> bookmarkCache.save(state)
                 }
             }
         }

@@ -106,6 +106,24 @@ class AccountClient(context: Context) : AutoCloseable {
     private val _startError = MutableStateFlow<String?>(null)
     val startError: StateFlow<String?> = _startError.asStateFlow()
 
+    /**
+     * Whether the account's sign-in state is known.
+     *
+     * `false` for the first frames of a launch, while the remembered login is
+     * still being restored. The UI must not read that as "signed out": showing
+     * the sign-in prompt and then a bookmark list is a flash the user notices.
+     */
+    private val _settled = MutableStateFlow(false)
+    val settled: StateFlow<Boolean> = _settled.asStateFlow()
+
+    /**
+     * Whether the bookmark list has been read from the account since this
+     * launch. Until it has, the list is the previous launch's cache, not an
+     * authoritative emptiness — so "no bookmarks" must not be shown yet.
+     */
+    private val _itemsFresh = MutableStateFlow(false)
+    val itemsFresh: StateFlow<Boolean> = _itemsFresh.asStateFlow()
+
     /** The live handle, or 0 when the account side could not start. */
     val handle: Long get() = ptr
 
@@ -129,10 +147,12 @@ class AccountClient(context: Context) : AutoCloseable {
         if (ptr != 0L) return true
         Native.loadError?.let {
             _startError.value = it
+            _settled.value = true
             return false
         }
         Native.abiError?.let {
             _startError.value = it
+            _settled.value = true
             return false
         }
 
@@ -149,12 +169,16 @@ class AccountClient(context: Context) : AutoCloseable {
         }
         if (ptr == 0L) {
             if (_startError.value == null) _startError.value = "账号服务启动失败"
+            _settled.value = true
             return false
         }
 
         pollJob = scope.launch { pollLoop() }
         if (hasRememberedLogin()) {
             exec("account_resume")
+        } else {
+            // Nothing was remembered, so there is nothing to wait for.
+            _settled.value = true
         }
         return true
     }
@@ -189,7 +213,14 @@ class AccountClient(context: Context) : AutoCloseable {
 
             if (notice.command == "sync_list") {
                 lastSyncNotice = notice
+                if (notice.ok) _itemsFresh.value = true
                 syncGeneration.value += 1
+            }
+            if (notice.command == "account_resume" || notice.command == "account_login") {
+                // Either way the sign-in question is answered, and a fresh
+                // account starts with no list read.
+                _settled.value = true
+                _itemsFresh.value = false
             }
             if (notice.command == "identity_pick") {
                 lastIdentityNotice = notice
@@ -223,6 +254,7 @@ class AccountClient(context: Context) : AutoCloseable {
         if (parsed.loggedIn && parsed.identities != accountIdentities) {
             accountIdentities = parsed.identities
         }
+        if (parsed.loggedIn) _settled.value = true
         if (parsed != _state.value) _state.value = parsed
     }
 

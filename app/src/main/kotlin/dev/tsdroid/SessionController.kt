@@ -74,6 +74,17 @@ class SessionController(
     /** Called whenever something the notification shows (mic, speaker) changes. */
     var onStateChanged: (() -> Unit)? = null
 
+    /**
+     * Asks the UI to switch bottom-navigation destination.
+     *
+     * The tab is UI state and lives on the ViewModel; the controller only says
+     * where a session event wants it to go (a connect lands on channels, a
+     * private chat jumps to chat). Keeping it here would tie the navigation bar
+     * to a live session, which is why the bar did nothing before the first
+     * connect.
+     */
+    var onNavigate: ((NavTab) -> Unit)? = null
+
     private val audioManager = app.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var wakeLock: PowerManager.WakeLock? = null
     private var focusRequest: AudioFocusRequest? = null
@@ -121,8 +132,6 @@ class SessionController(
      * recomposition and rotation: tapping a tab is a decision that should not
      * be lost when the screen redraws.
      */
-    private val _navTab = MutableStateFlow(NavTab.Home)
-    val navTab: StateFlow<NavTab> = _navTab.asStateFlow()
 
     /**
      * Whether the file tab appears in the bottom bar.
@@ -177,8 +186,8 @@ class SessionController(
 
         // A successful connection lands on the channel list: that is where the
         // user expects to see people and where the mic bar's context lives.
-        _navTab.value = NavTab.Channels
         selectTab(SessionTab.Channels)
+        onNavigate?.invoke(NavTab.Channels)
 
         scope.launch {
             session.state.collect { state ->
@@ -260,7 +269,7 @@ class SessionController(
         reconnectAfterGoodbye = null
         if (client == null) {
             _ui.value = SessionUiState()
-            _navTab.value = NavTab.Home
+            onNavigate?.invoke(NavTab.Home)
             onSessionEnded?.invoke()
             return
         }
@@ -272,7 +281,7 @@ class SessionController(
                 goodbyePending = false
                 cleanupSession()
                 _ui.value = SessionUiState()
-                _navTab.value = NavTab.Home
+                onNavigate?.invoke(NavTab.Home)
                 onSessionEnded?.invoke()
             }
         }
@@ -476,7 +485,7 @@ class SessionController(
      * not needed once the bar exists.
      */
     fun selectNavTab(tab: NavTab) {
-        _navTab.value = tab
+        onNavigate?.invoke(tab)
         if (tab == NavTab.Channels) selectTab(SessionTab.Channels)
         else if (tab == NavTab.Chat) selectTab(SessionTab.Chat)
         else if (tab == NavTab.Files) selectTab(SessionTab.Files)
@@ -503,7 +512,7 @@ class SessionController(
                 unreadPrivate = it.unreadPrivate - user.id,
             )
         }
-        _navTab.value = NavTab.Chat
+        onNavigate?.invoke(NavTab.Chat)
     }
 
     fun sendMessage(text: String) {
@@ -546,7 +555,7 @@ class SessionController(
         client?.joinChannel(channelId, password)
         // The file browser follows you: it always shows the channel you are in.
         _ui.update { it.copy(tab = SessionTab.Channels, filesChannelId = channelId, filesLoading = true) }
-        _navTab.value = NavTab.Channels
+        onNavigate?.invoke(NavTab.Channels)
         client?.listFiles(channelId)
     }
 
@@ -768,7 +777,7 @@ class SessionController(
                     connect(pending)
                 } else {
                     _ui.value = SessionUiState()
-                    _navTab.value = NavTab.Home
+                    onNavigate?.invoke(NavTab.Home)
                     onSessionEnded?.invoke()
                 }
             }

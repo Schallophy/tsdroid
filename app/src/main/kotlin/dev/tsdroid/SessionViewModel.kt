@@ -63,6 +63,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             val svc = (binder as? SessionService.LocalBinder)?.service() ?: return
             service = svc
             bound = true
+            svc.controller?.let { wire(it) }
             controllerFlow.value = svc.controller
             pendingConnect?.let { config ->
                 pendingConnect = null
@@ -94,10 +95,14 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         .flatMapLatest { it?.ui ?: flowOf(SessionUiState()) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, SessionUiState())
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val navTab: StateFlow<NavTab> = controllerFlow
-        .flatMapLatest { it?.navTab ?: flowOf(NavTab.Home) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, NavTab.Home)
+    /**
+     * The bottom-navigation destination.
+     *
+     * Held here, not on the controller: the bar must work with no session at
+     * all. The controller only asks for a change through [wire].
+     */
+    private val _navTab = MutableStateFlow(NavTab.Home)
+    val navTab: StateFlow<NavTab> = _navTab.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val micLevel: StateFlow<Float> = controllerFlow
@@ -124,8 +129,14 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
 
     private fun begin(svc: SessionService, config: ServerConfig) {
         val controller = svc.session()
+        wire(controller)
         controllerFlow.value = controller
         controller.connect(config)
+    }
+
+    /** Hands the controller the two callbacks that talk back to the UI. */
+    private fun wire(controller: SessionController) {
+        controller.onNavigate = { _navTab.value = it }
     }
 
     // ── session commands ──────────────────────────────────────────────────
@@ -149,7 +160,10 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun reconnect() = withController { it.reconnect() }
     fun reconnectWithToken(token: String) = withController { it.reconnectWithToken(token) }
     fun selectTab(tab: SessionTab) = withController { it.selectTab(tab) }
-    fun selectNavTab(tab: NavTab) = withController { it.selectNavTab(tab) }
+    fun selectNavTab(tab: NavTab) {
+        _navTab.value = tab
+        withController { it.selectNavTab(tab) }
+    }
     fun selectScope(scope: ChatScope) = withController { it.selectScope(scope) }
     fun openPrivateChat(user: User) = withController { it.openPrivateChat(user) }
     fun sendMessage(text: String) = withController { it.sendMessage(text) }
@@ -174,6 +188,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         val svc = service
         if (bound && svc != null) {
             val controller = svc.session()
+            wire(controller)
             controllerFlow.value = controller
             controller.adoptAccountIdentityAndConnect(config)
         } else {

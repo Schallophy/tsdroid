@@ -16,6 +16,7 @@ import dev.tsdroid.core.ServerConfig
 import dev.tsdroid.data.AudioFocusAction
 import dev.tsdroid.data.ServerStore
 import dev.tsdroid.data.Settings
+import dev.tsdroid.data.withAnnouncedVersion
 import dev.tsdroid.model.AccountState
 import dev.tsdroid.model.BookmarkSecrets
 import dev.tsdroid.model.ChatMessage
@@ -311,10 +312,7 @@ class SessionController(
      */
     fun reconnectNow() {
         val config = _ui.value.config ?: return
-        val fresh = config.copy(
-            version = settings.clientVersion,
-            platform = settings.clientPlatform,
-        )
+        val fresh = settings.withAnnouncedVersion(config)
         if (client == null) {
             connect(fresh)
             return
@@ -807,11 +805,19 @@ class SessionController(
         _ui.update { current ->
             when (event) {
                 is ServerEvent.Connected -> current.copy(status = SessionStatus.Online)
-                is ServerEvent.Disconnected -> current.copy(status = SessionStatus.Disconnected)
+                is ServerEvent.Disconnected -> if (current.status == SessionStatus.Failed) {
+                    current
+                } else {
+                    current.copy(status = SessionStatus.Disconnected)
+                }
                 is ServerEvent.Reconnecting -> current.copy(status = SessionStatus.Connecting)
+                // A failure is always followed by the connection thread's own
+                // `disconnected`, which would overwrite it with "已断开" and lose
+                // the reason before the user reads it. The failure wins.
                 is ServerEvent.Failure -> current.copy(
                     status = SessionStatus.Failed,
                     lastError = event.message,
+                    failureKind = event.kind,
                 )
 
                 is ServerEvent.CommandFailure -> current.copy(toast = event.message)

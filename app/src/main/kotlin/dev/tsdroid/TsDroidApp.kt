@@ -2,6 +2,7 @@ package dev.tsdroid
 
 import android.app.Application
 import dev.tsdroid.core.AccountClient
+import dev.tsdroid.data.Settings
 
 /**
  * The application entry point.
@@ -20,6 +21,11 @@ class TsDroidApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Repair a stored version pair before anything can announce it. The
+        // native table decides what is offered, and a value written by an older
+        // build may name a version that resolves but that no current server
+        // accepts — a connection refused for a reason the user cannot see.
+        Settings(this).announceableVersion()
         account = AccountClient(this)
         account.start()
     }

@@ -82,8 +82,12 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
     var filesEnabled by remember { mutableStateOf(settings.filesTabEnabled) }
     var keepInBackground by remember { mutableStateOf(settings.keepInBackground) }
     var focusAction by remember { mutableStateOf(settings.audioFocusAction) }
-    var clientVersion by remember { mutableStateOf(settings.clientVersion) }
-    var clientPlatform by remember { mutableStateOf(settings.clientPlatform) }
+    // A stored pair can be impossible (an older build wrote a version number
+    // this table has no signature for), so the screen opens on what would
+    // actually be announced rather than on the stale value.
+    val announced = remember { settings.announceableVersion() }
+    var clientVersion by remember { mutableStateOf(announced.first) }
+    var clientPlatform by remember { mutableStateOf(announced.second) }
     // Set when the version changed while a session is live: the choice only
     // takes effect on the next connection, so offer an immediate reconnect.
     var pendingReconnect by remember { mutableStateOf(false) }
@@ -115,20 +119,21 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
     /**
      * Saves the version choice and, when a session is live, offers a reconnect.
      *
-     * The local state always follows what was typed, so the field shows the
-     * user's input even mid-word; only a choice that resolves to a signed entry
-     * is persisted and can prompt, because an unresolvable one would silently
-     * fall back to the standard tuple on connect.
+     * The picker only offers pairs that can connect, so this cannot be handed an
+     * impossible one; the check is kept as the boundary that makes that true
+     * regardless of what the UI does. "Can connect" means the version is in the
+     * platform's offered list — a signature that resolves is not enough, since
+     * servers refuse anything older than 3.1.
      *
      * The version is announced only in `clientinit`, so it cannot change on an
      * open connection; the dialog asks whether to drop and rejoin now or keep
      * the setting for the next connection.
      */
     fun saveVersion(version: String, platform: String) {
+        val offered = Native.nativeVersionChoices(platform).split(',')
+        if (!offered.contains(version)) return
         clientVersion = version
         clientPlatform = platform
-        val valid = Native.nativeVersionResolve(version, platform).isNotEmpty()
-        if (!valid) return
         settings.clientVersion = version
         settings.clientPlatform = platform
         // Prompt at most once per editing session, and only on a live connection.
@@ -168,8 +173,7 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
             VersionSettings(
                 version = clientVersion,
                 platform = clientPlatform,
-                onVersionChange = { saveVersion(it, clientPlatform) },
-                onPlatformChange = { saveVersion(clientVersion, it) },
+                onChoose = ::saveVersion,
             )
 
             // Clearing saved passwords lives in General: it is a

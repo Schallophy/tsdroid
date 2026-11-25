@@ -47,6 +47,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.tsdroid.core.ServerConfig
+import dev.tsdroid.data.withAnnouncedVersion
 import dev.tsdroid.ui.HomeScreen
 import dev.tsdroid.ui.MicBar
 import dev.tsdroid.ui.SessionScreen
@@ -287,16 +288,17 @@ private fun App() {
                                 val secrets = session.accountBookmarkSecrets(row.uuid)
                                 val missing = (bookmark.hasServerPassword && secrets?.serverPassword.isNullOrEmpty()) ||
                                     (bookmark.hasChannelPassword && secrets?.channelPassword.isNullOrEmpty())
-                                val config = ServerConfig(
-                                    address = bookmark.connectAddress,
-                                    nickname = bookmark.nickname.ifBlank { account.username },
-                                    password = secrets?.serverPassword.orEmpty(),
-                                    channel = bookmark.defaultChannel,
-                                    channelPassword = secrets?.channelPassword.orEmpty(),
-                                    identityIni = session.serverStore().readIdentity(),
-                                    announceMyts = bookmark.sendMytsid,
-                                    version = session.settings().clientVersion,
-                                    platform = session.settings().clientPlatform,
+                                val settings = session.settings()
+                                val config = settings.withAnnouncedVersion(
+                                    ServerConfig(
+                                        address = bookmark.connectAddress,
+                                        nickname = bookmark.nickname.ifBlank { account.username },
+                                        password = secrets?.serverPassword.orEmpty(),
+                                        channel = bookmark.defaultChannel,
+                                        channelPassword = secrets?.channelPassword.orEmpty(),
+                                        identityIni = session.serverStore().readIdentity(),
+                                        announceMyts = bookmark.sendMytsid,
+                                    ),
                                 )
                 if (hasMicPermission()) {
                                     if (missing) {
@@ -341,6 +343,7 @@ private fun App() {
                         SessionScreen(
                             vm = session,
                             onLeave = { session.leave() },
+                            onOpenSettings = { session.selectNavTab(dev.tsdroid.NavTab.Settings) },
                         )
                     }
                 }

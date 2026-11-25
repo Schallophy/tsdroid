@@ -65,6 +65,7 @@ import dev.tsdroid.ui.sheets.UserSheet
 fun SessionScreen(
     vm: SessionViewModel,
     onLeave: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
@@ -114,8 +115,13 @@ fun SessionScreen(
                 Box(modifier = Modifier.align(Alignment.TopCenter)) {
                     ConnectErrorBanner(
                         message = ui.lastError ?: "连接失败",
+                        // A refused client version cannot be fixed by retrying:
+                        // the same value would be announced again. The banner
+                        // offers the setting instead of a button that cannot work.
+                        versionRejected = ui.failureKind == "client_version",
                         onRetry = vm::reconnect,
                         onEdit = onLeave,
+                        onOpenSettings = onOpenSettings,
                     )
                 }
             }
@@ -147,7 +153,13 @@ fun SessionScreen(
  * identical from the outside, and guessing means editing settings blindly.
  */
 @Composable
-private fun ConnectErrorBanner(message: String, onRetry: () -> Unit, onEdit: () -> Unit) {
+private fun ConnectErrorBanner(
+    message: String,
+    versionRejected: Boolean,
+    onRetry: () -> Unit,
+    onEdit: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -172,7 +184,11 @@ private fun ConnectErrorBanner(message: String, onRetry: () -> Unit, onEdit: () 
             modifier = Modifier.fillMaxWidth(),
         ) {
             androidx.compose.material3.TextButton(onClick = onEdit) { Text("修改设置") }
-            androidx.compose.material3.TextButton(onClick = onRetry) { Text("重试") }
+            if (versionRejected) {
+                androidx.compose.material3.TextButton(onClick = onOpenSettings) { Text("换版本") }
+            } else {
+                androidx.compose.material3.TextButton(onClick = onRetry) { Text("重试") }
+            }
         }
     }
 }

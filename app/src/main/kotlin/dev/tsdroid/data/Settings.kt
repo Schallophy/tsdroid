@@ -1,6 +1,7 @@
 package dev.tsdroid.data
 
 import android.content.Context
+import dev.tsdroid.core.Native
 
 /**
  * Audio and identity settings that live only on this device.
@@ -53,6 +54,50 @@ class Settings(context: Context) {
     var clientVersion: String
         get() = prefs.getString(KEY_CLIENT_VERSION, DEFAULT_VERSION).orEmpty()
         set(value) = prefs.edit().putString(KEY_CLIENT_VERSION, value.trim()).apply()
+
+    /**
+     * The pair actually announced, repaired to something that can connect.
+     *
+     * Two different questions, and only the second one matters here:
+     *
+     * - Does the signature resolve? `3.0.13` on Android does — the table still
+     *   carries a valid signature for it.
+     * - Will a current server accept it? No: anything below 3.1 is refused with
+     *   `ClientVersionOutdated`, measured against a live server.
+     *
+     * So this checks membership in [Native.nativeVersionChoices], the list of
+     * versions that both resolve and are new enough, rather than resolving the
+     * pair on its own. A stored value from an older build (or one the table has
+     * since dropped) falls back to the standard tuple instead of costing the
+     * user a refused connection they cannot explain.
+     *
+     * Used through [withAnnouncedVersion], which is the only place a connection
+     * should pick the version up.
+     */
+    fun announceableVersion(): Pair<String, String> {
+        val version = clientVersion
+        val platform = clientPlatform
+        val offered = Native.nativeVersionChoices(platform).split(',')
+        if (version.isNotEmpty() && offered.contains(version)) {
+            return version to platform
+        }
+        // The platform itself may be one the table no longer signs; fall back to
+        // the standard pair, which is known to resolve.
+        val fallbackPlatform = if (offered.any { it.isNotEmpty() }) platform else DEFAULT_PLATFORM
+        val fallbackOffered = Native.nativeVersionChoices(fallbackPlatform).split(',')
+        val fallbackVersion = if (fallbackOffered.contains(DEFAULT_VERSION)) {
+            DEFAULT_VERSION
+        } else {
+            fallbackOffered.firstOrNull { it.isNotEmpty() } ?: DEFAULT_VERSION
+        }
+        // Write the repair back. Reading is where the bad value is discovered,
+        // and leaving it on disk means every launch repairs it again — and the
+        // settings screen would keep opening on a value the list does not
+        // contain.
+        clientVersion = fallbackVersion
+        clientPlatform = fallbackPlatform
+        return fallbackVersion to fallbackPlatform
+    }
 
     /**
      * The platform announced with [clientVersion]. Only platforms with a signed

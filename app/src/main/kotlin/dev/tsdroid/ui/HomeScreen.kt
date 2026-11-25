@@ -72,6 +72,7 @@ import dev.tsdroid.R
 import dev.tsdroid.core.ServerConfig
 import dev.tsdroid.data.ServerStore
 import dev.tsdroid.data.Settings
+import dev.tsdroid.data.withAnnouncedVersion
 import dev.tsdroid.model.AccountRow
 import dev.tsdroid.model.AccountState
 import dev.tsdroid.ui.components.IconPlate
@@ -136,16 +137,16 @@ fun HomeScreen(
         // The identity is still written by the native client's connection
         // callback — that is protocol, not "remembering the server".
         onConnect(
-            ServerConfig(
-                address = address.trim(),
-                nickname = nickname.trim(),
-                password = serverPassword,
-                channel = channel.trim(),
-                channelPassword = channelPassword,
-                identityIni = store.readIdentity(),
-                announceMyts = announceMyts,
-                version = settings.clientVersion,
-                platform = settings.clientPlatform,
+            settings.withAnnouncedVersion(
+                ServerConfig(
+                    address = address.trim(),
+                    nickname = nickname.trim(),
+                    password = serverPassword,
+                    channel = channel.trim(),
+                    channelPassword = channelPassword,
+                    identityIni = store.readIdentity(),
+                    announceMyts = announceMyts,
+                ),
             ),
         )
     }

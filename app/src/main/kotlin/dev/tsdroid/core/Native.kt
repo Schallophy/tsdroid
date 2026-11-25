@@ -63,7 +63,7 @@ internal object Native {
      * a session that looks connected and behaves wrongly.
      * `NativeAbiTest` fails the build if the submodule is bumped without this.
      */
-    const val EXPECTED_ABI: Int = 5
+    const val EXPECTED_ABI: Int = 6
 
     /**
      * Why the loaded library is not the one this Kotlin expects, or null when it
@@ -206,10 +206,23 @@ internal object Native {
     external fun nativeVersionPlatforms(): String
 
     /**
+     * The version numbers a picker should offer for the platform, comma
+     * separated, newest first.
+     *
+     * Release numbers only: the table also holds several hundred pre-release
+     * builds and a `3.?.?` placeholder, which are real signatures but not
+     * something to pick from a list. Every entry resolves, so any row the user
+     * taps is a valid pair with the platform it was listed under.
+     */
+    external fun nativeVersionChoices(platform: String): String
+
+    /**
      * Version numbers the platform offers, comma-separated, newest build first.
      *
      * `prefix` filters by version-number prefix; empty returns every number the
      * platform has. Each number appears once even when several builds share it.
+     * This is the unfiltered table, pre-releases included; the picker uses
+     * [nativeVersionChoices].
      */
     external fun nativeVersionSuggest(prefix: String, platform: String): String
 

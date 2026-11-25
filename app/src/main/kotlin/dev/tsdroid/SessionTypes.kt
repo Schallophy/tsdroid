@@ -42,6 +42,8 @@ data class SessionUiState(
     val unreadPrivate: Map<Int, Int> = emptyMap(),
     val log: List<String> = emptyList(),
     val lastError: String? = null,
+    /** Why the connection failed, in the core's vocabulary (`client_version`, …). */
+    val failureKind: String = "",
     val toast: String? = null,
     val micEnabled: Boolean = true,
     val speakerEnabled: Boolean = true,

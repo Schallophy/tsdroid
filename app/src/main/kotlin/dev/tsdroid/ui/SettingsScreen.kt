@@ -289,6 +289,7 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
                     settings.audioFocusAction = it
                 },
             )
+            BatterySettingsRow()
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = "麦克风增益 ${"%.1f".format(gain)}×",
@@ -718,6 +719,40 @@ private fun Section(title: String, content: @Composable () -> Unit) {
         ) {
             content()
         }
+    }
+}
+
+@Composable
+private fun BatterySettingsRow() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                runCatching {
+                    context.startActivity(
+                        android.content.Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:${context.packageName}"),
+                        ),
+                    )
+                }
+            },
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = "后台运行", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "被系统清理时在这里允许",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = "设置",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }
 

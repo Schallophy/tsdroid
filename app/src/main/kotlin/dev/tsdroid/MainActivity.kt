@@ -152,24 +152,6 @@ private fun App() {
         }
     }
 
-    // A one-time nudge toward exempting the app from battery optimisation. It is
-    // the difference between "stays connected" and "dies an hour later" on ROMs
-    // that kill background processes hard; skipping it changes nothing else.
-    LaunchedEffect(Unit) {
-        val settings = session.settings()
-        if (!settings.batteryHintShown) {
-            settings.batteryHintShown = true
-            val pm = context.getSystemService(android.os.PowerManager::class.java)
-            if (pm != null && !pm.isIgnoringBatteryOptimizations(context.packageName)) {
-                runCatching {
-                    context.startActivity(
-                        Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
-                    )
-                }
-            }
-        }
-    }
-
     val snackbar = remember { SnackbarHostState() }
     val micLevel by session.micLevel.collectAsStateWithLifecycle()
 
@@ -177,6 +159,35 @@ private fun App() {
         val message = ui.toast ?: return@LaunchedEffect
         snackbar.showSnackbar(message)
         session.clearToast()
+    }
+
+    // A one-time, first-success nudge: on ROMs that kill background processes
+    // hard, an uninterrupted call depends on the app being exempt from battery
+    // optimisation. It is offered as an action, not a forced redirect, and never
+    // shown again once dismissed.
+    LaunchedEffect(ui.status) {
+        if (ui.status != SessionStatus.Online) return@LaunchedEffect
+        val settings = session.settings()
+        if (settings.batteryHintShown) return@LaunchedEffect
+        settings.batteryHintShown = true
+        val pm = context.getSystemService(android.os.PowerManager::class.java)
+        if (pm != null && pm.isIgnoringBatteryOptimizations(context.packageName)) return@LaunchedEffect
+        val result = snackbar.showSnackbar(
+            message = "锁屏或切后台时可能被系统断开，建议允许后台运行",
+            actionLabel = "去设置",
+            withDismissAction = true,
+            duration = androidx.compose.material3.SnackbarDuration.Long,
+        )
+        if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+            runCatching {
+                context.startActivity(
+                    Intent(
+                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.parse("package:${context.packageName}"),
+                    ),
+                )
+            }
+        }
     }
 
     Scaffold(

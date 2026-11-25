@@ -63,7 +63,7 @@ internal object Native {
      * a session that looks connected and behaves wrongly.
      * `NativeAbiTest` fails the build if the submodule is bumped without this.
      */
-    const val EXPECTED_ABI: Int = 7
+    const val EXPECTED_ABI: Int = 8
 
     /**
      * Why the loaded library is not the one this Kotlin expects, or null when it

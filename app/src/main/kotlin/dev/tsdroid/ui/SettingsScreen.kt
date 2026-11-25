@@ -383,7 +383,6 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
             onLogin = { run { vm.accountLogin(email, password, otp) } },
             onRefresh = { run { vm.accountRefresh() } },
             onLogout = { confirmLogout = true },
-            onDeleteBookmark = { uuid -> run { vm.accountDeleteBookmark(uuid) } },
             confirmLogout = confirmLogout,
             onConfirmLogout = {
                 confirmLogout = false
@@ -445,7 +444,6 @@ private fun AccountSection(
     onLogin: () -> Unit,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
-    onDeleteBookmark: (String) -> Unit,
     confirmLogout: Boolean,
     onConfirmLogout: () -> Unit,
     onDismissLogout: () -> Unit,
@@ -491,38 +489,6 @@ private fun AccountSection(
             }
 
 
-            // Bookmark management: list with delete. The home screen is for
-            // connecting; deleting a saved bookmark is management, and lives here.
-            Text(
-                text = "云书签",
-                style = MaterialTheme.typography.labelLarge,
-            )
-            val rows = account.bookmarkRows()
-            if (rows.isEmpty()) {
-                Text(
-                    text = if (busy) "正在读取书签…" else "账号里没有可用的书签。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    rows.forEach { row ->
-                        if (row.folder) {
-                            Text(
-                                text = row.name.ifEmpty { "文件夹" },
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = (row.depth * 14).dp, top = 4.dp),
-                            )
-                        } else {
-                            BookmarkManageRow(
-                                row = row,
-                                onDelete = { onDeleteBookmark(row.uuid) },
-                            )
-                        }
-                    }
-                }
-            }
         } else {
             // Not signed in: the login form.
             Text(
@@ -604,63 +570,7 @@ private fun AccountSection(
     }
 }
 
-@Composable
-private fun BookmarkManageRow(row: AccountRow, onDelete: () -> Unit) {
-    val bookmark = row.bookmark ?: return
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .padding(start = (8 + row.depth * 14).dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = bookmark.name.ifEmpty { bookmark.address },
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = bookmark.connectAddress,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (bookmark.nickname.isNotEmpty()) {
-                    Text(
-                        text = "· ${bookmark.nickname}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                    )
-                }
-                if (bookmark.hasServerPassword || bookmark.hasChannelPassword) {
-                    Icon(
-                        Icons.Default.Lock,
-                        contentDescription = "书签带有密码",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(11.dp),
-                    )
-                }
-            }
-        }
-        IconButton(onClick = onDelete) {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = "删除书签",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.size(18.dp),
-            )
-        }
-    }
-}
+
 
 @Composable
 private fun InlineBusy(account: AccountState) {

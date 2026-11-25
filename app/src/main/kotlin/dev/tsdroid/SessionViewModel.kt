@@ -212,6 +212,12 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun accountBackup(): String? = account.backup()
     fun accountBookmarkSecrets(uuid: String): BookmarkSecrets? = account.bookmarkSecrets(uuid)
     fun accountDeleteBookmark(uuid: String): String? = account.deleteBookmark(uuid)
+    fun accountEditBookmark(uuid: String, name: String, address: String, port: Int, nickname: String): String? =
+        account.editBookmark(uuid, name, address, port, nickname)
+    fun accountMoveBookmark(uuid: String, after: String): String? =
+        account.moveBookmark(uuid, after)
+    fun accountCreateBookmark(name: String, address: String, port: Int, nickname: String): String? =
+        account.createBookmark(name, address, port, nickname)
     fun accountIdentities(): List<dev.tsdroid.model.AccountIdentity> = account.accountIdentities
     fun accountSyncIdentity(): String? {
         val identity = servers.readIdentity()

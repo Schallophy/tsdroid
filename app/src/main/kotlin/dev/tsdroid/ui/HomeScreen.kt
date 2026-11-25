@@ -31,7 +31,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.zIndex
+import kotlin.math.roundToInt
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,20 +90,31 @@ fun HomeScreen(
     onConnect: (ServerConfig) -> Unit,
     onConnectBookmark: (AccountRow) -> Unit,
     onOpenSettings: () -> Unit,
+    onSaveBookmark: (name: String, address: String, nickname: String) -> Unit,
+    onEditBookmark: (AccountRow) -> Unit,
+    onDeleteBookmark: (AccountRow) -> Unit,
+    onMoveBookmark: (row: AccountRow, afterUuid: String) -> Unit,
 ) {
     val context = LocalContext.current
     val store = remember { ServerStore(context) }
     val settings = remember { Settings(context) }
 
-    var address by rememberSaveable { mutableStateOf("") }
-    var nickname by rememberSaveable { mutableStateOf("") }
+    // The scratch form survives a relaunch; the password does not (it is a
+    // secret, and ServerStore keeps those encrypted per address).
+    var address by rememberSaveable { mutableStateOf(settings.draftAddress) }
+    var nickname by rememberSaveable { mutableStateOf(settings.draftNickname) }
     var serverPassword by rememberSaveable { mutableStateOf("") }
     var serverPasswordVisible by rememberSaveable { mutableStateOf(false) }
-    var channel by rememberSaveable { mutableStateOf("") }
+    var channel by rememberSaveable { mutableStateOf(settings.draftChannel) }
     var channelPassword by rememberSaveable { mutableStateOf("") }
     var advanced by rememberSaveable { mutableStateOf(false) }
     var tempExpanded by rememberSaveable { mutableStateOf(false) }
     var announceMyts by rememberSaveable { mutableStateOf(true) }
+
+    // Persist as it is typed, so a relaunch or a rotation lands on the same form.
+    LaunchedEffect(address) { settings.draftAddress = address }
+    LaunchedEffect(nickname) { settings.draftNickname = nickname }
+    LaunchedEffect(channel) { settings.draftChannel = channel }
 
     val canConnect = address.isNotBlank() && nickname.isNotBlank()
 
@@ -292,6 +315,22 @@ fun HomeScreen(
             ) {
                 Text("连接", fontWeight = FontWeight.SemiBold)
             }
+
+            // Saves the same form as a cloud bookmark. Only offered when signed
+            // in, because a bookmark lives in the account; without one there is
+            // nowhere to put it.
+            if (account.loggedIn) {
+                TextButton(
+                    onClick = {
+                        val name = nickname.ifBlank { address }
+                        onSaveBookmark(name.trim(), address.trim(), nickname.trim())
+                    },
+                    enabled = canConnect,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("保存到书签")
+                }
+            }
                 }
             }
         }
@@ -316,23 +355,13 @@ fun HomeScreen(
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    rows.forEach { row ->
-                        if (row.folder) {
-                            Text(
-                                text = row.name.ifEmpty { "文件夹" },
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = (row.depth * 14).dp, top = 4.dp),
-                            )
-                        } else {
-                            BookmarkCard(
-                                row = row,
-                                onUse = { onConnectBookmark(row) },
-                            )
-                        }
-                    }
-                }
+                BookmarkList(
+                    rows = rows,
+                    onUse = onConnectBookmark,
+                    onEdit = onEditBookmark,
+                    onDelete = onDeleteBookmark,
+                    onMove = onMoveBookmark,
+                )
             }
         } else {
             Box(
@@ -359,42 +388,177 @@ fun HomeScreen(
     }
 }
 
+
+/**
+ * The bookmark list, with a drag handle per row.
+ *
+ * Dragging is the reorder gesture and the handle is the only place that starts
+ * it, so a tap still connects and a horizontal scroll still works. A drag is
+ * committed on drop: the list is re-sent as "this one now follows that one",
+ * which is the account's own model (a linked list, not an index).
+ *
+ * A long press opens the row's menu. It is a dialog rather than an inline row of
+ * buttons, so opening it does not push the list around.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun BookmarkCard(row: AccountRow, onUse: () -> Unit) {
-    val bookmark = row.bookmark ?: return
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .clickable(onClick = onUse)
-            .padding(start = (12 + row.depth * 14).dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            MemberAvatar(name = bookmark.name, size = 32.dp)
-            Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-                Text(
-                    text = bookmark.name.ifEmpty { bookmark.address },
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = bookmark.connectAddress,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (bookmark.hasServerPassword || bookmark.hasChannelPassword) {
-                Icon(
-                    Icons.Default.Lock,
-                    contentDescription = "书签带有密码",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(12.dp),
-                )
+private fun BookmarkList(
+    rows: List<AccountRow>,
+    onUse: (AccountRow) -> Unit,
+    onEdit: (AccountRow) -> Unit,
+    onDelete: (AccountRow) -> Unit,
+    onMove: (row: AccountRow, afterUuid: String) -> Unit,
+) {
+    // Only real bookmarks participate in ordering; folders are labels.
+    val bookmarks = remember(rows) { rows.filter { !it.folder && it.bookmark != null } }
+    var order by remember(bookmarks) { mutableStateOf(bookmarks.map { it.uuid }) }
+    var dragging by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    var menuFor by remember { mutableStateOf<AccountRow?>(null) }
+
+    // One row's height plus the gap; used to turn a drag distance into a target
+    // index without measuring each child.
+    val rowHeightPx = with(LocalDensity.current) { (ROW_HEIGHT + ROW_GAP).toPx() }
+
+    Column(verticalArrangement = Arrangement.spacedBy(ROW_GAP)) {
+        for (uuid in order) {
+            val row = bookmarks.firstOrNull { it.uuid == uuid } ?: continue
+            val bookmark = row.bookmark ?: continue
+            val isDragging = dragging == uuid
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .zIndex(if (isDragging) 1f else 0f)
+                    .offset { IntOffset(0, if (isDragging) dragOffset.roundToInt() else 0) },
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            if (isDragging) MaterialTheme.colorScheme.surfaceContainerHigh
+                            else MaterialTheme.colorScheme.surfaceContainerLow,
+                        )
+                        .combinedClickable(
+                            onClick = { onUse(row) },
+                            onLongClick = { menuFor = row },
+                        )
+                        .height(ROW_HEIGHT)
+                        .padding(start = 4.dp, end = 12.dp),
+                ) {
+                    // The handle: a drag surface and the row's affordance that it
+                    // can be moved.
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .pointerInput(uuid, order) {
+                                detectDragGestures(
+                                    onDragStart = {
+                                        dragging = uuid
+                                        dragOffset = 0f
+                                    },
+                                    onDragEnd = {
+                                        val from = order.indexOf(uuid)
+                                        val to = (from + (dragOffset / rowHeightPx).roundToInt())
+                                            .coerceIn(0, order.lastIndex)
+                                        if (from >= 0 && to != from) {
+                                            val next = order.toMutableList()
+                                            next.removeAt(from)
+                                            next.add(to, uuid)
+                                            order = next
+                                            // `after` is the item now above it,
+                                            // or empty when it landed first.
+                                            val after = if (to == 0) "" else next[to - 1]
+                                            onMove(row, after)
+                                        }
+                                        dragging = null
+                                        dragOffset = 0f
+                                    },
+                                    onDragCancel = {
+                                        dragging = null
+                                        dragOffset = 0f
+                                    },
+                                    onDrag = { change, amount ->
+                                        change.consume()
+                                        dragOffset += amount.y
+                                    },
+                                )
+                            },
+                    ) {
+                        Icon(
+                            Icons.Default.Menu,
+                            contentDescription = "拖动排序",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = bookmark.name.ifEmpty { bookmark.address },
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = bookmark.connectAddress,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (bookmark.hasServerPassword || bookmark.hasChannelPassword) {
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = "书签带有密码",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(12.dp),
+                        )
+                    }
+                }
             }
         }
     }
+
+    menuFor?.let { row ->
+        AlertDialog(
+            onDismissRequest = { menuFor = null },
+            title = { Text(row.bookmark?.name?.ifEmpty { row.bookmark?.address } ?: "") },
+            text = {
+                Column {
+                    MenuItem("编辑") {
+                        menuFor = null
+                        onEdit(row)
+                    }
+                    MenuItem("删除", destructive = true) {
+                        menuFor = null
+                        onDelete(row)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { menuFor = null }) { Text("取消") }
+            },
+        )
+    }
 }
+
+@Composable
+private fun MenuItem(label: String, destructive: Boolean = false, onClick: () -> Unit) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.bodyLarge,
+        color = if (destructive) MaterialTheme.colorScheme.error
+        else MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp),
+    )
+}
+
+private val ROW_HEIGHT = 56.dp
+private val ROW_GAP = 8.dp

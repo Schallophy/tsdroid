@@ -127,6 +127,26 @@ class Settings(context: Context) {
         get() = prefs.getString(KEY_FOCUS_ACTION, AudioFocusAction.MUTE_BOTH).orEmpty()
         set(value) = prefs.edit().putString(KEY_FOCUS_ACTION, value).apply()
 
+    /**
+     * The temporary-connect form, kept so a relaunch shows what was last typed.
+     *
+     * This is a convenience, not a saved server: it is one scratch form, not an
+     * entry in a list, and it is cleared by the user rather than by connecting.
+     * The password is deliberately *not* stored here — see [ServerStore], which
+     * keeps passwords encrypted per address.
+     */
+    var draftAddress: String
+        get() = prefs.getString(KEY_DRAFT_ADDRESS, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_DRAFT_ADDRESS, value).apply()
+
+    var draftNickname: String
+        get() = prefs.getString(KEY_DRAFT_NICKNAME, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_DRAFT_NICKNAME, value).apply()
+
+    var draftChannel: String
+        get() = prefs.getString(KEY_DRAFT_CHANNEL, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_DRAFT_CHANNEL, value).apply()
+
     /** Whether the one-time battery-optimisation hint has been shown. */
     var batteryHintShown: Boolean
         get() = prefs.getBoolean(KEY_BATTERY_HINT, false)
@@ -146,6 +166,9 @@ class Settings(context: Context) {
         const val KEY_KEEP_BACKGROUND = "keep_in_background"
         const val KEY_FOCUS_ACTION = "audio_focus_action"
         const val KEY_BATTERY_HINT = "battery_hint_shown"
+        const val KEY_DRAFT_ADDRESS = "draft_address"
+        const val KEY_DRAFT_NICKNAME = "draft_nickname"
+        const val KEY_DRAFT_CHANNEL = "draft_channel"
 
         /** `3.6.3` + `Windows`: the standard signed tuple, unchanged from before. */
         const val DEFAULT_VERSION = "3.6.3"

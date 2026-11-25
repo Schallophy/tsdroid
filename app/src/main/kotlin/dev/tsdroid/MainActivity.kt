@@ -14,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -101,6 +102,8 @@ private fun App() {
     }
 
     var tokenPromptAddress by remember { mutableStateOf<String?>(null) }
+    var editingBookmark by remember { mutableStateOf<dev.tsdroid.model.AccountRow?>(null) }
+    var deletingBookmark by remember { mutableStateOf<dev.tsdroid.model.AccountRow?>(null) }
     var tokenText by remember { mutableStateOf("") }
 
     // A skipped prompt is remembered for that connection only: leaving the
@@ -261,6 +264,16 @@ private fun App() {
                             }
                         },
                         onOpenSettings = { session.selectNavTab(dev.tsdroid.NavTab.Settings) },
+                        onSaveBookmark = { name, address, nickname ->
+                            val (host, port) = splitAddress(address)
+                            session.accountCreateBookmark(name, host, port, nickname)
+                                ?.let(session::setToast)
+                        },
+                        onEditBookmark = { row -> editingBookmark = row },
+                        onDeleteBookmark = { row -> deletingBookmark = row },
+                        onMoveBookmark = { row, after ->
+                            session.accountMoveBookmark(row.uuid, after)?.let(session::setToast)
+                        },
                     )
                 }
 
@@ -346,7 +359,131 @@ private fun App() {
             },
         )
     }
+
+    // Edit a bookmark: the four fields the account lets us change. Everything
+    // else (password, placement, profile) is preserved by the native side.
+    editingBookmark?.let { row ->
+        val bookmark = row.bookmark
+        if (bookmark != null) {
+            BookmarkEditDialog(
+                initialName = bookmark.name,
+                initialAddress = bookmark.connectAddress,
+                initialNickname = bookmark.nickname,
+                onDismiss = { editingBookmark = null },
+                onConfirm = { name, address, nickname ->
+                    val (host, port) = splitAddress(address)
+                    session.accountEditBookmark(row.uuid, name, host, port, nickname)
+                        ?.let(session::setToast)
+                    editingBookmark = null
+                },
+            )
+        }
+    }
+
+    deletingBookmark?.let { row ->
+        AlertDialog(
+            onDismissRequest = { deletingBookmark = null },
+            title = { Text("删除书签？") },
+            text = { Text(row.bookmark?.name?.ifEmpty { row.bookmark?.address } ?: "") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        session.accountDeleteBookmark(row.uuid)?.let(session::setToast)
+                        deletingBookmark = null
+                    },
+                ) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingBookmark = null }) { Text("取消") }
+            },
+        )
+    }
 }
+
+/**
+ * The bookmark editor: name, address, nickname.
+ *
+ * A dialog rather than a screen: it is three fields and it is always opened from
+ * a specific row, so keeping the list behind it is the right context. The address
+ * is one field (`host` or `host:port`); [splitAddress] turns it back into the two
+ * values the account stores.
+ */
+@Composable
+private fun BookmarkEditDialog(
+    initialName: String,
+    initialAddress: String,
+    initialNickname: String,
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, address: String, nickname: String) -> Unit,
+) {
+    var name by remember { mutableStateOf(initialName) }
+    var address by remember { mutableStateOf(initialAddress) }
+    var nickname by remember { mutableStateOf(initialNickname) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("编辑书签") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("名称") },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("地址") },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = nickname,
+                    onValueChange = { nickname = it },
+                    label = { Text("昵称") },
+                    singleLine = true,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name.trim(), address.trim(), nickname.trim()) },
+                enabled = name.isNotBlank() && address.isNotBlank(),
+            ) { Text("保存") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        },
+    )
+}
+
+/**
+ * Splits `host`, `host:port` or `[v6]:port` into a host and a port.
+ *
+ * The account stores the two separately; the form shows one field because a
+ * person types one. A missing port means the protocol default.
+ */
+private fun splitAddress(address: String): Pair<String, Int> {
+    val text = address.trim()
+    if (text.startsWith("[")) {
+        val end = text.indexOf(']')
+        if (end > 0) {
+            val host = text.substring(1, end)
+            val port = text.substring(end + 1).removePrefix(":").toIntOrNull() ?: DEFAULT_PORT
+            return host to port
+        }
+    }
+    val colon = text.lastIndexOf(':')
+    if (colon > 0 && text.indexOf(':') == colon) {
+        val port = text.substring(colon + 1).toIntOrNull()
+        if (port != null && port in 1..65535) {
+            return text.substring(0, colon) to port
+        }
+    }
+    return text to DEFAULT_PORT
+}
+
+private const val DEFAULT_PORT = 9987
 
 /**
  * Shown when a session tab is selected but no server is connected.

@@ -204,6 +204,12 @@ class AccountClient(context: Context) : AutoCloseable {
             if (notice.ok && notice.command == "account_refresh") {
                 scope.launch { syncBookmarkSecrets() }
             }
+            if (notice.ok && notice.command.startsWith("sync_bookmark_")) {
+                // A bookmark was created, edited, moved or deleted: the item set
+                // and the uuid->password map both changed. Re-fetch so a click on
+                // any row still resolves its password.
+                scope.launch { syncBookmarkSecrets() }
+            }
             if (notice.ok && notice.command == "account_logout") {
                 secrets = emptyMap()
             }
@@ -367,6 +373,35 @@ class AccountClient(context: Context) : AutoCloseable {
      */
     fun deleteBookmark(uuid: String): String? =
         exec("sync_delete", mapOf("uuid" to uuid, "class" to "BOOKMARK"))
+
+    /** Rewrites a bookmark's four editable fields; the item keeps its identity. */
+    fun editBookmark(
+        uuid: String,
+        name: String,
+        address: String,
+        port: Int,
+        nickname: String,
+    ): String? = exec(
+        "sync_bookmark_edit",
+        mapOf(
+            "uuid" to uuid,
+            "name" to name,
+            "address" to address,
+            "port" to port,
+            "nickname" to nickname,
+        ),
+    )
+
+    /** Moves a bookmark to follow `after` (empty means first). */
+    fun moveBookmark(uuid: String, after: String): String? =
+        exec("sync_bookmark_move", mapOf("uuid" to uuid, "after" to after))
+
+    /** Creates a bookmark from the temporary-connect form. */
+    fun createBookmark(name: String, address: String, port: Int, nickname: String): String? =
+        exec(
+            "sync_bookmark_create",
+            mapOf("name" to name, "address" to address, "port" to port, "nickname" to nickname),
+        )
 
     /**
      * Reads the whole item list once with passwords and keeps them here.

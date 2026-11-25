@@ -60,6 +60,10 @@ class BookmarkCache(context: Context) {
             return null
         }
         if (!snapshot.loggedIn) return null
+        // Older builds could write a state that still carried revealed
+        // passwords (the account asks for them once to fill the click cache).
+        // Strip them here too, so an old file is not read back as a secret.
+        val items = snapshot.items.map(::withoutSecrets)
         return AccountState(
             loggedIn = true,
             email = snapshot.email,
@@ -68,10 +72,10 @@ class BookmarkCache(context: Context) {
             keyBytes = snapshot.keyBytes,
             mytsId = snapshot.mytsId,
             mytsPublicKey = snapshot.mytsPublicKey,
-            items = snapshot.items,
+            items = items,
             hierarchy = snapshot.hierarchy,
             identities = snapshot.identities,
-            itemCount = snapshot.items.size,
+            itemCount = items.size,
         )
     }
 
@@ -92,7 +96,7 @@ class BookmarkCache(context: Context) {
             keyBytes = state.keyBytes,
             mytsId = state.mytsId,
             mytsPublicKey = state.mytsPublicKey,
-            items = state.items,
+            items = state.items.map(::withoutSecrets),
             hierarchy = state.hierarchy,
             identities = state.identities,
         )
@@ -100,6 +104,13 @@ class BookmarkCache(context: Context) {
             file.parentFile?.mkdirs()
             file.writeText(json.encodeToString(Snapshot.serializer(), snapshot))
         }
+    }
+
+    /** The item with its bookmark passwords dropped; the cache is not a secret store. */
+    private fun withoutSecrets(item: AccountItem): AccountItem {
+        val bookmark = item.bookmark ?: return item
+        if (bookmark.serverPassword == null && bookmark.channelPassword == null) return item
+        return item.copy(bookmark = bookmark.copy(serverPassword = null, channelPassword = null))
     }
 
     /** A logout must not leave the previous account's bookmarks on disk. */

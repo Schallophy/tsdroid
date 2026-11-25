@@ -65,6 +65,9 @@ class SessionController(
     /** Owns the polling and event collectors for the life of the session. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
+    /** One identity lookup at a time: a second tap must not tear down the first connect. */
+    private val adopting = java.util.concurrent.atomic.AtomicBoolean(false)
+
     /**
      * Called once when the session is over (a leave, or a disconnect the user did
      * not start). The service uses it to stop itself; the UI does not care.
@@ -645,48 +648,61 @@ class SessionController(
      * cannot decide (several identities, none matching), the connection goes
      * ahead with whatever identity is already local and the caller is told why
      * the rights may be missing.
+     *
+     * The sign-in answer is always awaited first. On a cold start the bookmark
+     * rows are drawn from the local cache before the remembered login has been
+     * restored; connecting in that window would carry no account identity and
+     * no myTS badge, which is exactly the wrong UID for the server's groups.
+     * The wait is local — a file read — so it is short.
      */
     fun adoptAccountIdentityAndConnect(config: ServerConfig) {
-        // A server already seen with a known identity costs no round trip: the
-        // first successful connection stored the winner. If the account's
-        // identity list is loaded, check it still contains that key; a stale
-        // cache from an older build must not keep shadowing the account.
-        settings.identityForServer(config.address)?.let { known ->
-            val identities = account.accountIdentities
-            if (identities.isEmpty() || identities.any { it.value == known }) {
-                connect(config.copy(identityIni = known))
-                return
-            }
-        }
-
+        if (!adopting.compareAndSet(false, true)) return
         scope.launch {
-            // The auto-login may still be in flight when connect is tapped.
-            if (account.hasRememberedLogin() && !account.state.value.loggedIn) {
-                setToast("正在等待账号登录，以取回这台服务器的身份…")
-                if (!account.awaitLogin()) {
-                    setToast("账号还没登录成功，本次连接不带账号身份")
+            try {
+                if (account.hasRememberedLogin() && !account.settled.value) {
+                    setToast("正在恢复账号身份…")
+                    if (!account.awaitSettled()) {
+                        setToast("账号恢复超时，本次连接不带账号身份")
+                    }
+                }
+
+                // A server already seen with a known identity costs no round
+                // trip: the first successful connection stored the winner. If
+                // the account's identity list is loaded, check it still
+                // contains that key; a stale cache from an older build must not
+                // keep shadowing the account.
+                settings.identityForServer(config.address)?.let { known ->
+                    val identities = account.accountIdentities
+                    if (identities.isEmpty() || identities.any { it.value == known }) {
+                        connect(config.copy(identityIni = known))
+                        return@launch
+                    }
+                }
+
+                if (!account.state.value.loggedIn) {
+                    if (account.hasRememberedLogin()) {
+                        setToast("账号没有恢复成功，本次连接不带账号身份")
+                    }
                     connect(config)
                     return@launch
                 }
-            }
-            if (!account.state.value.loggedIn) {
-                connect(config)
-                return@launch
-            }
 
-            val picked = account.pickIdentityAndWait(config.address)
-            if (picked.error != null) {
-                setToast("账号里选不出这台服务器用的身份：${picked.error}")
-                connect(config)
-                return@launch
+                val picked = account.pickIdentityAndWait(config.address)
+                if (picked.error != null) {
+                    setToast("账号里选不出这台服务器用的身份：${picked.error}")
+                    connect(config)
+                    return@launch
+                }
+                settings.rememberIdentityForServer(config.address, picked.value)
+                if (servers.readIdentity() != picked.value) {
+                    servers.writeIdentity(picked.value)
+                    val label = picked.nickname.ifEmpty { picked.name.ifEmpty { "默认" } }
+                    setToast("已采用账号里的身份「$label」，这台服务器的权限会跟过来")
+                }
+                connect(config.copy(identityIni = picked.value))
+            } finally {
+                adopting.set(false)
             }
-            settings.rememberIdentityForServer(config.address, picked.value)
-            if (servers.readIdentity() != picked.value) {
-                servers.writeIdentity(picked.value)
-                val label = picked.nickname.ifEmpty { picked.name.ifEmpty { "默认" } }
-                setToast("已采用账号里的身份「$label」，这台服务器的权限会跟过来")
-            }
-            connect(config.copy(identityIni = picked.value))
         }
     }
 

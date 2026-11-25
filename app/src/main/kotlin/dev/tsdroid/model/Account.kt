@@ -155,10 +155,12 @@ data class AccountBookmark(
 }
 
 /**
- * The two password values of one bookmark, held in memory only.
+ * The two password values of one bookmark.
  *
  * The account client reads them once after a login or refresh and keeps them
  * out of the polled snapshot; a bookmark click reads this cache synchronously.
+ * They are also kept encrypted on disk (BookmarkSecretsCache) so a cold start
+ * can connect from a bookmark before the first network read has landed.
  */
 data class BookmarkSecrets(
     val serverPassword: String?,

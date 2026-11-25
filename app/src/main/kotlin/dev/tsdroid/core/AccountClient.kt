@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -80,9 +81,12 @@ class AccountClient(context: Context) : AutoCloseable {
     @Volatile
     private var lastIdentityNotice: AccountNotice? = null
 
-    /** Passwords by bookmark uuid. Memory only; never in the polled snapshot. */
+    /** The passwords the account last reported, kept on disk so a cold start can use them. */
+    private val secretCache = dev.tsdroid.data.BookmarkSecretsCache(appContext)
+
+    /** Passwords by bookmark uuid. Never in the polled snapshot. */
     @Volatile
-    private var secrets: Map<String, BookmarkSecrets> = emptyMap()
+    private var secrets: Map<String, BookmarkSecrets> = secretCache.load()
 
     /**
      * The account's stored identities, as last read. A returning install uses
@@ -177,7 +181,10 @@ class AccountClient(context: Context) : AutoCloseable {
         if (hasRememberedLogin()) {
             exec("account_resume")
         } else {
-            // Nothing was remembered, so there is nothing to wait for.
+            // Nothing was remembered, so there is nothing to wait for — and no
+            // account that could own the passwords left on disk.
+            secrets = emptyMap()
+            secretCache.clear()
             _settled.value = true
         }
         return true
@@ -226,10 +233,16 @@ class AccountClient(context: Context) : AutoCloseable {
                 lastIdentityNotice = notice
                 identityGeneration.value += 1
             }
-            if (notice.ok && (notice.command == "account_login" || notice.command == "account_resume")) {
-                // A successful login/resume invalidates whatever the previous
-                // account had; the fetch below fills it for this one.
+            if (notice.ok && notice.command == "account_login") {
+                // A login may be a different account: its bookmarks are not the
+                // ones whose passwords are on disk.
                 secrets = emptyMap()
+                secretCache.clear()
+            }
+            if (notice.ok && (notice.command == "account_login" || notice.command == "account_resume")) {
+                // The fetch below fills the map for this account. A resume keeps
+                // the cached passwords until it lands, so a bookmark tapped in
+                // the meantime still has one.
                 scope.launch { syncBookmarkSecrets() }
             }
             if (notice.ok && notice.command == "account_refresh") {
@@ -243,19 +256,59 @@ class AccountClient(context: Context) : AutoCloseable {
             }
             if (notice.ok && notice.command == "account_logout") {
                 secrets = emptyMap()
+                secretCache.clear()
             }
         }
     }
 
+    /**
+     * The account snapshot as it stands, passwords included when the last list
+     * read asked for them.
+     */
+    private fun readSnapshot(): AccountState? {
+        val snapshot = Native.nativeSnapshot(ptr) ?: return null
+        return json.decodeFromString<SnapshotEnvelope>(snapshot).account
+    }
+
     private fun refresh() {
-        val snapshot = Native.nativeSnapshot(ptr) ?: return
-        val parsed = json.decodeFromString<SnapshotEnvelope>(snapshot).account
-        if (!parsed.loggedIn && secrets.isNotEmpty()) secrets = emptyMap()
+        val parsed = readSnapshot() ?: return
+        if (!parsed.loggedIn && _settled.value && secrets.isNotEmpty()) {
+            // A settled signed-out account really has no bookmarks of ours: the
+            // blank state at the start of a launch is not one.
+            secrets = emptyMap()
+            secretCache.clear()
+        }
         if (parsed.loggedIn && parsed.identities != accountIdentities) {
             accountIdentities = parsed.identities
         }
         if (parsed.loggedIn) _settled.value = true
-        if (parsed != _state.value) _state.value = parsed
+        // The bookmark password sync reads the list with revealed secrets, and
+        // a poll tick can see that state before it is scrubbed again. That state
+        // must not reach the UI: the UI writes the account to bookmarks.json,
+        // which would put plaintext passwords in a readable file.
+        val public = parsed.withoutSecrets()
+        if (public != _state.value) _state.value = public
+    }
+
+    /** The same account with bookmark passwords left out. */
+    private fun AccountState.withoutSecrets(): AccountState {
+        val exposed = items.any { item ->
+            val bookmark = item.bookmark
+            bookmark?.serverPassword != null || bookmark?.channelPassword != null
+        }
+        if (!exposed) return this
+        return copy(
+            items = items.map { item ->
+                val bookmark = item.bookmark
+                when {
+                    bookmark == null -> item
+                    bookmark.serverPassword == null && bookmark.channelPassword == null -> item
+                    else -> item.copy(
+                        bookmark = bookmark.copy(serverPassword = null, channelPassword = null),
+                    )
+                }
+            },
+        )
     }
 
     // ── commands ────────────────────────────────────────────────────────────
@@ -295,7 +348,10 @@ class AccountClient(context: Context) : AutoCloseable {
 
     fun logout(): String? {
         val error = exec("account_logout")
-        if (error == null) secrets = emptyMap()
+        if (error == null) {
+            secrets = emptyMap()
+            secretCache.clear()
+        }
         return error
     }
 
@@ -367,18 +423,23 @@ class AccountClient(context: Context) : AutoCloseable {
     }
 
     /**
-     * Waits for the login `start` kicked off from a remembered credential.
+     * Waits until a launch knows whether a login is remembered.
      *
-     * A user can tap connect before the automatic login finishes; picking an
-     * identity then fails with "not signed in" and the connection would silently
-     * lose both the UID and the badge. This closes that window.
+     * Resume is local — the credential file is on disk — so this is normally
+     * a fraction of a second. It returns false only if that took longer than
+     * [timeoutMs], which means the account side is stuck and the caller should
+     * go ahead without it.
      */
-    suspend fun awaitLogin(timeoutMs: Long = 45_000): Boolean {
-        if (state.value.loggedIn) return true
-        if (!hasRememberedLogin()) return false
-        return withTimeoutOrNull(timeoutMs) {
-            state.first { it.loggedIn || (!it.busy && it.lastError.isNotEmpty()) }.loggedIn
-        } ?: false
+    suspend fun awaitSettled(timeoutMs: Long = 10_000): Boolean {
+        if (!_settled.value) {
+            withTimeoutOrNull(timeoutMs) { _settled.first { it } } ?: return false
+        }
+        // Settled is set by the event that answered the question; the snapshot
+        // the UI reads is refreshed on the poll tick just after it. A caller
+        // that reads `state` now would still see "signed out, no identities" —
+        // which is the very race this wait exists to avoid.
+        withContext(Dispatchers.Default) { refresh() }
+        return true
     }
 
     fun pickIdentity(address: String): String? =
@@ -447,12 +508,11 @@ class AccountClient(context: Context) : AutoCloseable {
         syncMutex.withLock {
             val notice = syncListLocked(reveal = true)
             if (notice?.ok == true) {
-                // The account_status event is pushed after the report, so a
-                // parse here sees the revealed items instead of racing the
-                // 700 ms poll.
-                refresh()
-                val revealed = state.value
-                if (revealed.loggedIn && revealed.lastError.isEmpty()) {
+                // Read the snapshot directly rather than through the published
+                // state: that state is scrubbed of passwords, and this is the
+                // one reader that needs them.
+                val revealed = readSnapshot()
+                if (revealed != null && revealed.loggedIn && revealed.lastError.isEmpty()) {
                     secrets = revealed.items.mapNotNull { item ->
                         val bookmark = item.bookmark ?: return@mapNotNull null
                         if (!bookmark.hasServerPassword && !bookmark.hasChannelPassword) {
@@ -471,6 +531,7 @@ class AccountClient(context: Context) : AutoCloseable {
                             },
                         )
                     }.toMap()
+                    secretCache.save(secrets)
                 }
             }
             // Presence-only for the snapshot; the cache keeps what the UI needs.

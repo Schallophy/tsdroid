@@ -1,8 +1,15 @@
 package dev.tsdroid
 
 import android.app.Application
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.net.Uri
+import android.os.IBinder
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import dev.tsdroid.core.AccountClient
 import dev.tsdroid.core.AccountNotice
 import dev.tsdroid.core.ServerConfig
@@ -13,15 +20,28 @@ import dev.tsdroid.model.BookmarkSecrets
 import dev.tsdroid.model.ChatScope
 import dev.tsdroid.model.FileEntry
 import dev.tsdroid.model.User
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 
 /**
- * The screen-facing facade over [SessionController].
+ * The screen-facing facade over the session the [SessionService] owns.
  *
- * For now the controller is created and owned here, one per ViewModel instance.
- * A later step moves its ownership into a foreground service so the session
- * outlives the Activity; this facade stays the same, so the UI does not change.
+ * The connection, audio and session state live in a [SessionController] inside
+ * the service, so they survive rotation, backgrounding and the screen turning
+ * off. This ViewModel binds to that service and forwards commands and state; it
+ * owns nothing that a screen would take with it when it goes away.
+ *
+ * Commands that arrive before the bind completes (the first connect) are held
+ * until the service is connected, because a bind is asynchronous and the user
+ * should not have to tap twice.
  */
 class SessionViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -29,49 +49,142 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     private val servers = ServerStore(application)
     private val account: AccountClient = (application as TsDroidApp).account
 
-    private val controller = SessionController(application, settings, servers, account)
+    /** The controller currently hosted by the service, or null before the bind. */
+    private val controllerFlow = MutableStateFlow<SessionController?>(null)
+
+    private var service: SessionService? = null
+    private var bound = false
+
+    /** A connect that arrived before the service was bound. */
+    private var pendingConnect: ServerConfig? = null
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            val svc = (binder as? SessionService.LocalBinder)?.service() ?: return
+            service = svc
+            bound = true
+            controllerFlow.value = svc.controller
+            pendingConnect?.let { config ->
+                pendingConnect = null
+                begin(svc, config)
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            service = null
+            bound = false
+            controllerFlow.value = null
+        }
+    }
+
+    init {
+        // If the process outlived the screen and a session is still hosted, pick
+        // it up. A plain bind (no AUTO_CREATE) returns false when the service is
+        // not running, so an idle launch does not start one just to look at it.
+        val intent = Intent(application, SessionService::class.java)
+        runCatching { application.bindService(intent, connection, 0) }
+    }
 
     val accountState: StateFlow<AccountState> = account.state
     val accountError: StateFlow<String?> = account.startError
     val accountNotices: SharedFlow<AccountNotice> = account.notices
 
-    val ui: StateFlow<SessionUiState> = controller.ui
-    val navTab: StateFlow<NavTab> = controller.navTab
-    val micLevel: StateFlow<Float> = controller.micLevel
-    val audioError: StateFlow<String?> = controller.audioError
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val ui: StateFlow<SessionUiState> = controllerFlow
+        .flatMapLatest { it?.ui ?: flowOf(SessionUiState()) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, SessionUiState())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val navTab: StateFlow<NavTab> = controllerFlow
+        .flatMapLatest { it?.navTab ?: flowOf(NavTab.Home) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, NavTab.Home)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val micLevel: StateFlow<Float> = controllerFlow
+        .flatMapLatest { it?.micLevel ?: flowOf(0f) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0f)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val audioError: StateFlow<String?> = controllerFlow
+        .flatMapLatest { it?.audioError ?: flowOf(null) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     val filesTabEnabled: Boolean get() = settings.filesTabEnabled
 
-    // ── session commands ──────────────────────────────────────────────────
-    fun connect(config: ServerConfig) = controller.connect(config)
-    fun leave() = controller.leave()
-    fun disconnect() = controller.disconnect()
-    fun isLive(): Boolean = controller.isLive()
-    fun reconnectNow() = controller.reconnectNow()
-    fun reconnect() = controller.reconnect()
-    fun reconnectWithToken(token: String) = controller.reconnectWithToken(token)
-    fun selectTab(tab: SessionTab) = controller.selectTab(tab)
-    fun selectNavTab(tab: NavTab) = controller.selectNavTab(tab)
-    fun selectScope(scope: ChatScope) = controller.selectScope(scope)
-    fun openPrivateChat(user: User) = controller.openPrivateChat(user)
-    fun sendMessage(text: String) = controller.sendMessage(text)
-    fun poke(user: User, message: String) = controller.poke(user, message)
-    fun joinChannel(channelId: Long, password: String? = null) = controller.joinChannel(channelId, password)
-    fun toggleMic() = controller.toggleMic()
-    fun toggleSpeaker() = controller.toggleSpeaker()
-    fun setAway(away: Boolean, message: String = "") = controller.setAway(away, message)
-    fun setNickname(nickname: String) = controller.setNickname(nickname)
-    fun applyAudioSettings(gain: Float, noiseSuppression: Boolean, bluetoothMic: Boolean) =
-        controller.applyAudioSettings(gain, noiseSuppression, bluetoothMic)
-    fun applyOutputGain(gain: Float) = controller.applyOutputGain(gain)
-    fun openFiles(channelId: Long) = controller.openFiles(channelId)
-    fun refreshFiles() = controller.refreshFiles()
-    fun downloadFile(file: FileEntry) = controller.downloadFile(file)
-    fun uploadFile(uri: Uri, channelId: Long) = controller.uploadFile(uri, channelId)
-    fun setToast(message: String) = controller.setToast(message)
-    fun clearToast() = controller.clearToast()
+    // ── binding ───────────────────────────────────────────────────────────
 
-    fun adoptAccountIdentityAndConnect(config: ServerConfig) =
-        controller.adoptAccountIdentityAndConnect(config)
+    private fun ensureBound() {
+        val app = getApplication<Application>()
+        val intent = Intent(app, SessionService::class.java)
+        ContextCompat.startForegroundService(app, intent)
+        if (!bound) {
+            app.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
+    }
+
+    private fun begin(svc: SessionService, config: ServerConfig) {
+        val controller = svc.session()
+        controllerFlow.value = controller
+        controller.connect(config)
+    }
+
+    // ── session commands ──────────────────────────────────────────────────
+
+    fun connect(config: ServerConfig) {
+        val svc = service
+        if (bound && svc != null) {
+            begin(svc, config)
+        } else {
+            // Hold the request until the bind lands; the service is started here
+            // so it survives the Activity going away once the session is live.
+            pendingConnect = config
+            ensureBound()
+        }
+    }
+
+    fun leave() = withController { it.leave() }
+    fun disconnect() = withController { it.disconnect() }
+    fun isLive(): Boolean = service?.controller != null
+    fun reconnectNow() = withController { it.reconnectNow() }
+    fun reconnect() = withController { it.reconnect() }
+    fun reconnectWithToken(token: String) = withController { it.reconnectWithToken(token) }
+    fun selectTab(tab: SessionTab) = withController { it.selectTab(tab) }
+    fun selectNavTab(tab: NavTab) = withController { it.selectNavTab(tab) }
+    fun selectScope(scope: ChatScope) = withController { it.selectScope(scope) }
+    fun openPrivateChat(user: User) = withController { it.openPrivateChat(user) }
+    fun sendMessage(text: String) = withController { it.sendMessage(text) }
+    fun poke(user: User, message: String) = withController { it.poke(user, message) }
+    fun joinChannel(channelId: Long, password: String? = null) =
+        withController { it.joinChannel(channelId, password) }
+    fun toggleMic() = withController { it.toggleMic() }
+    fun toggleSpeaker() = withController { it.toggleSpeaker() }
+    fun setAway(away: Boolean, message: String = "") = withController { it.setAway(away, message) }
+    fun setNickname(nickname: String) = withController { it.setNickname(nickname) }
+    fun applyAudioSettings(gain: Float, noiseSuppression: Boolean, bluetoothMic: Boolean) =
+        withController { it.applyAudioSettings(gain, noiseSuppression, bluetoothMic) }
+    fun applyOutputGain(gain: Float) = withController { it.applyOutputGain(gain) }
+    fun openFiles(channelId: Long) = withController { it.openFiles(channelId) }
+    fun refreshFiles() = withController { it.refreshFiles() }
+    fun downloadFile(file: FileEntry) = withController { it.downloadFile(file) }
+    fun uploadFile(uri: Uri, channelId: Long) = withController { it.uploadFile(uri, channelId) }
+    fun setToast(message: String) = withController { it.setToast(message) }
+    fun clearToast() = withController { it.clearToast() }
+
+    fun adoptAccountIdentityAndConnect(config: ServerConfig) {
+        val svc = service
+        if (bound && svc != null) {
+            val controller = svc.session()
+            controllerFlow.value = controller
+            controller.adoptAccountIdentityAndConnect(config)
+        } else {
+            pendingConnect = config
+            ensureBound()
+        }
+    }
+
+    private inline fun withController(block: (SessionController) -> Unit) {
+        controllerFlow.value?.let(block)
+    }
 
     fun settings(): Settings = settings
     fun serverStore(): ServerStore = servers
@@ -97,6 +210,10 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun accountHasRememberedLogin(): Boolean = account.hasRememberedLogin()
 
     override fun onCleared() {
-        controller.shutdown()
+        // The service keeps the session; only the binding goes away with the UI.
+        if (bound) {
+            runCatching { getApplication<Application>().unbindService(connection) }
+            bound = false
+        }
     }
 }

@@ -42,11 +42,12 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Owns the session: the native client, the audio bridge and every piece of UI
- * state that has to outlive a recomposition.
+ * Owns one live session: the native client, the audio bridge, and the state the
+ * UI renders.
  *
- * A ViewModel rather than a composable-held object so that a rotation does not
- * tear down a live voice connection.
+ * Kept out of the ViewModel so its lifetime is not tied to a screen. It is
+ * created and held by [SessionService]; the ViewModel only forwards to it, which
+ * is what lets a connection survive rotation, backgrounding and a lock screen.
  */
 class SessionController(
     private val app: Application,
@@ -58,14 +59,17 @@ class SessionController(
     /** Owns the polling and event collectors for the life of the session. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
+    /**
+     * Called once when the session is over (a leave, or a disconnect the user did
+     * not start). The service uses it to stop itself; the UI does not care.
+     */
+    var onSessionEnded: (() -> Unit)? = null
+
     private val audio = AudioBridge(app)
 
-    /**
-     * The myTeamSpeak side, alive for the whole app rather than for one
-     * connection: it signs in from a remembered credential before the user has
-     * picked a server, and its handle is handed to the connection so the
-     * myTS ID can be announced in `clientinit`.
-     */
+    // The account is app-scoped and handed in: it can be signed in before any
+    // server is joined, and its handle rides into the connection so the myTS ID
+    // is announced in `clientinit`.
 
     val accountState: StateFlow<AccountState> = account.state
     val accountError: StateFlow<String?> = account.startError
@@ -237,6 +241,7 @@ class SessionController(
         if (client == null) {
             _ui.value = SessionUiState()
             _navTab.value = NavTab.Home
+            onSessionEnded?.invoke()
             return
         }
         goodbyePending = true
@@ -248,6 +253,7 @@ class SessionController(
                 cleanupSession()
                 _ui.value = SessionUiState()
                 _navTab.value = NavTab.Home
+                onSessionEnded?.invoke()
             }
         }
     }
@@ -643,6 +649,7 @@ class SessionController(
                 } else {
                     _ui.value = SessionUiState()
                     _navTab.value = NavTab.Home
+                    onSessionEnded?.invoke()
                 }
             }
             return

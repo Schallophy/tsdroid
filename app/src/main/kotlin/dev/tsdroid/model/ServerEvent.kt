@@ -30,7 +30,18 @@ sealed interface ServerEvent {
         override val type = "reconnecting"
     }
 
-    data class Failure(val message: String, val kind: String) : ServerEvent {
+    data class Failure(
+        val message: String,
+        val kind: String,
+        /**
+         * True when the session is over and no further command will be handled.
+         *
+         * Without it a shell cannot tell "the server refused this packet" from
+         * "the connection is dead" — both arrive as `error` — and has to guess
+         * from [kind], which is free text.
+         */
+        val terminal: Boolean = false,
+    ) : ServerEvent {
         override val type = "error"
     }
 
@@ -254,7 +265,13 @@ sealed interface ServerEvent {
 
                 "disconnected" -> Disconnected
                 "reconnecting" -> Reconnecting
-                "error" -> Failure(str(map, "message"), str(map, "kind"))
+                "error" -> Failure(
+                    message = str(map, "message"),
+                    kind = str(map, "kind"),
+                    // Absent on an older library; "not terminal" is the safe
+                    // reading, because it keeps the connect button available.
+                    terminal = boolOr(map, "terminal", false),
+                )
                 "command_error" -> CommandFailure(
                     message = str(map, "message"),
                     missingPermission = str(map, "missing_permission"),

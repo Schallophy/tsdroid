@@ -95,6 +95,7 @@ fun HomeScreen(
     account: AccountState,
     accountSettled: Boolean,
     bookmarksFresh: Boolean,
+    bookmarkOrderReset: Int,
     onConnect: (ServerConfig) -> Unit,
     onConnectBookmark: (AccountRow) -> Unit,
     onOpenSettings: () -> Unit,
@@ -375,8 +376,9 @@ fun HomeScreen(
                 )
             } else {
                 BookmarkItems(
-                        rows = rows,
-                        onUse = onConnectBookmark,
+                    rows = rows,
+                    orderReset = bookmarkOrderReset,
+                    onUse = onConnectBookmark,
                         onEdit = onEditBookmark,
                         onDelete = onDeleteBookmark,
                     onMove = onMoveBookmark,
@@ -452,6 +454,7 @@ fun HomeScreen(
 @Composable
 private fun BookmarkItems(
     rows: List<AccountRow>,
+    orderReset: Int,
     onUse: (AccountRow) -> Unit,
     onEdit: (AccountRow) -> Unit,
     onDelete: (AccountRow) -> Unit,
@@ -460,7 +463,9 @@ private fun BookmarkItems(
     val bookmarks = rows.filter { !it.folder && it.bookmark != null }
     val order = remember { mutableStateListOf<String>() }
     val serverOrder = bookmarks.map { it.uuid }
-    LaunchedEffect(serverOrder) {
+    // `orderReset` advances when a reorder was refused: the server's order is
+    // unchanged then, and this is what puts the rows back where they were.
+    LaunchedEffect(serverOrder, orderReset) {
         order.clear()
         order.addAll(serverOrder)
     }

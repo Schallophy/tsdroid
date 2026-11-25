@@ -69,7 +69,7 @@ import dev.tsdroid.ui.components.MemberAvatar
  * client automatically adopted.
  */
 @Composable
-fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Unit) {
+fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
     val account by vm.accountState.collectAsStateWithLifecycle()
     val settings = remember { vm.settings() }
 
@@ -104,33 +104,8 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
     var passwordVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        vm.accountNotices.collect { notice ->
-            if (notice.ok) {
-                // A background refresh is not worth a toast; everything the user
-                // explicitly did is.
-                val text = when (notice.command) {
-                    "account_login" -> "已登录 myTeamSpeak"
-                    "account_resume" -> "已从本机凭据恢复登录"
-                    "account_logout" -> "已退出登录"
-                    "sync_backup" -> notice.message.ifEmpty { "备份完成" }
-                    else -> null
-                }
-                text?.let(vm::setToast)
-            } else {
-                vm.setToast(notice.message.ifEmpty { "账号操作失败" })
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
         // Keep `pickedIdentity` current without waiting for a connect.
         run { vm.accountRefresh() }
-    }
-
-    // A broken account side is a toast, not a line that appears and pushes the
-    // rest of the card down.
-    LaunchedEffect(accountError) {
-        accountError?.let(vm::setToast)
     }
 
     fun run(command: () -> String?) {
@@ -369,7 +344,6 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
         AccountSection(
             vm = vm,
             account = account,
-            accountError = accountError,
             email = email,
             password = password,
             otp = otp,
@@ -430,7 +404,6 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
 private fun AccountSection(
     vm: SessionViewModel,
     account: AccountState,
-    accountError: String?,
     email: String,
     password: String,
     otp: String,

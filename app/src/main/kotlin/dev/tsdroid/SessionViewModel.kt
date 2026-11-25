@@ -38,6 +38,19 @@ import kotlinx.coroutines.flow.SharingStarted
 private sealed interface BookmarkEdit {
     data class Patched(val name: String, val address: String, val port: Int, val nickname: String) : BookmarkEdit
     data object Removed : BookmarkEdit
+
+    /** Whether the account now shows this change, i.e. the write has landed. */
+    fun appliedTo(uuid: String, state: AccountState): Boolean {
+        val item = state.items.firstOrNull { it.uuid == uuid }
+        return when (this) {
+            Removed -> item == null
+            is Patched -> item?.bookmark != null &&
+                item.bookmark.name == name &&
+                item.bookmark.address == address &&
+                item.bookmark.port == port &&
+                item.bookmark.nickname == nickname
+        }
+    }
 }
 
 /**
@@ -61,6 +74,14 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
 
     /** Bookmark changes shown before the server confirms them. */
     private val localBookmarkEdits = MutableStateFlow<Map<String, BookmarkEdit>>(emptyMap())
+
+    /**
+     * Bumped when a reorder is refused, so the home list stops showing the order
+     * that was dragged. A successful move needs no signal: the local order and
+     * the server's agree.
+     */
+    private val _bookmarkOrderReset = MutableStateFlow(0)
+    val bookmarkOrderReset: StateFlow<Int> = _bookmarkOrderReset.asStateFlow()
 
     /** The list shown last time, so a launch draws rows instead of a spinner. */
     private val cachedAccount: AccountState? = bookmarkCache.load()
@@ -159,6 +180,38 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     val bookmarksFresh: StateFlow<Boolean> = account.itemsFresh
 
     init {
+        // The overlay outlives the dispatch: it is dropped when the write has
+        // actually landed (the account's state then shows it) or when the
+        // account says it did not (a failed notice). Either way the UI never
+        // swaps back to the old row for the length of a round trip.
+        viewModelScope.launch {
+            account.notices.collect { notice ->
+                when {
+                    notice.command == "sync_bookmark_edit" ->
+                        localBookmarkEdits.update { edits ->
+                            edits.filterValues { it !is BookmarkEdit.Patched }
+                        }
+                    notice.command == "sync_delete" ->
+                        localBookmarkEdits.update { edits ->
+                            edits.filterValues { it !is BookmarkEdit.Removed }
+                        }
+                    notice.command == "sync_bookmark_move" && !notice.ok ->
+                        _bookmarkOrderReset.update { it + 1 }
+                    notice.command == "account_logout" ->
+                        localBookmarkEdits.value = emptyMap()
+                }
+            }
+        }
+        // A successful write updates the list; overlays that the new state
+        // already agrees with are no longer needed.
+        viewModelScope.launch {
+            account.state.collect { state ->
+                if (!account.itemsFresh.value) return@collect
+                localBookmarkEdits.update { edits ->
+                    edits.filter { (uuid, edit) -> !edit.appliedTo(uuid, state) }
+                }
+            }
+        }
         // Keep the cache current: every state the UI would render is what the
         // next launch should draw. It follows the account only once settled —
         // the blank state at the start of a launch is not a logout, and clearing
@@ -269,8 +322,23 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun refreshFiles() = withController { it.refreshFiles() }
     fun downloadFile(file: FileEntry) = withController { it.downloadFile(file) }
     fun uploadFile(uri: Uri, channelId: Long) = withController { it.uploadFile(uri, channelId) }
-    fun setToast(message: String) = withController { it.setToast(message) }
-    fun clearToast() = withController { it.clearToast() }
+    /**
+     * A message for the user, independent of any session.
+     *
+     * The session's own `ui.toast` only exists while a controller is bound — so
+     * account results and bookmark errors were silently dropped whenever the
+     * user was on the home screen with nothing connected. This flow is the
+     * screen-facing one; the controller keeps its own for session events.
+     */
+    private val _toast = MutableStateFlow<String?>(null)
+    val toast: StateFlow<String?> = _toast.asStateFlow()
+
+    fun setToast(message: String) { _toast.value = message }
+
+    fun clearToast() {
+        _toast.value = null
+        withController { it.clearToast() }
+    }
 
     fun adoptAccountIdentityAndConnect(config: ServerConfig) {
         val svc = service
@@ -307,14 +375,12 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
      */
     fun accountDeleteBookmark(uuid: String) {
         localBookmarkEdits.update { it + (uuid to BookmarkEdit.Removed) }
-        val error = account.deleteBookmark(uuid)
-        if (error != null) {
-            // Refused: put the row back and say why.
+        // On acceptance the row stays hidden until the account's read-back
+        // actually lacks it. Dropping the overlay here made the row reappear
+        // for the length of the round trip — the opposite of optimistic.
+        account.deleteBookmark(uuid)?.let { error ->
             localBookmarkEdits.update { it - uuid }
             setToast(error)
-        } else {
-            // Accepted: the server's list is authoritative now.
-            localBookmarkEdits.update { it - uuid }
         }
     }
 
@@ -323,9 +389,10 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         localBookmarkEdits.update {
             it + (uuid to BookmarkEdit.Patched(name, address, port, nickname))
         }
-        val error = account.editBookmark(uuid, name, address, port, nickname)
-        localBookmarkEdits.update { it - uuid }
-        error?.let(::setToast)
+        account.editBookmark(uuid, name, address, port, nickname)?.let { error ->
+            localBookmarkEdits.update { it - uuid }
+            setToast(error)
+        }
     }
 
     /**
@@ -336,7 +403,12 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
      * rows back where the server has them.
      */
     fun accountMoveBookmark(uuid: String, after: String) {
-        account.moveBookmark(uuid, after)?.let(::setToast)
+        account.moveBookmark(uuid, after)?.let { error ->
+            // Refused before it was sent: the list was already reordered by the
+            // drag, so undo that too.
+            _bookmarkOrderReset.update { it + 1 }
+            setToast(error)
+        }
     }
 
     fun accountCreateBookmark(name: String, address: String, port: Int, nickname: String) {

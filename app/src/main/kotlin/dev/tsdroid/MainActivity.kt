@@ -86,6 +86,7 @@ private fun App() {
     val account by session.accountState.collectAsStateWithLifecycle()
     val accountSettled by session.accountSettled.collectAsStateWithLifecycle()
     val bookmarksFresh by session.bookmarksFresh.collectAsStateWithLifecycle()
+    val bookmarkOrderReset by session.bookmarkOrderReset.collectAsStateWithLifecycle()
     val accountError by session.accountError.collectAsStateWithLifecycle()
     val navTab by session.navTab.collectAsStateWithLifecycle()
     val filesEnabled = session.filesTabEnabled
@@ -166,6 +167,49 @@ private fun App() {
         session.clearToast()
     }
 
+    val screenToast by session.toast.collectAsStateWithLifecycle()
+    LaunchedEffect(screenToast) {
+        val message = screenToast ?: return@LaunchedEffect
+        snackbar.showSnackbar(message)
+        session.clearToast()
+    }
+
+    // Account results are reported wherever the user happens to be. They used to
+    // be collected on the settings tab only, so a bookmark the cloud refused was
+    // silently reverted while the user was looking at the home screen.
+    LaunchedEffect(Unit) {
+        session.accountNotices.collect { notice ->
+            val text = if (notice.ok) {
+                // A background refresh is not worth a toast; everything the user
+                // explicitly did is.
+                when (notice.command) {
+                    "account_login" -> "已登录 myTeamSpeak"
+                    "account_resume" -> "已从本机凭据恢复登录"
+                    "account_logout" -> "已退出登录"
+                    "sync_backup" -> notice.message.ifEmpty { "备份完成" }
+                    else -> null
+                }
+            } else {
+                when (notice.command) {
+                    // Automatic reads have their own state: an offline launch
+                    // must not greet the user with a toast.
+                    "sync_list", "identity_pick", "account_resume" -> null
+                    // The bookmark row already went back; the user needs to
+                    // know why it did not stay changed, not the HTTP detail.
+                    "sync_bookmark_create", "sync_bookmark_edit",
+                    "sync_bookmark_move", "sync_delete",
+                    -> "书签未能同步到云端，请检查网络后重试"
+                    else -> notice.message.ifEmpty { "账号操作失败" }
+                }
+            }
+            text?.let(session::setToast)
+        }
+    }
+
+    LaunchedEffect(accountError) {
+        accountError?.let(session::setToast)
+    }
+
     // A one-time, first-success nudge: on ROMs that kill background processes
     // hard, an uninterrupted call depends on the app being exempt from battery
     // optimisation. It is offered as an action, not a forced redirect, and never
@@ -219,6 +263,7 @@ private fun App() {
                         account = account,
                         accountSettled = accountSettled,
                         bookmarksFresh = bookmarksFresh,
+                        bookmarkOrderReset = bookmarkOrderReset,
                         onConnect = { config ->
                             askNotificationPermissionOnce()
                             if (hasMicPermission()) {
@@ -282,7 +327,6 @@ private fun App() {
 
                 dev.tsdroid.NavTab.Settings -> SettingsScreen(
                     vm = session,
-                    accountError = accountError,
                     onBack = { session.selectNavTab(dev.tsdroid.NavTab.Home) },
                 )
 

@@ -21,6 +21,7 @@ import dev.tsdroid.model.ChatScope
 import dev.tsdroid.model.FileEntry
 import dev.tsdroid.model.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.SharedFlow
@@ -54,11 +55,15 @@ private sealed interface BookmarkEdit {
 class SessionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settings = Settings(application)
+    private val bookmarkCache = dev.tsdroid.data.BookmarkCache(application)
     private val servers = ServerStore(application)
     private val account: AccountClient = (application as TsDroidApp).account
 
     /** Bookmark changes shown before the server confirms them. */
     private val localBookmarkEdits = MutableStateFlow<Map<String, BookmarkEdit>>(emptyMap())
+
+    /** The list shown last time, so a launch draws rows instead of a spinner. */
+    private val cachedAccount: AccountState? = bookmarkCache.load()
 
     /** The controller currently hosted by the service, or null before the bind. */
     private val controllerFlow = MutableStateFlow<SessionController?>(null)
@@ -107,10 +112,15 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
      * still comes through.
      */
     val accountState: StateFlow<AccountState> = combine(account.state, localBookmarkEdits) { state, edits ->
+        // Until the first real read lands, the live state is a bare "signed in"
+        // with no items. The cached list is what was on screen last time, so it
+        // stands in: the rows are there at the first frame, and the read replaces
+        // them when it arrives.
+        val base = if (state.items.isEmpty() && state.loggedIn) cachedAccount ?: state else state
         if (edits.isEmpty()) {
-            state
+            base
         } else {
-            val items = state.items.mapNotNull { item ->
+            val items = base.items.mapNotNull { item ->
                 when (val edit = edits[item.uuid]) {
                     is BookmarkEdit.Removed -> null
                     is BookmarkEdit.Patched -> {
@@ -127,12 +137,26 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
                     null -> item
                 }
             }
-            state.copy(items = items)
+            base.copy(items = items)
         }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, account.state.value)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, cachedAccount ?: account.state.value)
 
     val accountError: StateFlow<String?> = account.startError
     val accountNotices: SharedFlow<AccountNotice> = account.notices
+
+    init {
+        // Keep the cache current: every state the UI would render is what the
+        // next launch should draw.
+        viewModelScope.launch {
+            account.state.collect { state ->
+                if (!state.loggedIn) {
+                    bookmarkCache.clear()
+                } else if (state.items.isNotEmpty()) {
+                    bookmarkCache.save(state)
+                }
+            }
+        }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val ui: StateFlow<SessionUiState> = controllerFlow

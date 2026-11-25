@@ -81,6 +81,7 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
     var bluetooth by remember { mutableStateOf(settings.bluetoothMic) }
     var filesEnabled by remember { mutableStateOf(settings.filesTabEnabled) }
     var keepInBackground by remember { mutableStateOf(settings.keepInBackground) }
+    var startMuted by remember { mutableStateOf(settings.startMuted) }
     var focusAction by remember { mutableStateOf(settings.audioFocusAction) }
     // A stored pair can be impossible (an older build wrote a version number
     // this table has no signature for), so the screen opens on what would
@@ -234,6 +235,15 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
 
         // ── 语音 ──────────────────────────────────────────────────────────
         Section("语音") {
+            ToggleRow(
+                label = "连接时静音",
+                hint = "进入服务器后先不发声，需要说话时再点麦克风",
+                checked = startMuted,
+                onChange = {
+                    startMuted = it
+                    settings.startMuted = it
+                },
+            )
             ToggleRow(
                 label = "麦克风降噪",
                 hint = "系统级噪声抑制，开会时更干净",

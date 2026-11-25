@@ -192,6 +192,17 @@ class Settings(context: Context) {
         get() = prefs.getString(KEY_DRAFT_CHANNEL, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_DRAFT_CHANNEL, value).apply()
 
+    /**
+     * Whether a connection starts with the microphone muted.
+     *
+     * Joining a server is not consent to be heard: a hot mic in a channel of
+     * strangers is the failure this prevents. Muted is the default, and the mic
+     * bar is one tap away for anyone who does want to talk.
+     */
+    var startMuted: Boolean
+        get() = prefs.getBoolean(KEY_START_MUTED, true)
+        set(value) = prefs.edit().putBoolean(KEY_START_MUTED, value).apply()
+
     /** Whether the one-time battery-optimisation hint has been shown. */
     var batteryHintShown: Boolean
         get() = prefs.getBoolean(KEY_BATTERY_HINT, false)
@@ -211,6 +222,7 @@ class Settings(context: Context) {
         const val KEY_KEEP_BACKGROUND = "keep_in_background"
         const val KEY_FOCUS_ACTION = "audio_focus_action"
         const val KEY_BATTERY_HINT = "battery_hint_shown"
+        const val KEY_START_MUTED = "start_muted"
         const val KEY_DRAFT_ADDRESS = "draft_address"
         const val KEY_DRAFT_NICKNAME = "draft_nickname"
         const val KEY_DRAFT_CHANNEL = "draft_channel"

@@ -163,7 +163,18 @@ class SessionController(
         cleanupSession()
         acquireWakeLock()
         requestAudioFocus()
-        _ui.value = SessionUiState(status = SessionStatus.Connecting, config = config)
+        // A connection starts muted unless the user turned that off: joining is
+        // not consent to be heard. The mute travels inside the config (see
+        // `withAnnouncedVersion`), because it has to be declared in
+        // `clientinit` — correcting it afterwards does not reach the server's
+        // record of this client.
+        val startMuted = config.startMuted
+        audio.micEnabled = !startMuted
+        _ui.value = SessionUiState(
+            status = SessionStatus.Connecting,
+            config = config,
+            micEnabled = !startMuted,
+        )
 
         val session = NativeClient(
             config,

@@ -42,6 +42,14 @@ data class ServerConfig(
     val platform: String = "Windows",
     /** A privilege key to redeem on first connect; empty for none. */
     val token: String = "",
+    /**
+     * Whether to appear on the server already muted.
+     *
+     * Declared in `clientinit`, not corrected afterwards: the server records the
+     * mute state from that first packet, and a later update of only this flag is
+     * not reflected back in our own client state.
+     */
+    val startMuted: Boolean = false,
     /** A TS3 `counterVkey` identity from a previous session, or "" for a fresh one. */
     val identityIni: String = "",
     /**
@@ -127,6 +135,7 @@ class NativeClient(
                     config.version,
                     config.platform,
                     config.token,
+                    config.startMuted,
                 )
             } else {
                 Native.nativeCreate(
@@ -139,6 +148,7 @@ class NativeClient(
                     config.version,
                     config.platform,
                     config.token,
+                    config.startMuted,
                 )
             }
         } catch (t: Throwable) {

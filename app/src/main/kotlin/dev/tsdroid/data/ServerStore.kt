@@ -112,8 +112,23 @@ class ServerStore(context: Context) {
 
     fun hasPasswords(): Boolean = credentials.all.isNotEmpty()
 
+    /**
+     * One field of the temporary-connect form's secret, encrypted like any other.
+     *
+     * The scratch form is not a saved server, so it does not get an address key;
+     * a reserved prefix keeps its secrets apart from the per-address ones and
+     * means clearing a server never touches the draft. Still ciphertext at rest —
+     * the point of persisting it is convenience, not a weaker store.
+     */
+    fun draftSecret(name: String): String? = passwordFor(DRAFT_PREFIX + name)
+
+    fun setDraftSecret(name: String, value: String) {
+        setPassword(DRAFT_PREFIX + name, value)
+    }
+
     private companion object {
         const val KEY_SERVERS = "list"
         const val MAX_SERVERS = 20
+        const val DRAFT_PREFIX = "__draft__:"
     }
 }

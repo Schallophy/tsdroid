@@ -267,12 +267,11 @@ private fun App() {
                         onSaveBookmark = { name, address, nickname ->
                             val (host, port) = splitAddress(address)
                             session.accountCreateBookmark(name, host, port, nickname)
-                                ?.let(session::setToast)
                         },
                         onEditBookmark = { row -> editingBookmark = row },
                         onDeleteBookmark = { row -> deletingBookmark = row },
                         onMoveBookmark = { row, after ->
-                            session.accountMoveBookmark(row.uuid, after)?.let(session::setToast)
+                            session.accountMoveBookmark(row.uuid, after)
                         },
                     )
                 }
@@ -373,7 +372,6 @@ private fun App() {
                 onConfirm = { name, address, nickname ->
                     val (host, port) = splitAddress(address)
                     session.accountEditBookmark(row.uuid, name, host, port, nickname)
-                        ?.let(session::setToast)
                     editingBookmark = null
                 },
             )
@@ -388,7 +386,7 @@ private fun App() {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        session.accountDeleteBookmark(row.uuid)?.let(session::setToast)
+                        session.accountDeleteBookmark(row.uuid)
                         deletingBookmark = null
                     },
                 ) { Text("删除", color = MaterialTheme.colorScheme.error) }

@@ -22,6 +22,7 @@ import dev.tsdroid.model.FileEntry
 import dev.tsdroid.model.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,7 +30,14 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.SharingStarted
+
+/** A bookmark change that is shown before the server confirms it. */
+private sealed interface BookmarkEdit {
+    data class Patched(val name: String, val address: String, val port: Int, val nickname: String) : BookmarkEdit
+    data object Removed : BookmarkEdit
+}
 
 /**
  * The screen-facing facade over the session the [SessionService] owns.
@@ -48,6 +56,9 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     private val settings = Settings(application)
     private val servers = ServerStore(application)
     private val account: AccountClient = (application as TsDroidApp).account
+
+    /** Bookmark changes shown before the server confirms them. */
+    private val localBookmarkEdits = MutableStateFlow<Map<String, BookmarkEdit>>(emptyMap())
 
     /** The controller currently hosted by the service, or null before the bind. */
     private val controllerFlow = MutableStateFlow<SessionController?>(null)
@@ -86,7 +97,40 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         runCatching { application.bindService(intent, connection, 0) }
     }
 
-    val accountState: StateFlow<AccountState> = account.state
+    /**
+     * The account, with local bookmark edits applied on top.
+     *
+     * A bookmark change is shown at once and the server's answer replaces the
+     * override when it lands. Without this the list would sit unchanged for the
+     * length of a round trip and then jump — the write is fast, but not instant.
+     * The override is keyed by item uuid so an unrelated change from the account
+     * still comes through.
+     */
+    val accountState: StateFlow<AccountState> = combine(account.state, localBookmarkEdits) { state, edits ->
+        if (edits.isEmpty()) {
+            state
+        } else {
+            val items = state.items.mapNotNull { item ->
+                when (val edit = edits[item.uuid]) {
+                    is BookmarkEdit.Removed -> null
+                    is BookmarkEdit.Patched -> {
+                        val bookmark = item.bookmark ?: return@mapNotNull item
+                        item.copy(
+                            bookmark = bookmark.copy(
+                                name = edit.name,
+                                address = edit.address,
+                                port = edit.port,
+                                nickname = edit.nickname,
+                            ),
+                        )
+                    }
+                    null -> item
+                }
+            }
+            state.copy(items = items)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, account.state.value)
+
     val accountError: StateFlow<String?> = account.startError
     val accountNotices: SharedFlow<AccountNotice> = account.notices
 
@@ -211,13 +255,49 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun accountRefresh(): String? = account.refreshAccount()
     fun accountBackup(): String? = account.backup()
     fun accountBookmarkSecrets(uuid: String): BookmarkSecrets? = account.bookmarkSecrets(uuid)
-    fun accountDeleteBookmark(uuid: String): String? = account.deleteBookmark(uuid)
-    fun accountEditBookmark(uuid: String, name: String, address: String, port: Int, nickname: String): String? =
-        account.editBookmark(uuid, name, address, port, nickname)
-    fun accountMoveBookmark(uuid: String, after: String): String? =
-        account.moveBookmark(uuid, after)
-    fun accountCreateBookmark(name: String, address: String, port: Int, nickname: String): String? =
-        account.createBookmark(name, address, port, nickname)
+    /**
+     * Deletes a bookmark, hiding it at once.
+     *
+     * The row disappears on the tap and comes back only if the server refuses;
+     * waiting for the round trip made a delete feel like a freeze.
+     */
+    fun accountDeleteBookmark(uuid: String) {
+        localBookmarkEdits.update { it + (uuid to BookmarkEdit.Removed) }
+        val error = account.deleteBookmark(uuid)
+        if (error != null) {
+            // Refused: put the row back and say why.
+            localBookmarkEdits.update { it - uuid }
+            setToast(error)
+        } else {
+            // Accepted: the server's list is authoritative now.
+            localBookmarkEdits.update { it - uuid }
+        }
+    }
+
+    /** Edits a bookmark, showing the new fields at once. */
+    fun accountEditBookmark(uuid: String, name: String, address: String, port: Int, nickname: String) {
+        localBookmarkEdits.update {
+            it + (uuid to BookmarkEdit.Patched(name, address, port, nickname))
+        }
+        val error = account.editBookmark(uuid, name, address, port, nickname)
+        localBookmarkEdits.update { it - uuid }
+        error?.let(::setToast)
+    }
+
+    /**
+     * Reorders, which the list already showed locally.
+     *
+     * The drag moved the row before this was called, so there is nothing to
+     * apply here: only a refusal needs reporting, and the next snapshot puts the
+     * rows back where the server has them.
+     */
+    fun accountMoveBookmark(uuid: String, after: String) {
+        account.moveBookmark(uuid, after)?.let(::setToast)
+    }
+
+    fun accountCreateBookmark(name: String, address: String, port: Int, nickname: String) {
+        account.createBookmark(name, address, port, nickname)?.let(::setToast)
+    }
     fun accountIdentities(): List<dev.tsdroid.model.AccountIdentity> = account.accountIdentities
     fun accountSyncIdentity(): String? {
         val identity = servers.readIdentity()

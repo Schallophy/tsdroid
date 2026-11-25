@@ -155,24 +155,22 @@ fun VersionSettings(
             }
         }
 
-        // What the server will actually see, or why the choice cannot be used.
-        if (valid) {
-            Text(
-                text = "将声明为：$resolved",
-                style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        } else {
-            Text(
-                text = "该版本号在「$platform」平台没有签名条目，无法声明。换一个版本号或平台。",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
+        // Fixed one-line slot: the content swaps, the height does not.
         Text(
-            text = "版本号必须对上官方签名。服务器逐字比对，不匹配会被当成改包拒连，" +
-                "反复试还可能封 IP；所以只能从签名表里选。改动在下次连接时生效。",
+            text = if (valid) "将声明为：$resolved" else "该版本在此平台无签名",
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = FontFamily.Monospace,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = if (valid) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.error
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = "只能从签名表里选，改动在下次连接时生效。",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -113,6 +113,18 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     /** Set while the goodbye is in flight; the UI waits for it to land. */
     private var goodbyePending = false
 
+    /**
+     * The config to connect with once the goodbye lands, or null for a plain
+     * leave.
+     *
+     * A reconnect cannot just tear the session down and build a new one: the
+     * old session has to say goodbye first, or the server keeps it listed until
+     * its timeout. Both the event path ([applyEvent]'s `Disconnected` branch) and
+     * the timeout path (the grace delay) check this, so whichever arrives first
+     * performs the reconnect exactly once.
+     */
+    private var reconnectAfterGoodbye: ServerConfig? = null
+
     private val _ui = MutableStateFlow(SessionUiState())
     val ui: StateFlow<SessionUiState> = _ui.asStateFlow()
 
@@ -149,6 +161,7 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
 
     fun connect(config: ServerConfig) {
         goodbyePending = false
+        reconnectAfterGoodbye = null
         cleanupSession()
         _ui.value = SessionUiState(status = SessionStatus.Connecting, config = config)
 
@@ -255,6 +268,9 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
      * safety net in case even that never produces a [ServerEvent.Disconnected].
      */
     fun leave() {
+        // A leave cancels any pending reconnect: the user asked to go back, not
+        // to come straight back to the same server.
+        reconnectAfterGoodbye = null
         if (client == null) {
             _ui.value = SessionUiState()
             _navTab.value = NavTab.Home
@@ -281,13 +297,42 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
 
     /**
      * Reconnects now, after a setting that only applies to a fresh connection
-     * changed (the announced client version). The current session is torn down
-     * and rebuilt with the same config, so the new setting is announced in
-     * `clientinit`.
+     * changed (the announced client version).
+     *
+     * Two things the naive "call connect(config)" would get wrong. First, the
+     * config is rebuilt from the current settings, because the stored one still
+     * carries the version the session started with — reusing it would reconnect
+     * with the old version and the change would look like it never happened.
+     * Second, the old session is told to say goodbye before its handle is
+     * dropped: destroying the handle without a `clientdisconnect` leaves the
+     * client listed on the server until its timeout, which makes the reconnect
+     * look like the original connection never left.
      */
     fun reconnectNow() {
         val config = _ui.value.config ?: return
-        connect(config)
+        val fresh = config.copy(
+            version = settings.clientVersion,
+            platform = settings.clientPlatform,
+        )
+        if (client == null) {
+            connect(fresh)
+            return
+        }
+        goodbyePending = true
+        reconnectAfterGoodbye = fresh
+        client?.disconnect()
+        viewModelScope.launch {
+            delay(GOODBYE_GRACE_MS)
+            // The server may answer the goodbye first, in which case the event
+            // path already reconnected and this is a no-op.
+            if (goodbyePending) {
+                goodbyePending = false
+                cleanupSession()
+                val pending = reconnectAfterGoodbye
+                reconnectAfterGoodbye = null
+                if (pending != null) connect(pending)
+            }
+        }
     }
 
     /**
@@ -623,7 +668,18 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
             if (event is ServerEvent.Disconnected) {
                 goodbyePending = false
                 cleanupSession()
-                _ui.value = SessionUiState()
+                // A reconnect asked for this goodbye: land the new connection
+                // instead of the connect screen. The timeout path in
+                // [reconnectNow] checks the same flag and does nothing if this
+                // ran first.
+                val pending = reconnectAfterGoodbye
+                reconnectAfterGoodbye = null
+                if (pending != null) {
+                    connect(pending)
+                } else {
+                    _ui.value = SessionUiState()
+                    _navTab.value = NavTab.Home
+                }
             }
             return
         }

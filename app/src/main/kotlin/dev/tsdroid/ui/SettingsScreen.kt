@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.tsdroid.SessionViewModel
+import dev.tsdroid.core.Native
 import dev.tsdroid.model.AccountBookmark
 import dev.tsdroid.model.AccountRow
 import dev.tsdroid.model.AccountState
@@ -82,10 +83,13 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
     // Set when the version changed while a session is live: the choice only
     // takes effect on the next connection, so offer an immediate reconnect.
     var pendingReconnect by remember { mutableStateOf(false) }
+    // Whether the reconnect prompt has already been shown for the current
+    // editing session. Without it every keystroke that yields a valid version
+    // would re-open the dialog after the user dismissed it.
+    var reconnectPromptShown by remember { mutableStateOf(false) }
 
-    // Account action notices
-    var actionError by remember { mutableStateOf<String?>(null) }
-    var actionInfo by remember { mutableStateOf<String?>(null) }
+    // Account action notices go to a toast rather than an inline line, so the
+    // card does not grow and shrink as messages come and go.
     var confirmLogout by remember { mutableStateOf(false) }
 
     // Email/password for the login form inside the account section
@@ -98,18 +102,18 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
     LaunchedEffect(Unit) {
         vm.accountNotices.collect { notice ->
             if (notice.ok) {
-                actionError = null
-                actionInfo = when (notice.command) {
+                // A background refresh is not worth a toast; everything the user
+                // explicitly did is.
+                val text = when (notice.command) {
                     "account_login" -> "已登录 myTeamSpeak"
                     "account_resume" -> "已从本机凭据恢复登录"
-                    "account_logout" -> "已退出登录，本机记住的凭据已删除"
-                    "account_refresh" -> "已从账号服务器刷新"
+                    "account_logout" -> "已退出登录"
                     "sync_backup" -> notice.message.ifEmpty { "备份完成" }
                     else -> null
                 }
+                text?.let(vm::setToast)
             } else {
-                actionInfo = null
-                actionError = notice.message.ifEmpty { "账号操作失败" }
+                vm.setToast(notice.message.ifEmpty { "账号操作失败" })
             }
         }
     }
@@ -119,13 +123,23 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
         run { vm.accountRefresh() }
     }
 
+    // A broken account side is a toast, not a line that appears and pushes the
+    // rest of the card down.
+    LaunchedEffect(accountError) {
+        accountError?.let(vm::setToast)
+    }
+
     fun run(command: () -> String?) {
-        actionInfo = null
-        actionError = command()
+        command()?.let(vm::setToast)
     }
 
     /**
      * Saves the version choice and, when a session is live, offers a reconnect.
+     *
+     * The local state always follows what was typed, so the field shows the
+     * user's input even mid-word; only a choice that resolves to a signed entry
+     * is persisted and can prompt, because an unresolvable one would silently
+     * fall back to the standard tuple on connect.
      *
      * The version is announced only in `clientinit`, so it cannot change on an
      * open connection; the dialog asks whether to drop and rejoin now or keep
@@ -134,9 +148,15 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
     fun saveVersion(version: String, platform: String) {
         clientVersion = version
         clientPlatform = platform
+        val valid = Native.nativeVersionResolve(version, platform).isNotEmpty()
+        if (!valid) return
         settings.clientVersion = version
         settings.clientPlatform = platform
-        if (vm.isLive()) pendingReconnect = true
+        // Prompt at most once per editing session, and only on a live connection.
+        if (vm.isLive() && !reconnectPromptShown) {
+            reconnectPromptShown = true
+            pendingReconnect = true
+        }
     }
 
     Column(
@@ -334,8 +354,6 @@ fun SettingsScreen(vm: SessionViewModel, accountError: String?, onBack: () -> Un
             otp = otp,
             showOtp = showOtp,
             passwordVisible = passwordVisible,
-            actionError = actionError,
-            actionInfo = actionInfo,
             onEmailChange = { email = it },
             onPasswordChange = { password = it },
             onOtpChange = { otp = it },
@@ -398,8 +416,6 @@ private fun AccountSection(
     otp: String,
     showOtp: Boolean,
     passwordVisible: Boolean,
-    actionError: String?,
-    actionInfo: String?,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onOtpChange: (String) -> Unit,
@@ -414,16 +430,8 @@ private fun AccountSection(
     onDismissLogout: () -> Unit,
 ) {
     val busy = account.busy
-    val errorLine = actionError ?: accountError ?: account.lastError.ifEmpty { null }
 
     Section("账号") {
-        if (accountError != null) {
-            Text(
-                text = accountError,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
         if (account.loggedIn) {
             // Signed in: the account's identity and the actions on it.
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -461,7 +469,6 @@ private fun AccountSection(
                 TextButton(onClick = onLogout, enabled = !busy) { Text("退出登录") }
             }
 
-            StatusLines(errorLine = errorLine, infoLine = actionInfo)
 
             // Bookmark management: list with delete. The home screen is for
             // connecting; deleting a saved bookmark is management, and lives here.
@@ -558,7 +565,6 @@ private fun AccountSection(
             ) {
                 Text(if (busy) "正在登录…" else "登录")
             }
-            StatusLines(errorLine = errorLine, infoLine = actionInfo)
         }
     }
 
@@ -660,23 +666,7 @@ private fun commandLabel(command: String): String = when (command) {
     else -> "处理"
 }
 
-@Composable
-private fun StatusLines(errorLine: String?, infoLine: String?) {
-    if (errorLine != null) {
-        Text(
-            text = errorLine,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-        )
-    }
-    if (infoLine != null) {
-        Text(
-            text = infoLine,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-    }
-}
+
 
 /**
  * A settings section: a label and one rounded container.

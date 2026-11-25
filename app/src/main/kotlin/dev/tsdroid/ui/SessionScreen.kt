@@ -84,14 +84,6 @@ fun SessionScreen(
             onLeave = onLeave,
         )
 
-        if (ui.status == SessionStatus.Failed) {
-            ConnectErrorBanner(
-                message = ui.lastError ?: "连接失败",
-                onRetry = vm::reconnect,
-                onEdit = onLeave,
-            )
-        }
-
         Box(modifier = Modifier.weight(1f)) {
             when (ui.tab) {
                 dev.tsdroid.SessionTab.Channels -> ChannelsTab(
@@ -113,6 +105,19 @@ fun SessionScreen(
                     onDownload = vm::downloadFile,
                     onUpload = { uri: android.net.Uri -> ui.filesChannelId?.let { vm.uploadFile(uri, it) } },
                 )
+            }
+
+            // Overlay, not an inline row: a failure banner that pushes the list
+            // down as it appears is exactly the kind of layout jump that reads
+            // as broken. It floats over the top of the content instead.
+            if (ui.status == SessionStatus.Failed) {
+                Box(modifier = Modifier.align(Alignment.TopCenter)) {
+                    ConnectErrorBanner(
+                        message = ui.lastError ?: "连接失败",
+                        onRetry = vm::reconnect,
+                        onEdit = onLeave,
+                    )
+                }
             }
         }
     }

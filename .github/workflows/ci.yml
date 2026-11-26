@@ -11,6 +11,12 @@ name: CI
 #          be a hand-run copy step from a committed binary; the job exists to keep
 #          it that way no longer.
 #
+# Both jobs cache what they can, because the uncached run spent most of its time
+# re-downloading rather than compiling. Gradle User Home (distribution,
+# dependencies, build cache) is cached by setup-gradle, and `buildTsbridgeJni` is
+# a `@CacheableTask`, so a run where the submodule did not move restores the
+# compiled `.so` instead of spending 80 s rebuilding it.
+#
 # Deliberately absent: an emulator job. There is no instrumentation test to run,
 # and a booted emulator would cost ten minutes to prove nothing the JVM suite
 # does not already pin.
@@ -32,8 +38,9 @@ jobs:
   tests:
     name: jvm unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # ServerEventTest parses third_party/tsbridge/docs/events.md and
           # NativeAbiTest parses include/tsbridge.h. Without the submodule they
@@ -41,12 +48,16 @@ jobs:
           # intended behaviour: a test that cannot see the contract is not a test.
           submodules: recursive
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
 
-      - uses: gradle/actions/setup-gradle@v4
+      # The default (`enhanced`) provider, not `basic`. Basic has no restore keys:
+      # any edit to a build file changes the key and the next run starts from an
+      # empty Gradle User Home. Enhanced keeps partial reuse across such edits and
+      # is free for public repositories, which this one is.
+      - uses: gradle/actions/setup-gradle@v6
 
       # The Apache-2.0 notice obligation covers the *binary* that ships, not the
       # source tree it came from, so the copies under assets/ have to be the
@@ -69,7 +80,7 @@ jobs:
 
       - name: Upload the test report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-report
           path: app/build/reports/tests/testDebugUnitTest
@@ -78,33 +89,48 @@ jobs:
   apk:
     name: assembleDebug
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
 
+      # setup-gradle keys its cache by job id, so this job keeps its own Gradle
+      # User Home entry rather than literally sharing the `tests` one (the
+      # last-resort restore key can still borrow it). Without this step the job
+      # re-downloaded the distribution and recompiled every Kotlin source and
+      # re-dexed every dependency on every push.
+      - uses: gradle/actions/setup-gradle@v6
+
       # The submodule pins its own toolchain in `rust-toolchain.toml`; naming the
       # same version here keeps the cache key stable and makes the version the
-      # job claims to use visible in the log.
-      - uses: dtolnay/rust-toolchain@master
+      # job claims to use visible in the log. The tag is the version itself, so
+      # this does not drift the way `@master` does.
+      - uses: dtolnay/rust-toolchain@1.97.1
         with:
-          toolchain: "1.97.1"
           targets: aarch64-linux-android
 
+      # Only useful on a run where the JNI library has to be rebuilt (the
+      # submodule moved). When it does not, `buildTsbridgeJni` is a cache hit and
+      # none of this runs; when it does, the registry and `target/` are already
+      # warm and only the changed crates compile.
       - uses: Swatinem/rust-cache@v2
         with:
-          # The Gradle task points CARGO_TARGET_DIR at the submodule's own
-          # `target/`, so that is the directory worth caching.
           workspaces: third_party/tsbridge -> target
           shared-key: apk
 
       # The version this project is built and tested with. A floating "latest"
       # would swap the sysroot under a fixed toolchain.
+      #
+      # `local-cache` is deliberately off: it would put the ~2.5 GB extracted
+      # NDK in the same 10 GB Actions cache as Gradle and the Rust target
+      # directory, and buying back the 23 s download would risk evicting entries
+      # that save minutes.
       - name: Android NDK
         id: ndk
         uses: nttld/setup-ndk@v1
@@ -152,8 +178,11 @@ jobs:
           test "$size" -gt 4000000
 
       - name: Upload the APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: app-debug.apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          # The APK is already deflated; zipping it again spends time to save
+          # nothing, and this artifact is downloaded on every run.
+          compression-level: 0

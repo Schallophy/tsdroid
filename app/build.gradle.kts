@@ -4,8 +4,10 @@ import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
@@ -31,28 +33,81 @@ plugins {
  * be ~0. Skipping is only safe because the output is *deleted* first inside the
  * task: a failed build leaves no `.so`, rather than the previous one wearing the
  * new code's name.
+ *
+ * `@CacheableTask` is what makes a fresh CI runner skip it too: a new runner has
+ * no task history, so only the build cache can say "this exact input set already
+ * produced this library".
+ *
+ * The inputs are the submodule's content, the ABI, and the NDK revision. The
+ * Rust compiler is covered because the submodule pins it in `rust-toolchain.toml`,
+ * which is one of the inputs. `cargo-ndk` is the one tool whose version is not in
+ * the key — it is pinned to 4.1.2 in the workflow and by `cargo install` locally,
+ * and a version bump there should come with a `clean` anyway.
  */
+@CacheableTask
 abstract class CargoNdkTask : DefaultTask() {
     /** Everything whose change must force a rebuild. */
     @get:InputFiles
     abstract val sources: ConfigurableFileCollection
 
-    @get:Input
+    /**
+     * The workspace manifest, for cargo's `--manifest-path`.
+     *
+     * `@Internal` because it is an absolute path and the same file is already in
+     * [sources], where Gradle hashes its content instead. Keeping the path out of
+     * the key is what lets a cache entry built on a CI runner be reused locally.
+     */
+    @get:Internal
     abstract val manifestPath: Property<String>
 
     @get:Input
     abstract val abi: Property<String>
 
+    /**
+     * The NDK's own revision, read from its `source.properties`.
+     *
+     * A version rather than the install path: a path would be a machine-specific
+     * absolute string, so Gradle would store a separate cache entry per machine
+     * and the entry could never be relocated. The revision is what actually
+     * decides the sysroot, and it is the same number everywhere.
+     */
     @get:Input
+    abstract val ndkVersion: Property<String>
+
+    /**
+     * Cargo's incremental state, kept outside the submodule.
+     *
+     * `@Internal`: it is where cargo writes, not something that changes what it
+     * writes. Declaring it as an input would key the cache entry on an absolute
+     * path, so a CI-built library could never be reused locally and every
+     * machine would store its own copy. The toolchain is pinned separately by
+     * [ndkVersion] and the `rust-toolchain.toml` in [sources].
+     */
+    @get:Internal
+    abstract val cargoTargetDir: Property<String>
+
+    /**
+     * Where the NDK lives, for the exec environment.
+     *
+     * `@Internal` for the same reason as [cargoTargetDir]: the path is
+     * machine-specific. [ndkVersion] is what the cache key uses.
+     */
+    @get:Internal
     abstract val ndkHome: Property<String>
 
-    /** The SDK root, for the CMake/ninja package that ships inside it. */
-    @get:Input
-    abstract val sdkHome: Property<String>
-
-    /** Cargo's incremental state, kept outside the submodule. */
-    @get:Input
-    abstract val cargoTargetDir: Property<String>
+    /**
+     * The search path the toolchain is found on.
+     *
+     * `@Internal` rather than an input: it is the whole inherited `PATH`, so
+     * declaring it would key the cache entry on every directory a machine
+     * happens to export and nothing would ever be reused. What actually decides
+     * the compiler is `rust-toolchain.toml`, which is in [sources], and the NDK,
+     * which is [ndkVersion]. `cmake` and `ninja` are the runner image's own and
+     * are not part of the key; a cached library built by a different CMake patch
+     * release is still a correct library.
+     */
+    @get:Internal
+    abstract val toolPath: Property<String>
 
     /** The `jniLibs` layout Android expects: `<abi>/libtsbridge_jni.so`. */
     @get:OutputDirectory
@@ -91,30 +146,32 @@ abstract class CargoNdkTask : DefaultTask() {
                 // cannot cross-compile to Android.
                 "CMAKE_GENERATOR" to "Ninja",
                 "CARGO_TARGET_DIR" to cargoTargetDir.get(),
-                "PATH" to toolPath(),
+                "PATH" to toolPath.get(),
             )
         }
     }
+}
 
-    /**
-     * `cmake` is not on the default Windows PATH and cargo needs it to build
-     * Opus from C source. A standalone install under Program Files is the usual
-     * one; the Android SDK's `cmake/<version>` package is the fallback (and it
-     * also carries ninja, which the task asks for as the generator). Both are
-     * prepended when present — a fresh machine with only the SDK used to fail
-     * this task with "is `cmake` not installed?".
-     */
-    private fun toolPath(): String {
-        val existing = System.getenv("PATH").orEmpty()
-        val sdkCmakeBins = File(sdkHome.get()).resolve("cmake").listFiles()
-            ?.filter { it.isDirectory }
-            ?.sortedByDescending { it.name }
-            ?.map { it.resolve("bin") }
-            .orEmpty()
-        val candidates = listOf(File("C:\\Program Files\\CMake\\bin")) + sdkCmakeBins
-        val prefix = candidates.filter { it.isDirectory }.map { it.absolutePath }
-        return (prefix + existing).joinToString(File.pathSeparator)
-    }
+/**
+ * The `PATH` [CargoNdkTask] runs with.
+ *
+ * `cmake` is not on the default Windows PATH and cargo needs it to build Opus
+ * from C source. A standalone install under Program Files is the usual one; the
+ * Android SDK's `cmake/<version>` package is the fallback (and it also carries
+ * ninja, which the task asks for as the generator). Both are prepended when
+ * present — a fresh machine with only the SDK used to fail this task with "is
+ * `cmake` not installed?".
+ */
+private fun cargoToolPath(sdk: File): String {
+    val existing = System.getenv("PATH").orEmpty()
+    val sdkCmakeBins = sdk.resolve("cmake").listFiles()
+        ?.filter { it.isDirectory }
+        ?.sortedByDescending { it.name }
+        ?.map { it.resolve("bin") }
+        .orEmpty()
+    val candidates = listOf(File("C:\\Program Files\\CMake\\bin")) + sdkCmakeBins
+    val prefix = candidates.filter { it.isDirectory }.map { it.absolutePath }
+    return (prefix + existing).joinToString(File.pathSeparator)
 }
 
 /** `sdk.dir` from local.properties, then the environment — as Android Studio does. */
@@ -158,6 +215,24 @@ fun selectedNdk(): File {
         ?: throw GradleException("No NDK under $ndkRoot; install one or set ANDROID_NDK_HOME")
 }
 
+/**
+ * The NDK's own revision, e.g. `27.2.12479018`.
+ *
+ * Read from the NDK's `source.properties` because that is the only place the
+ * revision is written. The directory it happens to be installed in (`r27c/x64`
+ * from `setup-ndk`, `27.2.12479018` from the SDK manager) is not it.
+ */
+fun ndkRevision(ndk: File): String {
+    val props = Properties().apply {
+        ndk.resolve("source.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
+    }
+    val revision = props.getProperty("Pkg.Revision")
+        ?: throw GradleException("No Pkg.Revision in ${ndk.resolve("source.properties")}")
+    // `setup-ndk` records `27.2.12479018-beta1` for a preview; the stable
+    // revision is the part before the dash, which is what `ndkVersion` means.
+    return revision.substringBefore("-")
+}
+
 val tsbridgeDir = rootProject.file("third_party/tsbridge")
 
 /**
@@ -187,14 +262,24 @@ val buildTsbridgeJni = tasks.register<CargoNdkTask>("buildTsbridgeJni") {
     sources.from(
         tsbridgeDir.resolve("Cargo.toml"),
         tsbridgeDir.resolve("Cargo.lock"),
+        // Decides which compiler runs, so it decides the output. Without it a
+        // submodule bump that changed only the pinned toolchain would report
+        // UP-TO-DATE and keep the old `.so`.
+        tsbridgeDir.resolve("rust-toolchain.toml"),
         tsbridgeDir.resolve("crates"),
+        // The vendored tsclientlib is a path dependency of `crates/core`, so a
+        // change there changes the library. It was missing from the input set,
+        // which meant a submodule bump that only touched the vendored stack
+        // reported this task UP-TO-DATE and shipped the previous `.so`.
+        tsbridgeDir.resolve("vendor"),
     )
     manifestPath.set(tsbridgeDir.resolve("Cargo.toml").absolutePath)
     abi.set("arm64-v8a")
     // Resolved when the task runs, not while Gradle configures: a checkout
     // without an Android SDK can still run `tasks`, `clean`, or a lint check.
     ndkHome.set(providers.provider { selectedNdk().absolutePath })
-    sdkHome.set(providers.provider { androidSdkDir().absolutePath })
+    ndkVersion.set(providers.provider { ndkRevision(selectedNdk()) })
+    toolPath.set(providers.provider { cargoToolPath(androidSdkDir()) })
     // Deliberately the submodule's own `target/`, not `app/build`: `gradlew clean`
     // deletes `app/build`, and throwing away the Rust dependency cache turns a
     // 80-second incremental build into a five-minute cold one. It is ignored by

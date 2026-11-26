@@ -208,6 +208,12 @@ Two jobs, both `ubuntu-latest`:
 | `tests` | `:app:testDebugUnitTest` on a bare JVM, plus a byte-for-byte check that `assets/licenses/*` matches the submodule. No `.so` exists on that runner, so a test that reached into the native library would fail instead of passing on a leftover binary. |
 | `apk` | `assembleDebug` with `cargo ndk` and NDK r27c, then compares the `.so` packaged in the APK against the one `buildTsbridgeJni` produced |
 
+Both jobs cache what they can. Gradle User Home — the distribution, the
+dependencies and the local build cache — is restored by setup-gradle, and
+`buildTsbridgeJni` is a `@CacheableTask`, so a push that does not move the
+submodule restores the compiled `.so` rather than spending 80 s rebuilding it.
+A cold run is what happens when the submodule or a lockfile changes.
+
 There is no emulator job: there are no instrumentation tests to run, and a
 booted emulator would cost ten minutes to prove nothing the JVM suite does not
 already pin. `build.gradle.kts` prefers `ANDROID_NDK_HOME` over "newest NDK in

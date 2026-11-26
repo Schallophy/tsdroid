@@ -11,7 +11,6 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import dev.tsdroid.core.AccountClient
 import dev.tsdroid.data.ServerStore
 import dev.tsdroid.data.Settings
 
@@ -63,7 +62,7 @@ class SessionService : Service() {
             app,
             Settings(this),
             ServerStore(this),
-            app.account as AccountClient,
+            app.account,
         )
         created.onSessionEnded = { endSession() }
         created.onStateChanged = { refreshNotification() }

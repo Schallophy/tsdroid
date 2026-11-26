@@ -40,11 +40,12 @@ plugins {
  * no task history, so only the build cache can say "this exact input set already
  * produced this library".
  *
- * The inputs are the submodule's content, the ABI, and the NDK revision. The
- * Rust compiler is covered because the submodule pins it in `rust-toolchain.toml`,
- * which is one of the inputs. `cargo-ndk` is the one tool whose version is not in
- * the key — it is pinned to 4.1.2 in the workflow and by `cargo install` locally,
- * and a version bump there should come with a `clean` anyway.
+ * The inputs are the submodule's content, the ABI, the NDK revision, and the
+ * cargo version. `rust-toolchain.toml` pins the compiler, but only a rustup
+ * `cargo` obeys it — a Homebrew or distro `cargo` ignores the file, so the
+ * version is asked for directly rather than inferred. `cargo-ndk` is the one
+ * tool still outside the key: it is pinned to 4.1.2 in the workflow and by
+ * `cargo install` locally, and a version bump there should come with a `clean`.
  */
 @CacheableTask
 abstract class CargoNdkTask : DefaultTask() {
@@ -87,6 +88,34 @@ abstract class CargoNdkTask : DefaultTask() {
     abstract val ndkVersion: Property<String>
 
     /**
+     * The resolved path of the `cargo` to run, e.g. `/Users/me/.cargo/bin/cargo`.
+     *
+     * Passed in rather than looked up inside the task for two reasons. `exec`
+     * resolves the program on the *parent* process's `PATH`, so the `PATH` set in
+     * the environment below reaches the child but cannot make `cargo` findable —
+     * the absolute path has to be handed over already resolved. And a Kotlin DSL
+     * script compiles its top-level functions into the script class, so calling
+     * one from this nested class would make the class `inner`, which Gradle
+     * cannot instantiate.
+     *
+     * `@Internal` because the path is machine-specific; [cargoVersion] is what
+     * the cache key uses.
+     */
+    @get:Internal
+    abstract val cargoExe: Property<String>
+
+    /**
+     * The `cargo` version, e.g. `cargo 1.97.1 (c980f4866 2026-06-30)`.
+     *
+     * An input rather than a comment about `rust-toolchain.toml`: that file only
+     * decides the compiler when `cargo` is rustup's, and a distro or Homebrew
+     * `cargo` ignores it entirely. Asking the binary is the only way the key
+     * describes the tool that actually produced the library.
+     */
+    @get:Input
+    abstract val cargoVersion: Property<String>
+
+    /**
      * Cargo's incremental state, kept outside the submodule.
      *
      * `@Internal`: it is where cargo writes, not something that changes what it
@@ -113,10 +142,10 @@ abstract class CargoNdkTask : DefaultTask() {
      * `@Internal` rather than an input: it is the whole inherited `PATH`, so
      * declaring it would key the cache entry on every directory a machine
      * happens to export and nothing would ever be reused. What actually decides
-     * the compiler is `rust-toolchain.toml`, which is in [sources], and the NDK,
-     * which is [ndkVersion]. `cmake` and `ninja` are the runner image's own and
-     * are not part of the key; a cached library built by a different CMake patch
-     * release is still a correct library.
+     * the compiler is [cargoVersion], and the NDK is [ndkVersion]. `cmake` and
+     * `ninja` are the runner image's own and are not part of the key; a cached
+     * library built by a different CMake patch release is still a correct
+     * library.
      */
     @get:Internal
     abstract val toolPath: Property<String>
@@ -135,10 +164,12 @@ abstract class CargoNdkTask : DefaultTask() {
     fun build() {
         fileSystem.delete { delete(outputDir) }
 
+        // Already resolved by the caller: `exec` searches the parent's PATH, so
+        // setting PATH below cannot make a bare "cargo" findable.
         execOps.exec {
             workingDir = manifestPath.get().let { File(it).parentFile }
             commandLine(
-                "cargo", "ndk",
+                cargoExe.get(), "ndk",
                 "-t", abi.get(),
                 "-o", outputDir.get().asFile.absolutePath,
                 "build",
@@ -167,23 +198,81 @@ abstract class CargoNdkTask : DefaultTask() {
 /**
  * The `PATH` [CargoNdkTask] runs with.
  *
+ * Two problems are solved here, both of them about a tool that exists but is not
+ * on the inherited `PATH`:
+ *
  * `cmake` is not on the default Windows PATH and cargo needs it to build Opus
  * from C source. A standalone install under Program Files is the usual one; the
  * Android SDK's `cmake/<version>` package is the fallback (and it also carries
  * ninja, which the task asks for as the generator). Both are prepended when
  * present — a fresh machine with only the SDK used to fail this task with "is
  * `cmake` not installed?".
+ *
+ * `cargo` comes from rustup, which puts it in `~/.cargo/bin` and expects a shell
+ * profile to add that directory to `PATH`. A Gradle build started from Android
+ * Studio on macOS never reads those profiles, and a non-login shell does not
+ * either, so the build fails with "A problem occurred starting process 'command
+ * 'cargo''". Prepending the directory unconditionally is safe: when rustup
+ * already exported it this is a duplicate entry, and when it does not exist the
+ * entry is inert.
  */
 private fun cargoToolPath(sdk: File): String {
     val existing = System.getenv("PATH").orEmpty()
+    val cargoBin = File(System.getProperty("user.home"), ".cargo/bin")
     val sdkCmakeBins = sdk.resolve("cmake").listFiles()
         ?.filter { it.isDirectory }
         ?.sortedByDescending { it.name }
         ?.map { it.resolve("bin") }
         .orEmpty()
-    val candidates = listOf(File("C:\\Program Files\\CMake\\bin")) + sdkCmakeBins
+    val candidates = listOf(cargoBin, File("C:\\Program Files\\CMake\\bin")) + sdkCmakeBins
     val prefix = candidates.filter { it.isDirectory }.map { it.absolutePath }
     return (prefix + existing).joinToString(File.pathSeparator)
+}
+
+/**
+ * Finds an executable by searching `path`, the way a shell would.
+ *
+ * Needed because `ProcessBuilder` and Gradle's `ExecOperations` look the program
+ * up with `execvp`, which searches the *parent* process's `PATH` — the
+ * `environment()` map handed to them only becomes the child's environment, after
+ * the lookup has already happened. Setting `PATH` in that map therefore cannot
+ * make a binary findable; the absolute path has to be resolved here and passed
+ * as the command.
+ */
+private fun resolveExecutable(name: String, path: String): File? =
+    path.split(File.pathSeparator)
+        .filter { it.isNotBlank() }
+        .map { File(it, name) }
+        .firstOrNull { it.isFile && it.canExecute() }
+
+/**
+ * `cargo --version`, asked of the same binary the build will run.
+ *
+ * `directory` matters: rustup reads `rust-toolchain.toml` from the working
+ * directory and switches toolchains accordingly, so the same binary reports
+ * 1.100.0 at the repository root and 1.97.1 inside the submodule that pins it.
+ * The build runs in the submodule, so that is where the version has to be read —
+ * otherwise the cache key names a compiler the library was not built with.
+ *
+ * Resolved during configuration, which means one short process per build. That
+ * is the price of the version being a real cache input.
+ *
+ * A missing `cargo` is reported as a string rather than thrown, so `clean` still
+ * works on a machine that cannot build native code at all.
+ */
+private fun detectCargoVersion(cargo: File?, directory: File): String = try {
+    if (cargo == null) {
+        "cargo unavailable"
+    } else {
+        val process = ProcessBuilder(cargo.absolutePath, "--version")
+            .directory(directory)
+            .redirectErrorStream(true)
+            .start()
+        val text = process.inputStream.bufferedReader().readText().trim()
+        if (process.waitFor() == 0 && text.isNotEmpty()) text else "cargo unavailable"
+    }
+} catch (_: Exception) {
+    "cargo unavailable"
 }
 
 /** `sdk.dir` from local.properties, then the environment — as Android Studio does. */
@@ -292,6 +381,25 @@ val buildTsbridgeJni = tasks.register<CargoNdkTask>("buildTsbridgeJni") {
     ndkHome.set(providers.provider { selectedNdk().absolutePath })
     ndkVersion.set(providers.provider { ndkRevision(selectedNdk()) })
     toolPath.set(providers.provider { cargoToolPath(androidSdkDir()) })
+    // Resolved once, outside the task class, and handed over as a path. The
+    // version is asked of that same binary so the cache key and the build cannot
+    // disagree about which `cargo` runs.
+    cargoExe.set(providers.provider {
+        val path = cargoToolPath(androidSdkDir())
+        resolveExecutable("cargo", path)?.absolutePath
+            ?: throw GradleException(
+                "cargo not found on PATH: $path. Install Rust with rustup, " +
+                    "or set PATH so that cargo is reachable.",
+            )
+    })
+    cargoVersion.set(providers.provider {
+        // Read in the submodule: that is where `rust-toolchain.toml` lives and
+        // where cargo actually runs, so that is the version the library gets.
+        detectCargoVersion(
+            resolveExecutable("cargo", cargoToolPath(androidSdkDir())),
+            tsbridgeDir,
+        )
+    })
     // Deliberately the submodule's own `target/`, not `app/build`: `gradlew clean`
     // deletes `app/build`, and throwing away the Rust dependency cache turns a
     // 80-second incremental build into a five-minute cold one. It is ignored by

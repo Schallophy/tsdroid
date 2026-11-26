@@ -106,12 +106,6 @@ class ServerStore(context: Context) {
         SecureStore.encrypt(password)?.let { credentials.edit().putString(address, it).apply() }
     }
 
-    fun clearPasswords() {
-        credentials.edit().clear().apply()
-    }
-
-    fun hasPasswords(): Boolean = credentials.all.isNotEmpty()
-
     /**
      * One field of the temporary-connect form's secret, encrypted like any other.
      *

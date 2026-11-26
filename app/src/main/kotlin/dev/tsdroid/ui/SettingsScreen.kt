@@ -178,54 +178,6 @@ fun SettingsScreen(vm: SessionViewModel) {
                 onChoose = ::saveVersion,
             )
 
-            // Clearing saved passwords lives in General: it is a
-            // once-in-a-while action, and putting it next to the password field
-            // on the home screen invites mis-taps that force a retype.
-            val store = remember { vm.serverStore() }
-            var hasSaved by remember { mutableStateOf(store.hasPasswords()) }
-            var confirmClear by remember { mutableStateOf(false) }
-            Text(
-                text = if (hasSaved) {
-                    "密码加密保存在本机；换机或恢复备份后需重新输入。"
-                } else {
-                    "没有保存的密码。"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            TextButton(
-                onClick = { confirmClear = true },
-                enabled = hasSaved,
-            ) {
-                Text("清除已保存的密码")
-            }
-            if (confirmClear) {
-                AlertDialog(
-                    onDismissRequest = { confirmClear = false },
-                    title = { Text("清除已保存的密码？") },
-                    text = { Text("下次连接这些服务器要重新输入密码。服务器地址和昵称不受影响。") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                store.clearPasswords()
-                                hasSaved = false
-                                confirmClear = false
-                            },
-                        ) { Text("清除") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { confirmClear = false }) { Text("取消") }
-                    },
-                )
-            }
-
-            Text("第三方组件", style = MaterialTheme.typography.labelLarge)
-            Text(
-                text = "tsclientlib（Apache-2.0 OR MIT）、Opus（BSD）。" +
-                    "完整许可见安装包中的 NOTICE。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
 
         // ── 语音 ──────────────────────────────────────────────────────────

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `3d_sound_user` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M58.789,104.282L58.789,76.155C58.789,72.689 60.586,69.472 63.535,67.65C63.695,67.551 63.857,67.457 64.021,67.368L65.048,66.788C65.014,66.771 64.979,66.759 64.945,66.742C63.15,65.836 57.424,61.617 58.239,60.737C62.392,56.238 63.994,55.059 66.072,49.959L66.726,48.345L68.187,47.583C69.41,46.947 71.04,44.523 71.916,40.531C72.419,38.252 72.524,35.95 72.202,34.217C71.966,32.978 71.589,32.321 71.307,32.124L69.604,30.91L69.34,28.699C68.022,17.027 61.342,9 49.424,9C37.497,9 30.819,17.023 29.484,28.687L29.227,30.913L27.499,32.124C27.222,32.32 26.84,32.971 26.607,34.216C26.287,35.952 26.388,38.254 26.892,40.533C27.78,44.533 29.404,46.956 30.625,47.586L32.102,48.345L32.765,49.968C34.838,55.068 36.61,56.418 40.59,60.734C41.657,61.891 35.689,65.83 33.889,66.741C32.52,67.428 31.133,67.817 29.67,68.232C25.6,69.371 20.986,70.671 15.383,79.204C11.176,85.627 9.241,107.667 9,119L74.124,119L63.732,112.909C60.67,111.114 58.789,107.831 58.789,104.282Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M68.794,76.166L93.891,90.828L93.891,119L68.794,104.351L68.794,76.166Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M119,76.166L93.891,90.828L93.891,119L119,104.351L119,76.166Z"
+        android:fillColor="#FF808080" />
+    <path
+        android:pathData="M119,76.17L93.889,61.99L68.794,76.157L93.918,90.845L119,76.17Z"
+        android:fillColor="#FF999999" />
+</vector>

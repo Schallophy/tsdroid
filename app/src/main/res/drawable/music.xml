@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `music` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M115.813,13.826c-24.738,16.741 -41.601,-7.063 -57.528,-4.646c-10.67,1.619 -10.411,9.006 -10.411,26.967c0,3.411 0,54.263 0,54.263c-3.762,-1.765 -8.33,-2.802 -13.259,-2.802c-12.846,0 -23.263,7.029 -23.263,15.69c0,8.675 10.417,15.696 23.263,15.696c12.775,0 23.137,-6.94 23.256,-15.546l0.006,-0.001l0,-74.142c0,0 0,-0.544 0,-1.102c9.458,-3.833 21.352,11.176 43.086,8.698c20.981,-2.394 14.85,-23.075 14.85,-23.075Z"
+        android:fillColor="#FF7289DA" />
+</vector>

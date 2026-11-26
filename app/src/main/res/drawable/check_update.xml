@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `check_update` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M44.497,90.575L12.536,122.536L5.464,115.464L37.425,83.503L44.497,90.575Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M125.035,20.377L83.035,9.295L93.124,50.291L100.939,38.25C103.23,41.572 104.014,46.926 104.014,50.524C104.014,65.137 92.126,77.026 77.514,77.026C62.902,77.026 51.014,65.137 51.014,50.524C51.014,36.12 61.568,24.373 75.894,24.041L72.632,9.323C52.043,11.749 36.015,29.295 36.015,50.525C36.015,73.409 54.632,92.027 77.515,92.027C100.398,92.027 119.015,73.409 119.015,50.525C119.015,42.87 116.873,34.349 112.911,27.865L125.035,20.377Z"
+        android:fillColor="#FF7289DA" />
+</vector>

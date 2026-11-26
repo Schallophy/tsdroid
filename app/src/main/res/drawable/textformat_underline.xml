@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `textformat_underline` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M43.729,9l0,58.461c0,9.297 1.638,16.029 4.925,20.195c3.28,4.181 8.343,6.262 15.202,6.262c7.423,0 12.851,-2.081 16.276,-6.262c3.431,-4.166 5.141,-10.898 5.141,-20.195l0,-58.461l19.273,0l0,59.88c0,13.661 -3.426,23.924 -10.272,30.789c-6.848,6.88 -17.049,10.322 -30.561,10.322c-14.28,0 -24.564,-3.464 -30.835,-10.383c-6.288,-6.919 -9.425,-17.162 -9.425,-30.729l0,-59.879l20.276,0Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M23.4530,118.0000L104.5470,118.0000L104.5470,128.0000L23.4530,128.0000Z"
+        android:fillColor="#FFA9AAAC" />
+</vector>

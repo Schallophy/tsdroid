@@ -171,7 +171,7 @@ fun HomeScreen(
                     .background(IconPlate),
             ) {
                 Image(
-                    painter = painterResource(R.drawable.ts_input_unmuted),
+                    painter = painterResource(R.drawable.capture),
                     contentDescription = null,
                     modifier = Modifier.size(28.dp),
                 )

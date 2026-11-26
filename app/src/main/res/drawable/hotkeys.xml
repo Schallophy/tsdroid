@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `hotkeys` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M94,85.503C94,90.19 90.19,94.001 85.504,94.001L17.502,94.001C12.806,94.001 9,90.189 9,85.503L9,17.499C9,12.807 12.806,9 17.502,9L85.504,9C90.19,9 94,12.807 94,17.499L94,85.503Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M110.514,34L104,34L104,85.503C104,95.703 95.703,104.001 85.504,104.001L34,104.001L34,110.508C34,115.189 37.81,119 42.504,119L110.514,119C115.188,119 119,115.188 119,110.508L119,42.503C119,37.811 115.188,34 110.514,34Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M51.45,41.881L44.974,74.235L32.624,74.235L23.402,28.767L33.76,28.767L40.227,61.527L45.665,28.767L57.614,28.767L63.302,61.527L69.713,28.767L79.595,28.767L70.666,74.235L58.372,74.235L51.45,41.881Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>

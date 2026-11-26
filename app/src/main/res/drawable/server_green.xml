@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `server_green` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M58.9990,85.4080L68.9990,85.4080L68.9990,113.1440L58.9990,113.1440Z"
+        android:fillColor="#FFE6E6E6" />
+    <path
+        android:pathData="M118.999,37.936c0,4.721 -3.848,8.549 -8.594,8.549l-92.812,0c-4.746,0 -8.594,-3.827 -8.594,-8.549l0,-15.387c0,-4.722 3.848,-8.549 8.594,-8.549l92.813,0c4.746,0 8.594,3.827 8.594,8.549l0,15.387l-0.001,0Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M118.999,82.251c0,4.722 -3.848,8.548 -8.594,8.548l-92.812,0c-4.746,0 -8.594,-3.827 -8.594,-8.548l0,-15.389c0,-4.721 3.848,-8.548 8.594,-8.548l92.813,0c4.746,0 8.594,3.827 8.594,8.548l0,15.389l-0.001,0Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M108.687,80.211c0,1.132 -0.913,2.04 -2.051,2.04l-28.555,0c-1.138,0 -2.051,-0.908 -2.051,-2.04l0,-11.309c0,-1.131 0.913,-2.04 2.051,-2.04l28.555,0c1.138,0 2.051,0.909 2.051,2.04l0,11.309Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M108.687,35.897c0,1.126 -0.916,2.039 -2.05,2.039l-28.557,0c-1.134,0 -2.05,-0.913 -2.05,-2.039l0,-11.31c0,-1.125 0.916,-2.039 2.05,-2.039l28.557,0c1.134,0 2.05,0.914 2.05,2.039l0,11.31Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M8.9990,104.0000L118.9990,104.0000L118.9990,114.0000L8.9990,114.0000Z"
+        android:fillColor="#FFE6E6E6" />
+</vector>

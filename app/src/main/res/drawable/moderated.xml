@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `moderated` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M95.651,12.505l-63.304,0c-12.893,0 -23.347,10.454 -23.347,23.348l0,30.299c0,12.897 10.454,23.348 23.347,23.348l34.539,0c2.034,5.361 4.119,16.286 -6.902,25.995c20.145,-3.741 29.607,-19.513 32.703,-25.995l2.965,0c12.893,0 23.348,-10.451 23.348,-23.348l0,-30.299c0,-12.894 -10.455,-23.348 -23.349,-23.348Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M36.0027431640625 75.1V25.417382812499994H45.771419921875L59.53484765625 63.854272460937494L73.70110742187501 25.417382812499994H82.42913476562501V75.1H75.84954492187501V34.682519531249994L62.153255859375 71.7766357421875H55.3386806640625L42.0452236328125 34.581811523437494V75.1Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>

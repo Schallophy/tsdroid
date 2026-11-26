@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `kick_channel` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M108,62.28C107,61.36 106.94,60.28 106.62,59.28C104.34,52.15 100.14,49.28 92.62,50.53C87.79,51.31 83.05,52.66 78.29,53.84C72.24,55.35 66.21,56.84 59.92,55.28C49.31,52.2 41,46.94 38.61,34.94C37.61,30.13 34.9,29.7 31.09,32.74C30.05,33.533 29.089,34.423 28.22,35.4C22.55,42.07 15.29,46.22 7.11,49C0.65,51.27 -0.56,53.69 2,60.17C4.661,66.475 6.672,73.036 8,79.75C8.32,90.86 14.58,99.66 19.43,109C20.54,111.15 22.06,111.36 24.32,110.46C32.22,107.32 40.19,104.37 48.17,101.46C49.65,100.91 50.99,100.3 51.03,98.54C51.21,91.44 56.28,90.79 61.31,91.45C74.17,93.12 84.93,87.77 95.68,82.1C100.47,79.57 105.15,76.83 108.68,72.61C112.07,68.54 111.91,65.83 108,62.28Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M81.85,45.33C64.25,45.33 53.78,33.01 57.85,17.17C60.14,8.37 68,2 77.94,1C80.55,0.818 83.17,0.818 85.78,1C91.49,1.26 91.78,1.87 91.13,7.41C90.78,10.29 89.8,10.53 87.13,10.09C78.92,8.72 73,11.6 70.87,17.64C69,22.73 69.31,27.72 72.82,32C76.73,36.77 82.14,36.77 87.69,36C88.96,35.83 91.36,33.82 91.29,36.77C91.22,39.35 94.53,43 89.65,44.66C87.09,45.56 84.46,45.25 81.85,45.33Z"
+        android:fillColor="#FFC90709" />
+</vector>

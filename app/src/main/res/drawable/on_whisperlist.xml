@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `on_whisperlist` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path android:pathData="M157,100.39C156.988,105.588 155.729,110.709 153.33,115.32C145.33,103.43 129.84,95.32 112.06,95.32C92.54,95.32 75.8,105.02 68.65,118.86C64.907,113.425 62.883,106.989 62.84,100.39C62.84,79.16 83.91,61.92 109.92,61.92C135.93,61.92 157,79.16 157,100.39L157,100.39Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="109.9" android:startY="61.09"
+                android:endX="109.9" android:endY="107">
+                <item android:offset="0" android:color="#CCFFFFFF"/>
+                <item android:offset="1" android:color="#CCC90B0E"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M69.84,128.54C69.868,124.405 70.956,120.345 73,116.75C79.79,126.16 93,132.5 108.1,132.5C124.72,132.5 138.97,124.84 145.1,113.91C148.252,118.138 149.969,123.266 150,128.54C150,145.31 132.06,158.92 109.92,158.92C87.78,158.92 69.84,145.31 69.84,128.54Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="109.9" android:startY="159.6"
+                android:endX="109.9" android:endY="123.3">
+                <item android:offset="0" android:color="#4CFFFFFF"/>
+                <item android:offset="0" android:color="#4CFFFEFE"/>
+                <item android:offset="0.22" android:color="#4CEFB5B6"/>
+                <item android:offset="0.43" android:color="#4CE1797A"/>
+                <item android:offset="0.61" android:color="#4CD7494C"/>
+                <item android:offset="0.78" android:color="#4CCF272A"/>
+                <item android:offset="0.91" android:color="#4CCB1315"/>
+                <item android:offset="1" android:color="#4CC90B0E"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

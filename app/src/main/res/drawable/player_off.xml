@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `player_off` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M64,116.5C35.051,116.5 11.5,92.948 11.5,64C11.5,35.051 35.051,11.5 64,11.5C92.948,11.5 116.5,35.051 116.5,64C116.5,92.948 92.948,116.5 64,116.5Z"
+        android:fillColor="#FF002F5D" />
+    <path
+        android:pathData="M64,14C91.57,14 114,36.43 114,64C114,91.57 91.57,114 64,114C36.43,114 14,91.57 14,64C14,36.43 36.43,14 64,14M64,9C33.624,9 9,33.624 9,64C9,94.375 33.624,119 64,119C94.375,119 119,94.375 119,64C119,33.624 94.375,9 64,9Z"
+        android:fillColor="#FF002F5D" />
+    <path android:pathData="M107.318,49.564C107.318,69.096 87.923,84.912 64,84.912C40.075,84.912 20.688,69.097 20.688,49.564C20.688,30.048 40.075,14.217 64,14.217C87.924,14.218 107.318,30.048 107.318,49.564Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="64" android:startY="84.91"
+                android:endX="64" android:endY="14.22">
+                <item android:offset="0" android:color="#FF002F5D"/>
+                <item android:offset="0.3" android:color="#FF002F5D"/>
+                <item android:offset="0.37" android:color="#FF123E68"/>
+                <item android:offset="0.51" android:color="#FF416486"/>
+                <item android:offset="0.72" android:color="#FF8CA1B6"/>
+                <item android:offset="0.97" android:color="#FFF3F5F7"/>
+                <item android:offset="1" android:color="#FFFFFFFF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M21.188,78.844C21.188,59.543 40.351,43.904 64.002,43.904C87.653,43.904 106.819,59.544 106.819,78.844C106.819,98.137 87.653,113.786 64.002,113.786C40.351,113.786 21.188,98.137 21.188,78.844Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="64" android:startY="43.9"
+                android:endX="64" android:endY="113.8">
+                <item android:offset="0" android:color="#66002F5D"/>
+                <item android:offset="0.48" android:color="#66002F5D"/>
+                <item android:offset="1" android:color="#66FFFFFF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

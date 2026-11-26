@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `switch_standard` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M87.705,53.908C96.762,58.588 107.064,57.73 114.524,50.207C119.717,44.967 118.961,25.012 118.961,25.012L114.116,23.404L109.128,37.706C109.128,37.706 104.254,46.972 92.549,35.175C80.848,23.375 90.815,19.24 90.815,19.24L104.908,14.116L103.381,9.303C103.381,9.303 83.172,7.431 77.634,13.018C70.175,20.533 69.467,31.071 74.116,40.202L54.861,59.457L68.51,73.103L87.705,53.908Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M13.905,70.755L9,118.999L57.228,114.101L42.375,99.238L61.439,80.174L47.791,66.526L28.729,85.587L13.905,70.755Z"
+        android:fillColor="#FF7289DA" />
+</vector>

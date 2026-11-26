@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -139,15 +138,15 @@ val IconPlate = Color(0xFF161618)
  * back.
  */
 fun inputStatusIcon(muted: Boolean, hardwareEnabled: Boolean): Int? = when {
-    !hardwareEnabled -> R.drawable.ts_input_hardware_muted
-    muted -> R.drawable.ts_input_muted
+    !hardwareEnabled -> R.drawable.hardware_input_muted
+    muted -> R.drawable.input_muted
     else -> null
 }
 
 /** The output twin of [inputStatusIcon]; `null` means "you can hear them". */
 fun outputStatusIcon(deafened: Boolean, hardwareEnabled: Boolean): Int? = when {
-    !hardwareEnabled -> R.drawable.ts_output_hardware_muted
-    deafened -> R.drawable.ts_output_muted
+    !hardwareEnabled -> R.drawable.hardware_output_muted
+    deafened -> R.drawable.output_muted
     else -> null
 }
 
@@ -167,7 +166,7 @@ fun memberStatusIcon(
     inputHardwareEnabled: Boolean,
     outputHardwareEnabled: Boolean,
 ): Int? = when {
-    away -> R.drawable.ts_away
+    away -> R.drawable.away
     else -> outputStatusIcon(deafened = deafened, hardwareEnabled = outputHardwareEnabled)
         ?: inputStatusIcon(muted = muted, hardwareEnabled = inputHardwareEnabled)
 }
@@ -283,38 +282,18 @@ fun MemberStatusBadge(
         return
     }
 
-    val live = talking
-    val base = if (live) BallLive else BallIdle
-    val highlight = if (live) BallLiveHighlight else BallIdleHighlight
-    val shade = if (live) BallLiveShade else BallIdleShade
-
-    Canvas(modifier = modifier.size(size)) {
-        val d = this.size.width
-        val center = Offset(d / 2f, d / 2f)
-        drawCircle(
-            brush = Brush.radialGradient(
-                colorStops = arrayOf(0f to highlight, 0.45f to base, 1f to shade),
-                center = Offset(d * 0.36f, d * 0.30f),
-                radius = d * 0.80f,
-            ),
-            radius = d / 2f,
-            center = center,
-        )
-        // The single specular dot is what turns a flat disc into a marble.
-        drawCircle(
-            color = Color.White.copy(alpha = if (live) 0.40f else 0.16f),
-            radius = d * 0.11f,
-            center = Offset(d * 0.35f, d * 0.28f),
-        )
-    }
+    // The speaking ball is the pack's own `player_on` / `player_off`. The drawn
+    // approximation that used to live here sampled those two SVGs for its
+    // colours but could not reproduce their two vertical gradients and rim, so
+    // it read as a flatter disc next to the TeamSpeak marks it sits among.
+    Image(
+        painter = painterResource(
+            if (talking) R.drawable.player_on else R.drawable.player_off,
+        ),
+        contentDescription = if (talking) "正在说话" else null,
+        modifier = modifier.size(size),
+    )
 }
-
-private val BallLive = Color(0xFF1A91D0)
-private val BallLiveHighlight = Color(0xFFA6D4ED)
-private val BallLiveShade = Color(0xFF0B5F91)
-private val BallIdle = Color(0xFF002F5D)
-private val BallIdleHighlight = Color(0xFF8CA1B6)
-private val BallIdleShade = Color(0xFF001B33)
 
 // ── formatting ──────────────────────────────────────────────────────────────
 

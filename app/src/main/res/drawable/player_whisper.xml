@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `player_whisper` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path android:pathData="M103,46.23C102.988,51.428 101.729,56.549 99.33,61.16C91.33,49.27 75.84,41.16 58.06,41.16C38.54,41.16 21.8,50.86 14.65,64.7C10.907,59.265 8.883,52.829 8.84,46.23C8.84,25 29.91,7.76 55.92,7.76C81.93,7.76 103,25 103,46.23Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="55.92" android:startY="6.93"
+                android:endX="55.92" android:endY="52.82">
+                <item android:offset="0" android:color="#CCFFFFFF"/>
+                <item android:offset="1" android:color="#CCC90B0E"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M15.84,74.38C15.868,70.245 16.956,66.185 19,62.59C25.79,72 39,78.34 54.1,78.34C70.72,78.34 84.97,70.68 91.1,59.75C94.252,63.978 95.969,69.106 96,74.38C96,91.15 78.06,104.76 55.92,104.76C33.78,104.76 15.84,91.15 15.84,74.38Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="55.92" android:startY="105.4"
+                android:endX="55.92" android:endY="69.18">
+                <item android:offset="0" android:color="#4CFFFFFF"/>
+                <item android:offset="0" android:color="#4CFFFEFE"/>
+                <item android:offset="0.22" android:color="#4CEFB5B6"/>
+                <item android:offset="0.43" android:color="#4CE1797A"/>
+                <item android:offset="0.61" android:color="#4CD7494C"/>
+                <item android:offset="0.78" android:color="#4CCF272A"/>
+                <item android:offset="0.91" android:color="#4CCB1315"/>
+                <item android:offset="1" android:color="#4CC90B0E"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

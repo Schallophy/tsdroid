@@ -82,21 +82,37 @@ The Rust sources are no longer here. `native/` has been removed; the equivalent
 code lives in the `third_party/tsbridge` submodule: `crates/core`
 (platform-neutral) and `crates/jni` (the Android shim).
 
-### The status icons
+### The icons
 
-`app/src/main/res/drawable/ts_*.xml` are the TeamSpeak desktop client's own
-icons, converted straight from the `dark` icon pack in a local install
-(`%APPDATA%\TS3Client\gfx\dark`): `capture`, `volume`, the two muted marks, the
-two switched-off-device marks and `away`. Path data and fills are unchanged; only
-the envelope is Android vector XML. A hand-drawn stand-in looked like one, which
-is why `MicGlyph` and `SpeakerGlyph` are gone.
+Every icon under `app/src/main/res/drawable/` comes from the TeamSpeak dark icon
+pack, [randomhost/teamspeak-dark], pinned at commit `66d732f2`. The whole pack
+ships, not just the marks in use: a client that shows a channel, a group or a
+permission mark should draw the same picture the desktop client draws, and
+having the file already in the tree is what makes that a layout decision rather
+than a porting job.
+
+[randomhost/teamspeak-dark]: https://github.com/randomhost/teamspeak-dark
+
+`tools/svg2vector.py` is the converter. It keeps each file's name from the pack
+so a different pack can be dropped in by name, and it refuses what it cannot
+express exactly — a radial gradient, a rounded rect, a clip smaller than the
+viewBox — rather than shipping an approximation. Two files needed more than the
+common case and are handled: `moderated`'s `<text>` is outlined with fontTools,
+and `ban_list`'s rotated `<rect>` is mapped corner by corner.
+
+Thirteen names could not survive as-is: Android resource names are `[a-z0-9_]`,
+cannot start with a digit, and cannot be a Java keyword. Those are rewritten
+(`addon-collection` → `addon_collection`, `3d_sound` → `icon_3d_sound`,
+`default` → `icon_default`), and `res/raw/iconpack_names.json` maps every
+resource name back to the pack's own, so nothing loses track of what it is.
 
 The fills are baked into the paths (`#a9aaac` grey, `#7289da` blue, `#c90709`
 red), so `Icon(tint = ...)`-style recolouring does nothing useful — the
 microphone, the speaker and the connect header all put them on one fixed dark
-plate (`IconPlate`) instead.
+plate (`IconPlate`) instead. That is also why the bottom navigation still uses
+Material icons: it signals the selected tab by tinting, which these cannot do.
 
-Which mark applies is decided once, in `components/Common.kt`
+Which status mark applies is decided once, in `components/Common.kt`
 (`inputStatusIcon` / `outputStatusIcon`): switched-off device first, mute
 button second. Every screen uses those two functions, so the member row, the
 user sheet and the self-view cannot disagree about the same person.

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `play` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M104.39,64l-12.89,7.442l-44.687,25.802l-12.891,7.443l0,-14.885l0,-51.604l0,-14.885l12.891,7.443l44.687,25.802l12.89,7.442Zm14.61,-55l-110,0l0,110l110,0l0,-110Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M42.516,38.198l44.687,25.802l-44.687,25.802l0,-51.604Z"
+        android:fillColor="#FF1CA037" />
+</vector>

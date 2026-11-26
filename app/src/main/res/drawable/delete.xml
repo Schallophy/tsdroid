@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `delete` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M109.254,22.823C110.75,24.32 111.516,26.095 111.482,28.149C111.493,30.179 110.747,31.944 109.256,33.433L78.686,63.998L109.247,94.559C110.737,96.048 111.476,97.814 111.491,99.834C111.482,101.909 110.755,103.681 109.259,105.177L105.185,109.251C103.687,110.75 101.902,111.473 99.818,111.473C97.756,111.415 95.993,110.68 94.551,109.246L63.998,78.686L33.448,109.245C31.954,110.736 30.178,111.494 28.15,111.48C26.095,111.516 24.319,110.751 22.818,109.254L18.749,105.18C17.246,103.681 16.51,101.875 16.542,99.828C16.578,97.755 17.297,96.009 18.757,94.558L49.312,64L18.747,33.435C17.25,31.943 16.508,30.173 16.49,28.142C16.502,26.077 17.25,24.319 18.753,22.821L22.827,18.747C24.323,17.247 26.077,16.502 28.141,16.491C30.172,16.513 31.942,17.256 33.434,18.748L64,49.312L94.569,18.747C96.058,17.258 97.826,16.513 99.855,16.524C101.909,16.484 103.68,17.247 105.179,18.75L109.254,22.823Z"
+        android:fillColor="#FFC90709" />
+</vector>

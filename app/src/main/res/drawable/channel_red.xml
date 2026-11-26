@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `channel_red` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M119,66.152c0,12.896 -10.455,23.348 -23.349,23.348l-63.304,0c-12.893,0 -23.347,-10.451 -23.347,-23.348l0,-30.299c0,-12.894 10.454,-23.348 23.347,-23.348l63.305,0c12.893,0 23.348,10.454 23.348,23.348l0,30.299Z"
+        android:fillColor="#FFC90709" />
+    <path android:pathData="M93.891,86.693c0,0 -8.386,24.063 -33.907,28.802c15.313,-13.489 5.326,-29.327 5.326,-29.327l28.581,0.525Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="76.94" android:startY="115.5"
+                android:endX="76.94" android:endY="12.57">
+                <item android:offset="0" android:color="#FFC9070A"/>
+                <item android:offset="0.2" android:color="#FFC9070A"/>
+                <item android:offset="1" android:color="#FFEC6600"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `warning_external_link` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M 64,8.1774598 C 33.060714,8.1774598 7.6021865,33.376304 7.6021865,64 7.6021865,94.623696 33.060714,119.82254 64,119.82254 94.939286,119.82254 120.39781,94.623696 120.39781,64 120.39781,33.376304 94.939286,8.1774598 64,8.1774598 Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M64,3c-33.464,0 -61,27.536 -61,61c0,33.464 27.536,61 61,61c33.464,0 61,-27.536 61,-61c0,-33.464 -27.536,-61 -61,-61Zm1.11,108.12c-13.67,0 -14,-0.35 -14,-14.14c0,-1.68 0,-3.36 0.09,-5c0.3,-3.53 2.24,-5.51 5.82,-5.64c2.34,-0.09 4.69,0 7,0c12.77,0 12.77,0 12.8,12.93c0.09,10.54 -1.19,11.83 -11.71,11.85Zm11.54,-44.12c-0.05,3.72 -2.26,5.86 -6.13,5.91c-4,0 -8.06,0.12 -12.09,0c-5.52,-0.13 -7.24,-1.81 -7.31,-7.28c-0.12,-6.83 -0.26,-13.72 -0.26,-20.63c0,-7.05 -0.08,-14.11 0,-21.16c0.14,-5.24 2.14,-7.2 7.41,-7.36c3.86,-0.11 7.72,0 11.59,0c4.55,0 7,2.4 7.05,6.76c0.06,14.587 -0.027,29.173 -0.26,43.76Z"
+        android:fillColor="#FFC9070A" />
+    <path
+        android:pathData="M65,111.12c10.53,0 11.8,-1.31 11.77,-11.9c0,-13 0,-13 -12.8,-12.93c-2.35,0 -4.7,-0.07 -7,0c-3.59,0.13 -5.53,2.11 -5.82,5.64c-0.14,1.67 -0.09,3.35 -0.09,5c-0.06,13.84 0.31,14.21 13.94,14.19Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>

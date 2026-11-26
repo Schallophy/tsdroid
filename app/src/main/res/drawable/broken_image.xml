@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `broken_image` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M64.012,18.988c24.813,0 45,20.194 45,45.016c0,24.821 -20.187,45.016 -45,45.016c-24.813,0 -45,-20.194 -45,-45.016c0,-24.822 20.187,-45.016 45,-45.016m0,-10c-30.376,0 -55,24.631 -55,55.016c0,30.385 24.624,55.016 55,55.016c30.376,0 55,-24.631 55,-55.016c0,-30.385 -24.624,-55.016 -55,-55.016Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M105.036,30.036l-75,75l-7.072,-7.072l75,-75l7.072,7.072Z"
+        android:fillColor="#FFA9AAAC" />
+</vector>

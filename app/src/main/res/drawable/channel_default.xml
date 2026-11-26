@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `channel_default` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M43.186,77.359C45.945,74.605 49.626,73.088 53.55,73.088C57.471,73.088 61.15,74.604 63.92,77.366L67.427,80.872L97.303,51.056C100.062,48.296 103.744,46.776 107.673,46.776C111.591,46.776 115.265,48.287 118.021,51.031L119,52L119,36.774C119,23.88 108.545,13.426 95.651,13.426L32.347,13.426C19.454,13.426 9,23.88 9,36.774L9,67.073C9,79.97 19.454,90.421 32.347,90.421L32.784,90.421C33.451,88.029 34.711,85.837 36.508,84.037L43.186,77.359Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M117.643,71.393L71.242,117.721C70.343,118.62 69.016,119.044 67.268,118.995C65.669,118.948 64.445,118.519 63.595,117.721L43.578,97.704C42.679,96.806 42.23,95.707 42.23,94.407C42.23,93.108 42.679,92.009 43.578,91.108L50.251,84.436C51.15,83.539 52.249,83.087 53.549,83.087C54.848,83.087 55.947,83.538 56.847,84.436L67.417,95.007L104.374,58.124C105.273,57.224 106.372,56.775 107.671,56.775C108.97,56.775 110.07,57.224 110.971,58.124L117.642,64.72C118.54,65.671 118.992,66.783 118.992,68.056C118.992,69.333 118.541,70.443 117.643,71.393Z"
+        android:fillColor="#FF1CA037" />
+</vector>

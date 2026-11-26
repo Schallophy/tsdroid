@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `subscribe_to_channel` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M95.651,13.426L32.347,13.426C19.454,13.426 9,23.88 9,36.774L9,67.073C9,79.97 19.454,90.421 32.347,90.421L66.886,90.421C68.92,95.782 71.005,106.707 59.984,116.416C80.129,112.675 89.591,96.903 92.687,90.421L95.652,90.421C108.545,90.421 119,79.97 119,67.073L119,36.774C119,23.88 108.545,13.426 95.651,13.426Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M88.875,41.831L57.706,72.949C57.102,73.553 56.212,73.84 55.038,73.805C53.963,73.772 53.141,73.487 52.571,72.949L39.125,59.505C38.521,58.901 38.219,58.163 38.219,57.289C38.219,56.417 38.521,55.678 39.125,55.074L43.606,50.593C44.21,49.989 44.948,49.687 45.822,49.687C46.695,49.687 47.433,49.989 48.037,50.593L55.137,57.693L79.962,32.919C80.566,32.315 81.304,32.013 82.178,32.013C83.05,32.013 83.789,32.315 84.393,32.919L88.874,37.351C89.478,37.989 89.78,38.736 89.78,39.591C89.781,40.446 89.479,41.193 88.875,41.831Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>

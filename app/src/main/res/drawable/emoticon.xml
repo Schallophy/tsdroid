@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `emoticon` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="m 119.14,61.814 c -0.87,-29 -25.53,-53.13 -55.4,-52.91 -29.99,-0.48 -56.15,25.4 -54.86,57.42 1.2,28.85 25.94,53.75 57.11,52.75 29.09,-1 54.09,-25.93 53.15,-57.26 z m -55.25,47 c -42.593333,12.79067 -21.296667,6.39533 0,0 z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M83.84,75.424c-13.29,11.93 -27.72,12 -41,0.09c-2.76,-2.44 -5.52,-3.62 -8.27,-0.63c-2.75,2.99 -1.12,5.82 1.39,8.19c7.68,7.3 16.75,11.25 27.45,11.21c10.246,-0.091 20.061,-4.188 27.33,-11.41c2.56,-2.61 3.7,-5.39 0.92,-8.24c-2.78,-2.85 -5.29,-1.48 -7.82,0.79Z"
+        android:fillColor="#FF333333" />
+    <path
+        android:pathData="M46.48,58.074c0.016,0 0.031,0 0.047,0c4.01,0 7.31,-3.3 7.31,-7.31c0,-0.104 -0.003,-0.207 -0.007,-0.31c0,-0.016 0,-0.033 0,-0.049c0,-4.164 -3.426,-7.59 -7.59,-7.59c-4.164,0 -7.59,3.426 -7.59,7.59c0,0.183 0.007,0.366 0.02,0.549c0.23,4.46 3.3,7.26 7.81,7.12Z"
+        android:fillColor="#FF333333" />
+    <path
+        android:pathData="M81.85,58.074c0.098,0.004 0.196,0.006 0.294,0.006c3.961,0 7.22,-3.26 7.22,-7.22c0,-0.082 -0.001,-0.164 -0.004,-0.246c-0.024,-4.126 -3.347,-7.542 -7.47,-7.68c-0.045,-0.001 -0.09,-0.001 -0.135,-0.001c-4.175,0 -7.61,3.435 -7.61,7.61c0,0.09 0.002,0.18 0.005,0.271c0.01,3.992 3.298,7.271 7.29,7.271c0.137,0 0.274,-0.004 0.41,-0.011l0,0Z"
+        android:fillColor="#FF333333" />
+</vector>

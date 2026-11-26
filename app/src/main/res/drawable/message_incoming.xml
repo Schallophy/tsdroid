@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `message_incoming` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M63.997,127L95.872,89.047L77.38,89.047L77.38,36.19C77.38,35.01 76.976,34.019 76.168,33.211C75.359,32.403 74.365,32 73.187,32L54.802,32C53.668,32 52.687,32.403 51.857,33.212C51.025,34.02 50.612,35.011 50.612,36.191L50.612,89.047L32.13,89.047L63.997,127Z"
+        android:fillColor="#FF1CA037" />
+</vector>

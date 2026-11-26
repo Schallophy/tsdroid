@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `channel_commander` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M95.651,13.426L32.347,13.426C19.454,13.426 9,23.88 9,36.774L9,67.073C9,79.97 19.454,90.421 32.347,90.421L66.886,90.421C68.92,95.782 71.005,106.707 59.984,116.416C80.129,112.675 89.591,96.903 92.687,90.421L95.652,90.421C108.545,90.421 119,79.97 119,67.073L119,36.774C119,23.88 108.545,13.426 95.651,13.426Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M60.829,29.26L73.922,51.76L60.829,74.26L74.73,74.26L87.829,51.76L74.73,29.26L60.829,29.26Z"
+        android:fillColor="#FFF2E617" />
+    <path
+        android:pathData="M84.415,74.26L97.508,51.76L84.415,29.26L98.315,29.26L111.414,51.76L98.315,74.26L84.415,74.26Z"
+        android:fillColor="#FFF2E617" />
+    <path
+        android:pathData="M40,29.26L47.311,44.072L63.657,46.448L51.829,57.978L54.623,74.26L40,66.572L25.378,74.26L28.171,57.978L16.343,46.448L32.689,44.072L40,29.26Z"
+        android:fillColor="#FFF2E617" />
+</vector>

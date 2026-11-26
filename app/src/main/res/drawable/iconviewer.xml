@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `iconviewer` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M104,9L24,9C15.716,9 9,15.716 9,24L9,104C9,112.284 15.716,119 24,119L104,119C112.284,119 119,112.284 119,104L119,24C119,15.716 112.284,9 104,9Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M104,63.996C104,80.057 86.098,93.095 64,93.095C41.903,93.095 24,80.057 24,63.996C24,47.927 41.903,34.911 64,34.911C86.098,34.911 104,47.927 104,63.996ZM64,40.02C50.796,40.02 40.106,50.751 40.106,64.008C40.106,77.242 50.795,87.982 64,87.982C77.196,87.982 87.894,77.243 87.894,64.008C87.894,50.751 77.196,40.02 64,40.02Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M89.492,56.825C89.492,63.617 84.022,69.138 77.286,69.138C70.513,69.138 65.045,63.616 65.045,56.825C65.045,50.025 70.513,44.515 77.286,44.515C84.022,44.515 89.492,50.025 89.492,56.825Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>

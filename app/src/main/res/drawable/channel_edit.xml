@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `channel_edit` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M 95.651,12.505 H 32.347 C 19.454,12.505 9,22.959 9,35.853 V 66.152 C 9,79.049 19.454,89.5 32.347,89.5 h 34.539 c 2.035,5.361 4.119,16.285 -6.902,25.995 C 80.129,111.754 89.59,95.983 92.686,89.5 h 2.966 C 108.545,89.5 119,79.049 119,66.152 V 35.853 C 119,22.959 108.545,12.505 95.651,12.505 Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M 67.923,44.871 C 71.362,38.206 70.828,30.533 65.299,25.044 61.446,21.224 46.774,21.78 46.774,21.78 l -1.182,3.564 10.515,3.67 c 0,0 8.798,5.571 0.125,14.182 -8.676,8.607 -13.701,-0.71 -13.701,-0.71 l -3.769,-10.367 -3.54,1.123 c 0,0 -1.375,14.867 2.731,18.942 5.526,5.486 13.265,6.016 19.978,2.596 z"
+        android:fillColor="#FFF2F2F2" />
+    <path
+        android:pathData="m 91.738,68.483 c 1.683,1.679 1.682,4.403 0,6.085 l -4.056,4.056 c -1.679,1.682 -4.404,1.682 -6.085,0 L 54.542,51.568 c -1.68,-1.681 -1.68,-4.405 0,-6.086 l 4.056,-4.055 c 1.68,-1.68 4.405,-1.681 6.085,0 z"
+        android:fillColor="#FFF2F2F2" />
+</vector>

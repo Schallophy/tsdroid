@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `channel_yellow` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M119,67.073C119,79.969 108.545,90.421 95.651,90.421L32.347,90.421C19.454,90.421 9,79.97 9,67.073L9,36.774C9,23.88 19.454,13.426 32.347,13.426L95.652,13.426C108.545,13.426 119,23.88 119,36.774L119,67.073Z"
+        android:fillColor="#FFAFA201" />
+    <path
+        android:pathData="M93.891,87.614C93.891,87.614 85.505,111.677 59.984,116.416C75.297,102.927 65.31,87.089 65.31,87.089L93.891,87.614Z"
+        android:fillColor="#FFAFA201" />
+</vector>

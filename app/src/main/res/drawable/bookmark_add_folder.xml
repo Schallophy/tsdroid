@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `bookmark_add_folder` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M78.92,30.914L64.859,30.914L64.859,24.898C64.859,20.152 61.012,16.304 56.265,16.304L17.594,16.304C12.848,16.305 9,20.152 9,24.898L9,103.1C9,107.846 12.848,111.694 17.594,111.694L78.92,111.694L78.92,30.914Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M110.406,30.914L88.922,30.914L88.922,119L96.313,111.695L103.963,104.134L111.528,111.613L119,119L119,103.102L119,45.523L119,44.664L119,39.508C119,34.762 115.153,30.914 110.406,30.914Z"
+        android:fillColor="#FFCCCCCC" />
+    <path
+        android:pathData="M63.688,77.193L49.626,77.193L49.626,91.254C49.626,92.041 49.351,92.715 48.812,93.254C48.273,93.793 47.605,94.067 46.815,94.067L41.19,94.067C40.399,94.067 39.729,93.782 39.189,93.234C38.649,92.683 38.374,92.022 38.374,91.255L38.374,77.193L24.314,77.193C23.523,77.193 22.852,76.906 22.313,76.355C21.774,75.806 21.5,75.148 21.5,74.38L21.5,68.756C21.5,67.965 21.774,67.296 22.313,66.754C22.852,66.218 23.523,65.94 24.314,65.94L38.375,65.94L38.375,51.88C38.375,51.089 38.65,50.418 39.19,49.879C39.73,49.341 40.4,49.066 41.191,49.066L46.815,49.066C47.605,49.066 48.273,49.34 48.812,49.879C49.351,50.418 49.626,51.089 49.626,51.88L49.626,65.94L63.688,65.94C64.475,65.94 65.149,66.218 65.688,66.754C66.227,67.296 66.501,67.965 66.501,68.756L66.501,74.38C66.501,75.148 66.228,75.806 65.688,76.355C65.148,76.906 64.475,77.193 63.688,77.193Z"
+        android:fillColor="#FFE6E6E6" />
+</vector>

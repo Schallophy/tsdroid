@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `capture` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M13.654,114.345c6.199,6.202 16.242,6.207 22.451,0.015l-22.466,-22.464c-6.191,6.206 -6.185,16.249 0.015,22.449Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M52.557,52.975l-3.305,3.306l-29.534,29.534l22.466,22.466l29.533,-29.533l3.308,-3.306c-4.953,-1.932 -9.593,-4.885 -13.588,-8.881c-3.994,-3.993 -6.948,-8.635 -8.88,-13.586Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M110.371,17.63c-11.509,-11.507 -30.234,-11.506 -41.743,0.001c-11.505,11.507 -11.505,30.231 0,41.738c11.509,11.507 30.232,11.507 41.741,0.001c11.507,-11.508 11.507,-30.234 0.002,-41.74Z"
+        android:fillColor="#FF7289DA" />
+</vector>

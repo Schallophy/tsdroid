@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `bookmark_manager` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M39.078,119l-15.037,-14.865l-15.041,14.865l0,-110l30.078,0l0,110Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M119,89.189l-15.037,-14.865l-15.041,14.865l0,-80.189l30.078,0l0,80.189Z"
+        android:fillColor="#FFCCCCCC" />
+    <path
+        android:pathData="M79.039,104.03l-15.038,-14.865l-15.04,14.865l0,-95.03l30.078,0l0,95.03Z"
+        android:fillColor="#FFB3B3B3" />
+</vector>

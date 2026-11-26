@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `server_log` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M88.33,41.504l-58.17,0c-2.761,0 -5,-2.239 -5,-5c0,-2.761 2.239,-5 5,-5l58.17,0c2.762,0 5,2.239 5,5c0,2.761 -2.238,5 -5,5Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M22.999,112.004c-2.762,0 -5,-2.238 -5,-5l0,-86.008c0,-2.761 2.238,-5 5,-5l72.475,0c2.762,0 5,2.239 5,5l0,20.686l10,0l0,-20.686c0,-8.271 -6.729,-15 -15,-15l-72.475,0c-8.271,0 -15,6.729 -15,15l0,86.008c0,8.271 6.729,15 15,15l17,0l0,-10l-17,0Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M39.999,59.004l-9.839,0c-2.761,0 -5,2.239 -5,5c0,2.762 2.239,5 5,5l9.861,0c-0.005,-0.165 -0.022,-0.327 -0.022,-0.493l0,-9.507Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M40.187,86.504l-10.027,0c-2.761,0 -5,2.238 -5,5c0,2.762 2.239,5 5,5l9.839,0l0,-7.643c0,-0.801 0.073,-1.586 0.188,-2.357Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M79.9990,86.8910L89.9990,86.8910L89.9990,121.4070L79.9990,121.4070Z"
+        android:fillColor="#FFE6E6E6" />
+    <path
+        android:pathData="M119.999,66.983c0,3.005 -2.449,5.44 -5.469,5.44l-59.062,0c-3.02,0 -5.469,-2.436 -5.469,-5.44l0,-9.792c0,-3.006 2.449,-5.44 5.469,-5.44l59.063,0c3.02,0 5.469,2.435 5.469,5.44l0,9.792l-0.001,0Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M119.999,96.183c0,3.005 -2.449,5.439 -5.469,5.439l-59.062,0c-3.02,0 -5.469,-2.435 -5.469,-5.439l0,-9.793c0,-3.004 2.449,-5.439 5.469,-5.439l59.063,0c3.02,0 5.469,2.436 5.469,5.439l0,9.793l-0.001,0Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M49.9990,112.0040L119.9990,112.0040L119.9990,122.0040L49.9990,122.0040Z"
+        android:fillColor="#FFE6E6E6" />
+    <path
+        android:pathData="M113.437,94.884c0,0.721 -0.581,1.299 -1.305,1.299l-18.172,0c-0.724,0 -1.305,-0.578 -1.305,-1.299l0,-7.196c0,-0.72 0.581,-1.298 1.305,-1.298l18.172,0c0.724,0 1.305,0.578 1.305,1.298l0,7.196Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M113.437,65.685c0,0.717 -0.583,1.298 -1.305,1.298l-18.172,0c-0.722,0 -1.305,-0.581 -1.305,-1.298l0,-7.197c0,-0.716 0.583,-1.297 1.305,-1.297l18.172,0c0.722,0 1.305,0.581 1.305,1.297l0,7.197Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>

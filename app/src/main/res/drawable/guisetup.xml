@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `guisetup` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M44.72,11.481l19.998,19.999l46.763,0l0,80.002l-90,0l0,-56.769l-10,-10.001l0,76.769l110,0l0,-110l-76.761,0Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M81.979,62.884l-54.133,-54.135c-1.565,-1.508 -3.493,-2.258 -5.775,-2.229c-2.271,0.024 -4.187,0.845 -5.754,2.458l-7.354,7.337c-1.6,1.57 -2.417,3.478 -2.444,5.761c-0.024,2.287 0.72,4.208 2.239,5.77l54.126,54.133c0.063,-0.096 0.065,-0.094 0.005,0.006l28.511,9.412l-9.418,-28.511c-0.081,0.052 -0.085,0.05 -0.003,-0.002Z"
+        android:fillColor="#FF7289DA" />
+</vector>

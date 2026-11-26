@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `player_chat` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M9,46.358L9,76.657C9,89.553 19.455,100.005 32.349,100.005L35.315,100.005C38.411,106.488 47.873,122.259 68.017,126C56.996,116.29 59.079,105.366 61.115,100.005L95.654,100.005C108.547,100.005 119.001,89.554 119.001,76.657L119.001,46.358C119.001,33.464 108.547,23.01 95.654,23.01L32.349,23.01C19.455,23.01 9,33.464 9,46.358Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M78.24,89.084L73.952,76.397L53.486,76.397L49.198,89.084L39,89.084L58.266,34.084L69.449,34.084L89,89.084L78.24,89.084ZM66.29,52.244C65.957,51.116 65.642,49.957 65.338,48.775C65.032,47.595 64.737,46.478 64.461,45.428C64.176,44.376 63.969,43.486 63.823,42.748L63.685,42.748C63.498,43.486 63.263,44.375 62.987,45.428C62.701,46.478 62.387,47.595 62.033,48.775C61.679,49.958 61.344,51.116 61.011,52.244C60.686,53.375 60.381,54.36 60.096,55.194L56.023,68.048L71.278,68.048L67.205,55.194C66.921,54.36 66.615,53.375 66.29,52.244Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>

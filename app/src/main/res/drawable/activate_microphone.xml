@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `activate_microphone` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M13.644,114.319c6.195,6.199 16.234,6.204 22.439,0.015l-22.454,-22.453c-6.188,6.204 -6.182,16.241 0.015,22.438Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M37.502,84.991l6.678,-6.678c2.53,-2.525 5.769,-3.859 9.369,-3.859c3.596,0 6.834,1.333 9.375,3.865l4.5,4.501l7.447,-7.431c-4.908,-1.932 -9.506,-4.865 -13.469,-8.829c-3.991,-3.992 -6.943,-8.632 -8.875,-13.581l-3.303,3.305l-29.52,29.519l16.763,16.764c-1.852,-2.328 -2.831,-5.131 -2.831,-8.201c0.001,-3.598 1.335,-6.838 3.866,-9.375Z"
+        android:fillColor="#FFA9AAAC" />
+    <path
+        android:pathData="M107.672,48.142c3.171,0 6.06,1.038 8.431,3.008c5.18,-10.951 3.252,-24.454 -5.79,-33.497c-11.503,-11.501 -30.219,-11.5 -41.723,0.002c-11.5,11.501 -11.5,30.216 0,41.717c4.103,4.102 9.124,6.732 14.406,7.909l15.299,-15.268c2.492,-2.496 5.822,-3.871 9.377,-3.871Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M117.643,71.352l-46.401,46.328c-0.899,0.899 -2.226,1.323 -3.974,1.274c-1.599,-0.047 -2.823,-0.476 -3.673,-1.274l-20.017,-20.017c-0.899,-0.898 -1.348,-1.997 -1.348,-3.297c0,-1.299 0.449,-2.398 1.348,-3.299l6.673,-6.672c0.899,-0.897 1.998,-1.349 3.298,-1.349c1.299,0 2.398,0.451 3.298,1.349l10.57,10.571l36.957,-36.883c0.899,-0.9 1.998,-1.349 3.297,-1.349c1.299,0 2.399,0.449 3.3,1.349l6.671,6.596c0.898,0.951 1.35,2.063 1.35,3.336c0,1.277 -0.451,2.387 -1.349,3.337Z"
+        android:fillColor="#FF1CA037" />
+</vector>

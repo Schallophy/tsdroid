@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `change_nickname` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M28.561,76.477l-19.561,42.523l42.526,-19.562c-2.865,-4.529 -6.25,-8.823 -10.195,-12.769c-3.945,-3.945 -8.239,-7.328 -12.77,-10.192Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M119,29.492c0.002,-2.379 -0.833,-4.377 -2.502,-5.996l-11.987,-12.006c-1.625,-1.657 -3.613,-2.487 -6.008,-2.49c-2.395,0.002 -4.417,0.809 -6.073,2.42l-57.398,57.392c3.578,2.345 7.015,4.989 10.273,7.939c1.033,0.936 2.052,1.899 3.049,2.897c0.998,0.998 1.963,2.017 2.902,3.053c2.948,3.256 5.591,6.691 7.935,10.268l57.403,-57.397c1.597,-1.66 2.408,-3.69 2.406,-6.08Z"
+        android:fillColor="#FF7289DA" />
+</vector>

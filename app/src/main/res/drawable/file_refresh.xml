@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `file_refresh` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M110.406,30.914L64.859,30.914L64.859,24.898C64.859,20.152 61.012,16.304 56.265,16.304L17.594,16.304C12.848,16.305 9,20.152 9,24.898L9,103.1C9,107.846 12.848,111.694 17.594,111.694L110.407,111.694C115.154,111.694 119.001,107.846 119.001,103.1L119.001,45.523L119.001,44.664L119.001,39.508C119,34.762 115.153,30.914 110.406,30.914Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M64.21,92.993C52.765,92.993 43.448,83.677 43.448,72.227C43.448,60.781 52.764,51.463 64.21,51.463C69.127,51.463 73.639,53.182 77.175,56.043L66.895,64.948L94,68.959L93.945,41.548L84.42,49.787C79.087,44.961 71.998,42.002 64.21,42.002C47.521,42.002 34,55.538 34,72.228C34,88.904 47.521,102.427 64.21,102.427C77.295,102.427 88.445,94.107 92.623,82.482L82.977,81.041C79.668,88.082 72.502,92.993 64.21,92.993Z"
+        android:fillColor="#FFF2F2F2" />
+</vector>

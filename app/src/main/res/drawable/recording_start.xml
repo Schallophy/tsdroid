@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    TeamSpeak's own `recording_start` icon, copied verbatim from the `dark` icon pack
+    (github.com/randomhost/teamspeak-dark, BSD-3-Clause). Path data and
+    gradient stops are unchanged; only the envelope is Android vector XML.
+    See assets/licenses/LICENSE-TEAMSPEAK-ICONS.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="128"
+    android:viewportHeight="128">
+    <path
+        android:pathData="M119,9l-110,0l0,110l110,0l0,-110Zm-17.346,55c0,20.796 -16.858,37.654 -37.654,37.654c-20.796,0 -37.654,-16.858 -37.654,-37.654c0,-20.796 16.858,-37.654 37.654,-37.654c20.796,0 37.654,16.858 37.654,37.654Z"
+        android:fillColor="#FF7289DA" />
+    <path
+        android:pathData="M64,36.346c-15.249,0 -27.654,12.406 -27.654,27.654c0,15.249 12.406,27.654 27.654,27.654c15.249,0 27.654,-12.405 27.654,-27.654c0,-15.249 -12.405,-27.654 -27.654,-27.654Z"
+        android:fillColor="#FFC90709" />
+</vector>

@@ -9,6 +9,8 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 import java.util.Properties
@@ -46,8 +48,18 @@ plugins {
  */
 @CacheableTask
 abstract class CargoNdkTask : DefaultTask() {
-    /** Everything whose change must force a rebuild. */
+    /**
+     * Everything whose change must force a rebuild.
+     *
+     * `RELATIVE` sensitivity: the cache key is built from each file's path
+     * relative to this collection's roots, not its absolute location. That is
+     * what lets an entry written on a CI runner (`/home/runner/work/...`) be
+     * reused by a checkout in any other directory. Gradle requires an explicit
+     * strategy here — a cacheable task with unnormalised file inputs fails
+     * validation rather than silently caching per-path.
+     */
     @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val sources: ConfigurableFileCollection
 
     /**

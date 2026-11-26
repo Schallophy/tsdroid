@@ -18,11 +18,11 @@ class StatusIconTest {
         // Both are wrong at once: the device wins, because it is the harder fact
         // — nothing can arrive while the device is off, button or no button.
         assertEquals(
-            R.drawable.hardware_input_muted,
+            R.drawable.icon_hardware_input_muted,
             inputStatusIcon(muted = true, hardwareEnabled = false),
         )
         assertEquals(
-            R.drawable.hardware_output_muted,
+            R.drawable.icon_hardware_output_muted,
             outputStatusIcon(deafened = true, hardwareEnabled = false),
         )
     }
@@ -30,11 +30,11 @@ class StatusIconTest {
     @Test
     fun `a switched-off device is its own mark`() {
         assertEquals(
-            R.drawable.hardware_input_muted,
+            R.drawable.icon_hardware_input_muted,
             inputStatusIcon(muted = false, hardwareEnabled = false),
         )
         assertEquals(
-            R.drawable.hardware_output_muted,
+            R.drawable.icon_hardware_output_muted,
             outputStatusIcon(deafened = false, hardwareEnabled = false),
         )
     }
@@ -43,7 +43,7 @@ class StatusIconTest {
     fun `the output side claims the slot before the input side`() {
         // Everyone is muted: the speakers/headphones mark wins.
         assertEquals(
-            R.drawable.output_muted,
+            R.drawable.icon_output_muted,
             memberStatusIcon(
                 away = false, deafened = true, muted = true,
                 inputHardwareEnabled = true, outputHardwareEnabled = true,
@@ -52,7 +52,7 @@ class StatusIconTest {
         // Even a switched-off microphone yields to a muted speaker: the legend
         // puts speakers/headphones above the microphone.
         assertEquals(
-            R.drawable.output_muted,
+            R.drawable.icon_output_muted,
             memberStatusIcon(
                 away = false, deafened = true, muted = false,
                 inputHardwareEnabled = false, outputHardwareEnabled = true,
@@ -60,7 +60,7 @@ class StatusIconTest {
         )
         // A switched-off speaker outranks every input-side state.
         assertEquals(
-            R.drawable.hardware_output_muted,
+            R.drawable.icon_hardware_output_muted,
             memberStatusIcon(
                 away = false, deafened = false, muted = true,
                 inputHardwareEnabled = false, outputHardwareEnabled = false,
@@ -69,14 +69,14 @@ class StatusIconTest {
         // Nothing wrong on the output side: the input mark takes over,
         // device off before mute.
         assertEquals(
-            R.drawable.hardware_input_muted,
+            R.drawable.icon_hardware_input_muted,
             memberStatusIcon(
                 away = false, deafened = false, muted = true,
                 inputHardwareEnabled = false, outputHardwareEnabled = true,
             ),
         )
         assertEquals(
-            R.drawable.input_muted,
+            R.drawable.icon_input_muted,
             memberStatusIcon(
                 away = false, deafened = false, muted = true,
                 inputHardwareEnabled = true, outputHardwareEnabled = true,

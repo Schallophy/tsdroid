@@ -93,18 +93,20 @@ than a porting job.
 
 [randomhost/teamspeak-dark]: https://github.com/randomhost/teamspeak-dark
 
-`tools/svg2vector.py` is the converter. It keeps each file's name from the pack
-so a different pack can be dropped in by name, and it refuses what it cannot
+`tools/svg2vector.py` is the converter, and it is checked in because a
+converted icon nobody can regenerate is a dead end. It refuses what it cannot
 express exactly — a radial gradient, a rounded rect, a clip smaller than the
 viewBox — rather than shipping an approximation. Two files needed more than the
-common case and are handled: `moderated`'s `<text>` is outlined with fontTools,
-and `ban_list`'s rotated `<rect>` is mapped corner by corner.
+common case: `moderated`'s `<text>` is outlined with fontTools, and `ban_list`'s
+rotated `<rect>` is mapped corner by corner.
 
-Thirteen names could not survive as-is: Android resource names are `[a-z0-9_]`,
-cannot start with a digit, and cannot be a Java keyword. Those are rewritten
-(`addon-collection` → `addon_collection`, `3d_sound` → `icon_3d_sound`,
-`default` → `icon_default`), and `res/raw/iconpack_names.json` maps every
-resource name back to the pack's own, so nothing loses track of what it is.
+Every resource is named `icon_` plus the pack's own name. The prefix is uniform
+so a drawable in the tree is recognisably from the pack, and it is what makes
+the pack's name survive Android's rules without being rewritten: `default` is a
+Java keyword, `3d_sound` starts with a digit, `addon-collection` has a hyphen.
+Two characters change and nothing else — a hyphen becomes an underscore, since
+that is all a resource name allows. `res/raw/iconpack_names.json` maps each
+resource name back to the pack's spelling for code that needs the original.
 
 The fills are baked into the paths (`#a9aaac` grey, `#7289da` blue, `#c90709`
 red), so `Icon(tint = ...)`-style recolouring does nothing useful — the

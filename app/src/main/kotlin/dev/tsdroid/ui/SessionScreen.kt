@@ -257,9 +257,9 @@ fun MicBar(
     val deviceOn = ui.state.inputHardwareEnabled
     val speakerDeviceOn = ui.state.outputHardwareEnabled
     val micIcon = inputStatusIcon(muted = !ui.micEnabled, hardwareEnabled = deviceOn)
-        ?: R.drawable.capture
+        ?: R.drawable.icon_capture
     val speakerIcon = outputStatusIcon(deafened = !ui.speakerEnabled, hardwareEnabled = speakerDeviceOn)
-        ?: R.drawable.volume
+        ?: R.drawable.icon_volume
 
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     Surface(color = MaterialTheme.colorScheme.surface) {

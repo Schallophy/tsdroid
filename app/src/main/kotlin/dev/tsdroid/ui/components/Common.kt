@@ -138,15 +138,15 @@ val IconPlate = Color(0xFF161618)
  * back.
  */
 fun inputStatusIcon(muted: Boolean, hardwareEnabled: Boolean): Int? = when {
-    !hardwareEnabled -> R.drawable.hardware_input_muted
-    muted -> R.drawable.input_muted
+    !hardwareEnabled -> R.drawable.icon_hardware_input_muted
+    muted -> R.drawable.icon_input_muted
     else -> null
 }
 
 /** The output twin of [inputStatusIcon]; `null` means "you can hear them". */
 fun outputStatusIcon(deafened: Boolean, hardwareEnabled: Boolean): Int? = when {
-    !hardwareEnabled -> R.drawable.hardware_output_muted
-    deafened -> R.drawable.output_muted
+    !hardwareEnabled -> R.drawable.icon_hardware_output_muted
+    deafened -> R.drawable.icon_output_muted
     else -> null
 }
 
@@ -166,7 +166,7 @@ fun memberStatusIcon(
     inputHardwareEnabled: Boolean,
     outputHardwareEnabled: Boolean,
 ): Int? = when {
-    away -> R.drawable.away
+    away -> R.drawable.icon_away
     else -> outputStatusIcon(deafened = deafened, hardwareEnabled = outputHardwareEnabled)
         ?: inputStatusIcon(muted = muted, hardwareEnabled = inputHardwareEnabled)
 }
@@ -288,7 +288,7 @@ fun MemberStatusBadge(
     // it read as a flatter disc next to the TeamSpeak marks it sits among.
     Image(
         painter = painterResource(
-            if (talking) R.drawable.player_on else R.drawable.player_off,
+            if (talking) R.drawable.icon_player_on else R.drawable.icon_player_off,
         ),
         contentDescription = if (talking) "正在说话" else null,
         modifier = modifier.size(size),

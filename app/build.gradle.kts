@@ -457,6 +457,33 @@ android {
         compose = true
     }
 
+    // AGP 9 registers a Compose Preview task per variant that reads compiled
+    // Android resources, and refuses to configure itself when the unit-test
+    // variant has none. That is a *configuration*-time failure, so it took down
+    // `gradlew tasks` as well as anything else that configures every task — the
+    // build was unusable outside `assembleDebug` and `testDebugUnitTest`, which
+    // only configure what they need.
+    //
+    // There is no public switch: `VariantTaskManager` registers the task whenever
+    // `buildFeatures.compose` is on, and disabling it afterwards is too late
+    // because it throws while being created. What it actually requires is that
+    // the variant has unit tests packaging Android resources, so both variants
+    // now do.
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
+    androidComponents {
+        beforeVariants(selector().withBuildType("release")) { variant ->
+            // Without this the release preview task fails for the opposite
+            // reason: no unit-test component to read resources from. It costs a
+            // test APK on release builds, which this project does not ship from
+            // CI — `assembleDebug` and `testDebugUnitTest` are the only builds
+            // that run there.
+            (variant as com.android.build.api.variant.HasUnitTestBuilder).enableUnitTest = true
+        }
+    }
+
     sourceSets["main"].kotlin.directories.add("src/main/kotlin")
 
     // Native code now comes from the generated directory; nothing under

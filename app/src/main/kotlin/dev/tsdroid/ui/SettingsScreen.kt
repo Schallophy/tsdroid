@@ -13,15 +13,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -30,7 +27,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -61,7 +56,7 @@ import dev.tsdroid.ui.components.MemberAvatar
  * here, it is simply shown as the one the client automatically adopted.
  */
 @Composable
-fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
+fun SettingsScreen(vm: SessionViewModel) {
     val account by vm.accountState.collectAsStateWithLifecycle()
     val settings = remember { vm.settings() }
 
@@ -71,7 +66,9 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
     var output by remember { mutableFloatStateOf(settings.outputGain) }
     var noise by remember { mutableStateOf(settings.noiseSuppression) }
     var bluetooth by remember { mutableStateOf(settings.bluetoothMic) }
-    var filesEnabled by remember { mutableStateOf(settings.filesTabEnabled) }
+    // Read from the ViewModel's flow, not from a local copy: the bar in the app
+    // shell follows the same value, and they must not be able to disagree.
+    val filesEnabled by vm.filesTabEnabled.collectAsStateWithLifecycle()
     var keepInBackground by remember { mutableStateOf(settings.keepInBackground) }
     var startMuted by remember { mutableStateOf(settings.startMuted) }
     var focusAction by remember { mutableStateOf(settings.audioFocusAction) }
@@ -97,11 +94,6 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
     var otp by remember { mutableStateOf("") }
     var showOtp by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        // Keep `pickedIdentity` current without waiting for a connect.
-        run { vm.accountRefresh() }
-    }
 
     fun run(command: () -> String?) {
         command()?.let(vm::setToast)
@@ -141,15 +133,35 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
             .verticalScroll(rememberScrollState())
             .imePadding(),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(start = 6.dp, end = 16.dp, top = 6.dp),
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-            }
-            Text("设置", style = MaterialTheme.typography.titleLarge)
-        }
+        Text(
+            text = "设置",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 14.dp),
+        )
+
+        // ── 账号 ──────────────────────────────────────────────────────────
+        AccountSection(
+            account = account,
+            email = email,
+            password = password,
+            otp = otp,
+            showOtp = showOtp,
+            passwordVisible = passwordVisible,
+            onEmailChange = { email = it },
+            onPasswordChange = { password = it },
+            onOtpChange = { otp = it },
+            onShowOtpChange = { showOtp = it },
+            onPasswordVisibleChange = { passwordVisible = it },
+            onLogin = { run { vm.accountLogin(email, password, otp) } },
+            onRefresh = { run { vm.accountRefresh() } },
+            onLogout = { confirmLogout = true },
+            confirmLogout = confirmLogout,
+            onConfirmLogout = {
+                confirmLogout = false
+                run { vm.accountLogout() }
+            },
+            onDismissLogout = { confirmLogout = false },
+        )
 
         // ── 通用 ──────────────────────────────────────────────────────────
         Section("通用") {
@@ -321,36 +333,9 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
             ToggleRow(
                 label = "显示文件入口",
                 checked = filesEnabled,
-                onChange = {
-                    filesEnabled = it
-                    settings.filesTabEnabled = it
-                },
+                onChange = { vm.setFilesTabEnabled(it) },
             )
         }
-
-        // ── 账号 ──────────────────────────────────────────────────────────
-        AccountSection(
-            account = account,
-            email = email,
-            password = password,
-            otp = otp,
-            showOtp = showOtp,
-            passwordVisible = passwordVisible,
-            onEmailChange = { email = it },
-            onPasswordChange = { password = it },
-            onOtpChange = { otp = it },
-            onShowOtpChange = { showOtp = it },
-            onPasswordVisibleChange = { passwordVisible = it },
-            onLogin = { run { vm.accountLogin(email, password, otp) } },
-            onRefresh = { run { vm.accountRefresh() } },
-            onLogout = { confirmLogout = true },
-            confirmLogout = confirmLogout,
-            onConfirmLogout = {
-                confirmLogout = false
-                run { vm.accountLogout() }
-            },
-            onDismissLogout = { confirmLogout = false },
-        )
 
     }
 
@@ -425,17 +410,6 @@ private fun AccountSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                }
-            }
-
-            if (account.uuid.isNotEmpty()) {
-                SelectionContainer {
-                    Text(
-                        text = "UUID ${account.uuid}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
 

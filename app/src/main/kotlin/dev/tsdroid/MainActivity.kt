@@ -90,7 +90,7 @@ private fun App() {
     val bookmarkOrderReset by session.bookmarkOrderReset.collectAsStateWithLifecycle()
     val accountError by session.accountError.collectAsStateWithLifecycle()
     val navTab by session.navTab.collectAsStateWithLifecycle()
-    val filesEnabled = session.filesTabEnabled
+    val filesEnabled by session.filesTabEnabled.collectAsStateWithLifecycle()
 
     // The manifest declares `configChanges="…|uiMode"`, so switching the system
     // theme does not recreate the Activity — `enableEdgeToEdge()` therefore never
@@ -185,7 +185,6 @@ private fun App() {
                 // explicitly did is.
                 when (notice.command) {
                     "account_login" -> "已登录 myTeamSpeak"
-                    "account_resume" -> "已从本机凭据恢复登录"
                     "account_logout" -> "已退出登录"
                     "sync_backup" -> notice.message.ifEmpty { "备份完成" }
                     else -> null
@@ -327,10 +326,7 @@ private fun App() {
                     )
                 }
 
-                dev.tsdroid.NavTab.Settings -> SettingsScreen(
-                    vm = session,
-                    onBack = { session.selectNavTab(dev.tsdroid.NavTab.Home) },
-                )
+                dev.tsdroid.NavTab.Settings -> SettingsScreen(vm = session)
 
                 dev.tsdroid.NavTab.Channels,
                 dev.tsdroid.NavTab.Chat,

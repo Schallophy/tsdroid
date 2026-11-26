@@ -136,14 +136,6 @@ class SessionController(
      * be lost when the screen redraws.
      */
 
-    /**
-     * Whether the file tab appears in the bottom bar.
-     *
-     * Read from settings on demand: the toggle lives in Settings, and the bar
-     * simply follows it. Changing it does not require a restart.
-     */
-    val filesTabEnabled: Boolean get() = settings.filesTabEnabled
-
     val micLevel = audio.level
     val audioError = audio.error
 

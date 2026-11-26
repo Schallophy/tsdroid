@@ -254,7 +254,28 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         .flatMapLatest { it?.audioError ?: flowOf(null) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val filesTabEnabled: Boolean get() = settings.filesTabEnabled
+    /**
+     * Whether the file tab appears in the bottom bar.
+     *
+     * A `StateFlow`, not a getter over [Settings]: the toggle lives in Settings
+     * but the bar lives in the activity shell, and only an observable value
+     * makes the bar redraw while the settings screen is still on screen.
+     */
+    private val _filesTabEnabled = MutableStateFlow(settings.filesTabEnabled)
+    val filesTabEnabled: StateFlow<Boolean> = _filesTabEnabled.asStateFlow()
+
+    /**
+     * Stores the switch and, when it hides the tab the user is standing on, moves
+     * them off it: the bar no longer has a destination to show, and leaving the
+     * nav state on a hidden tab would strand the file screen with no way back.
+     */
+    fun setFilesTabEnabled(enabled: Boolean) {
+        settings.filesTabEnabled = enabled
+        _filesTabEnabled.value = enabled
+        if (!enabled && _navTab.value == NavTab.Files) {
+            selectNavTab(NavTab.Channels)
+        }
+    }
 
     // ── binding ───────────────────────────────────────────────────────────
 

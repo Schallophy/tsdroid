@@ -15,10 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -76,7 +73,6 @@ fun SessionScreen(
             subtitle = statusLine(ui.status, ui.state.server.clientsOnline, ui.state.server.maxClients),
             connected = ui.status == SessionStatus.Online,
             onDisconnect = vm::disconnect,
-            onLeave = onLeave,
         )
 
         Box(modifier = Modifier.weight(1f)) {
@@ -196,7 +192,6 @@ private fun ServerHeader(
     subtitle: String,
     connected: Boolean,
     onDisconnect: () -> Unit,
-    onLeave: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -204,14 +199,7 @@ private fun ServerHeader(
             .fillMaxWidth()
             .padding(start = 18.dp, end = 6.dp, top = 6.dp),
     ) {
-        IconButton(onClick = onLeave, modifier = Modifier.size(36.dp)) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "返回",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,7 +34,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -76,17 +74,16 @@ import dev.tsdroid.data.withAnnouncedVersion
 import dev.tsdroid.model.AccountRow
 import dev.tsdroid.model.AccountState
 import dev.tsdroid.ui.components.IconPlate
-import dev.tsdroid.ui.components.MemberAvatar
 
 /**
  * The home screen: the app's front door.
  *
  * Two things live here, in this order. The temporary-connect form sits at the
- * top, always visible: it is the one-off entry point, and it deliberately does
- * not save anything — type an address, connect, and the server is not remembered
- * for next time. Below it, the account's cloud bookmarks appear as cards,
- * because those are the connections the user *has* saved. Connecting from a
- * bookmark brings its own passwords; nothing is written locally.
+ * top, collapsed by default: it is the one-off entry point, and it deliberately
+ * does not save anything — type an address, connect, and the server is not
+ * remembered for next time. Below it, the account's cloud bookmarks appear as
+ * cards, because those are the connections the user *has* saved. Connecting
+ * from a bookmark brings its own passwords; nothing is written locally.
  *
  * There is no "recent connections" list: bookmarks are the saved connections,
  * and the temporary form is for the one you do not want to keep.
@@ -249,7 +246,7 @@ fun HomeScreen(
                 value = serverPassword,
                 onValueChange = { serverPassword = it },
                 label = { Text("服务器密码") },
-                placeholder = { Text("服务器没设密码就留空") },
+                placeholder = { Text("没有就留空") },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 visualTransformation = if (serverPasswordVisible) {
@@ -309,7 +306,6 @@ fun HomeScreen(
                     value = channelPassword,
                     onValueChange = { channelPassword = it },
                     label = { Text("频道密码") },
-                    placeholder = { Text("频道有密码时填写") },
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
                     visualTransformation = PasswordVisualTransformation(),
@@ -370,7 +366,7 @@ fun HomeScreen(
                 // the cache had no rows either.
             } else if (rows.isEmpty()) {
                 Text(
-                    text = "账号里没有可用的书签。",
+                    text = "账号里还没有书签。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -418,39 +414,12 @@ fun HomeScreen(
  * The bookmark list, with a drag handle per row.
  *
  * Dragging is the reorder gesture and the handle is the only place that starts
- * it, so a tap still connects and a horizontal scroll still works. A drag is
- * committed on drop: the list is re-sent as "this one now follows that one",
- * which is the account's own model (a linked list, not an index).
+ * it, so a tap still connects. A drag is committed on drop: the list is re-sent
+ * as "this one now follows that one", which is the account's own model (a
+ * linked list, not an index).
  *
- * A long press opens the row's menu. It is a dialog rather than an inline row of
- * buttons, so opening it does not push the list around.
- */
-/**
- * The bookmark rows, as LazyColumn items.
- *
- * A LazyListScope extension rather than a composable with its own list: the home
- * screen is one scroll, and `animateItem` only works inside the same LazyColumn
- * as the items it should move. That is what makes the rows below shuffle out of
- * a dragged row's way instead of jumping.
- *
- * Dragging is started by the handle only, so a tap still connects. The order is
- * optimistic: the row moves under the finger and the server is told after.
- */
-/**
- * The bookmark rows, as LazyColumn items.
- *
- * The order is held in a plain composable (not in the scope extension) because a
- * drag writes it: a LazyListScope body is not a composable and has no state.
- * `animateItem` on each row is what makes the others shuffle out of a dragged
- * row's way; without it a reorder is a jump cut.
- */
-/**
- * The bookmark section, as part of the home screen's one LazyColumn.
- *
- * Written as a plain `@Composable` that emits the items rather than a
- * LazyListScope extension, because the drag needs state (`remember`) and a scope
- * body has none. `animateItem` on each row is what makes the others shuffle out
- * of a dragged row's way.
+ * A long press opens the row's menu. It is an overlay rather than an inline row
+ * of buttons, so opening it does not push the list around.
  */
 @Composable
 private fun BookmarkItems(
@@ -471,10 +440,6 @@ private fun BookmarkItems(
         order.addAll(serverOrder)
     }
 
-    // A nested LazyColumn with a bounded height is not an option here (the outer
-    // list scrolls), so the rows are emitted into the caller's scope by returning
-    // them through this composable's content. Instead, the caller places this
-    // inside the LazyColumn scope; see the call site.
     BookmarkRows(
         order = order,
         bookmarks = bookmarks,
@@ -501,9 +466,9 @@ private fun BookmarkRows(
     onEdit: (AccountRow) -> Unit,
     onDelete: (AccountRow) -> Unit,
 ) {
-    // Rows are laid out by `offset`, not by the Column's own stacking, so a row
-    // can animate from its old slot to its new one. The Column therefore has no
-    // spacing of its own; the offset carries both the height and the gap.
+    // Rows are laid out by `offset` inside a Box, so a row can animate from its
+    // old slot to its new one. The Box has no spacing of its own; the offset
+    // carries both the height and the gap.
     Box(modifier = Modifier.fillMaxWidth().height((ROW_HEIGHT + ROW_GAP) * order.size)) {
         order.forEachIndexed { index, uuid ->
             val row = bookmarks.firstOrNull { it.uuid == uuid }
@@ -643,20 +608,6 @@ private fun BookmarkRow(
             )
         }
     }
-}
-
-@Composable
-private fun MenuItem(label: String, destructive: Boolean = false, onClick: () -> Unit) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.bodyLarge,
-        color = if (destructive) MaterialTheme.colorScheme.error
-        else MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 14.dp),
-    )
 }
 
 private val ROW_HEIGHT = 56.dp

@@ -221,7 +221,7 @@ private fun ScopeChip(
                     .background(MaterialTheme.colorScheme.error),
             ) {
                 Text(
-                    text = if (unread > 9) "9" else unread.toString(),
+                    text = if (unread > 9) "9+" else unread.toString(),
                     color = MaterialTheme.colorScheme.onError,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,

@@ -379,7 +379,7 @@ private fun App() {
             text = {
                 Column {
                     Text(
-                        text = "这台服务器要求输入权限密钥（启动日志里的 token=…）才会授予分组。",
+                        text = "启动日志里的 token=… 会授予对应分组。",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -555,7 +555,7 @@ private fun ConnectFirstPrompt(onConnect: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = "在首页填写服务器地址连接，或从书签中选一个。",
+            text = "填写服务器地址，或从书签选一个。",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             modifier = Modifier.padding(top = 4.dp),

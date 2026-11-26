@@ -131,19 +131,12 @@ fun ChannelsTab(
             onDismissRequest = { passwordTarget = null },
             title = { Text("进入「${channel.name}」") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        "这个频道有密码",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        singleLine = true,
-                        label = { Text("频道密码") },
-                    )
-                }
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    singleLine = true,
+                    label = { Text("频道密码") },
+                )
             },
             confirmButton = {
                 TextButton(

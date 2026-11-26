@@ -5,7 +5,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -80,11 +79,13 @@ fun FilesTab(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    text = if (files.isEmpty()) "暂无文件" else "${files.count { it.isFile }} 个文件",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (files.isNotEmpty()) {
+                    Text(
+                        text = "${files.count { it.isFile }} 个文件",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             IconButton(onClick = onRefresh) {
                 Icon(
@@ -95,19 +96,26 @@ fun FilesTab(
             }
         }
 
-        if (ui.filesLoading) {
-            LinearProgressIndicator(
-                modifier = Modifier.fillMaxWidth().height(2.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
+        // Fixed-height slot: the list does not move while a refresh runs.
+        Box(modifier = Modifier.fillMaxWidth().height(2.dp)) {
+            if (ui.filesLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().height(2.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+            }
         }
 
         Box(modifier = Modifier.weight(1f)) {
             if (files.isEmpty() && !ui.filesLoading) {
                 EmptyState(
                     title = "这个频道还没有文件",
-                    hint = "上传一个，其他人就能下载",
+                    hint = when {
+                        !ui.isOnline -> "连接后可上传"
+                        !canUpload -> "没有上传权限"
+                        else -> "点下方按钮上传"
+                    },
                 )
             } else {
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
@@ -140,7 +148,7 @@ fun FilesTab(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text("  上传文件")
+            Text("上传文件", modifier = Modifier.padding(start = 6.dp))
         }
     }
 }
@@ -208,11 +216,11 @@ private fun TransferRow(transfer: Transfer) {
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "  ${transfer.name}",
+                text = transfer.name,
                 style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).padding(start = 4.dp),
             )
             Text(
                 text = when (transfer.state) {
@@ -228,24 +236,21 @@ private fun TransferRow(transfer: Transfer) {
                 },
             )
         }
-        if (transfer.state == TransferState.Running) {
-            LinearProgressIndicator(
-                progress = { transfer.fraction },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 5.dp)
-                    .height(3.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.outlineVariant,
-            )
-        }
-        transfer.error?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 2.dp),
-            )
+        // Fixed-height slot: finishing a transfer does not resize its row.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 5.dp)
+                .height(3.dp),
+        ) {
+            if (transfer.state == TransferState.Running) {
+                LinearProgressIndicator(
+                    progress = { transfer.fraction },
+                    modifier = Modifier.fillMaxWidth().height(3.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.outlineVariant,
+                )
+            }
         }
     }
 }

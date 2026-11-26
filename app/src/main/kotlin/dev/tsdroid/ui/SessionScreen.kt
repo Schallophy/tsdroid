@@ -17,18 +17,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -114,7 +108,8 @@ fun SessionScreen(
             if (ui.status == SessionStatus.Failed) {
                 Box(modifier = Modifier.align(Alignment.TopCenter)) {
                     ConnectErrorBanner(
-                        message = ui.lastError ?: "连接失败",
+                        message = ui.lastError?.takeIf { it.isNotBlank() }
+                            ?: "请检查服务器地址和网络",
                         // A refused client version cannot be fixed by retrying:
                         // the same value would be announced again. The banner
                         // offers the setting instead of a button that cannot work.
@@ -169,15 +164,9 @@ private fun ConnectErrorBanner(
             .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 6.dp),
     ) {
         Text(
-            text = "无法连接",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-        )
-        Text(
             text = message,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onErrorContainer,
-            modifier = Modifier.padding(top = 4.dp),
         )
         Row(
             horizontalArrangement = Arrangement.End,

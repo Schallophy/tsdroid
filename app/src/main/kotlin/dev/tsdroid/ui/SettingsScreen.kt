@@ -3,16 +3,13 @@ package dev.tsdroid.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -20,13 +17,11 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -54,8 +49,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.tsdroid.SessionViewModel
 import dev.tsdroid.core.Native
 import dev.tsdroid.data.AudioFocusAction
-import dev.tsdroid.model.AccountBookmark
-import dev.tsdroid.model.AccountRow
 import dev.tsdroid.model.AccountState
 import dev.tsdroid.ui.components.MemberAvatar
 
@@ -63,10 +56,9 @@ import dev.tsdroid.ui.components.MemberAvatar
  * Settings, grouped into five sections: 通用 / 语音 / 聊天 / 文件 / 账号.
  *
  * Each section is one rounded container, the same card language the rest of
- * the app uses. The account is the last section: it holds the login, the
- * read-only identity display and the bookmark management — the identity is
- * never a choice the user makes here, it is simply shown as the one the
- * client automatically adopted.
+ * the app uses. The account is the last section: it holds the login and the
+ * read-only identity display — the identity is never a choice the user makes
+ * here, it is simply shown as the one the client automatically adopted.
  */
 @Composable
 fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
@@ -93,12 +85,10 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
     // takes effect on the next connection, so offer an immediate reconnect.
     var pendingReconnect by remember { mutableStateOf(false) }
     // Whether the reconnect prompt has already been shown for the current
-    // editing session. Without it every keystroke that yields a valid version
-    // would re-open the dialog after the user dismissed it.
+    // editing session. Without it every pick would re-open the dialog after
+    // the user dismissed it.
     var reconnectPromptShown by remember { mutableStateOf(false) }
 
-    // Account action notices go to a toast rather than an inline line, so the
-    // card does not grow and shrink as messages come and go.
     var confirmLogout by remember { mutableStateOf(false) }
 
     // Email/password for the login form inside the account section
@@ -164,9 +154,9 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
         // ── 通用 ──────────────────────────────────────────────────────────
         Section("通用") {
             // The announced client version. Global: one choice for every server.
-            // Only the version number is typed; the platform is picked from the
-            // signed platforms, and the native side resolves the pair to the full
-            // signed text.
+            // Both fields are picked from the signed pairs the native side
+            // offers, so the selection cannot name a version it has no
+            // signature for.
             Text(
                 text = "客户端版本",
                 style = MaterialTheme.typography.labelLarge,
@@ -184,7 +174,11 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
             var hasSaved by remember { mutableStateOf(store.hasPasswords()) }
             var confirmClear by remember { mutableStateOf(false) }
             Text(
-                text = "服务器密码用 Android Keystore 持有的密钥加密后存放在本机。换机、抹机或从备份恢复后密文解不开，会当作没保存过，需要重新输入。",
+                text = if (hasSaved) {
+                    "密码加密保存在本机；换机或恢复备份后需重新输入。"
+                } else {
+                    "没有保存的密码。"
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -192,7 +186,7 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
                 onClick = { confirmClear = true },
                 enabled = hasSaved,
             ) {
-                Text(if (hasSaved) "清除已保存的密码" else "没有保存的密码")
+                Text("清除已保存的密码")
             }
             if (confirmClear) {
                 AlertDialog(
@@ -214,20 +208,10 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
                 )
             }
 
-            Text("关于", style = MaterialTheme.typography.labelLarge)
+            Text("第三方组件", style = MaterialTheme.typography.labelLarge)
             Text(
-                text = "协议核心：Rust + tsclientlib（钉在固定提交）",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "语音：Opus 24 kbps 单声道，采集与播放由 Android 音频栈负责",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "本应用包含 tsclientlib（Apache-2.0 OR MIT）与 Opus（BSD）等第三方组件，" +
-                    "完整许可见安装包 assets/licenses/NOTICE",
+                text = "tsclientlib（Apache-2.0 OR MIT）、Opus（BSD）。" +
+                    "完整许可见安装包中的 NOTICE。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -237,7 +221,6 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
         Section("语音") {
             ToggleRow(
                 label = "连接时静音",
-                hint = "进入服务器后先不发声，需要说话时再点麦克风",
                 checked = startMuted,
                 onChange = {
                     startMuted = it
@@ -246,7 +229,6 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
             )
             ToggleRow(
                 label = "麦克风降噪",
-                hint = "系统级噪声抑制，开会时更干净",
                 checked = noise,
                 onChange = {
                     noise = it
@@ -255,7 +237,7 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
             )
             ToggleRow(
                 label = "使用蓝牙耳机麦克风",
-                hint = "必须走通话通道：开启期间手机其他声音会变窄带，音质下降。没连耳机时自动用手机麦克风。",
+                hint = "通话期间其他声音音质下降；无耳机时用手机麦克风",
                 checked = bluetooth,
                 onChange = {
                     bluetooth = it
@@ -298,8 +280,7 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
                     style = MaterialTheme.typography.labelLarge,
                 )
                 Text(
-                    text = "拉高会整体放大别人说话的声音；超过 1.0× 时软限幅，不会破音。" +
-                        "播放走媒体音量，请同时用音量键确认媒体音量没有调低。",
+                    text = "超过 1.0× 会自动限幅，不破音；媒体音量需单独调",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -317,7 +298,6 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
         Section("聊天") {
             ToggleRow(
                 label = "离开",
-                hint = "别人会看到你处于离开状态",
                 checked = away,
                 onChange = {
                     away = it
@@ -338,14 +318,8 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
 
         // ── 文件 ──────────────────────────────────────────────────────────
         Section("文件") {
-            Text(
-                text = "文件传输是低频功能，默认不在底部导航中显示文件入口。打开后，连接服务器时可浏览和收发当前频道的文件。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             ToggleRow(
                 label = "显示文件入口",
-                hint = "在底部导航栏中加入「文件」标签",
                 checked = filesEnabled,
                 onChange = {
                     filesEnabled = it
@@ -356,7 +330,6 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
 
         // ── 账号 ──────────────────────────────────────────────────────────
         AccountSection(
-            vm = vm,
             account = account,
             email = email,
             password = password,
@@ -387,10 +360,8 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
     if (pendingReconnect) {
         AlertDialog(
             onDismissRequest = { pendingReconnect = false },
-            title = { Text("版本改动需要重连才生效") },
-            text = {
-                Text("客户端版本只在连接时声明一次，当前连接不会改变。要现在断开重连吗？取消则保留设置，下次连接生效。")
-            },
+            title = { Text("版本改动") },
+            text = { Text("重连后生效。现在重连？") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -407,16 +378,14 @@ fun SettingsScreen(vm: SessionViewModel, onBack: () -> Unit) {
 }
 
 /**
- * The account section: login, account info, and bookmark management.
+ * The account section: login and account info.
  *
  * The identity is never a choice here and is not shown as one: the client
- * adopts it automatically, and this section only manages the login and the
- * saved bookmarks. Bookmark deletion lives here too: the home screen is for
- * connecting, not for managing what is saved.
+ * adopts it automatically. Bookmarks are managed from the home screen, not
+ * here.
  */
 @Composable
 private fun AccountSection(
-    vm: SessionViewModel,
     account: AccountState,
     email: String,
     password: String,
@@ -449,11 +418,13 @@ private fun AccountSection(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text = account.email,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (account.username.isNotEmpty() && account.email.isNotEmpty()) {
+                        Text(
+                            text = account.email,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
 
@@ -468,19 +439,34 @@ private fun AccountSection(
                 }
             }
 
-            if (busy) InlineBusy(account)
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // The row is already tall enough for the buttons, so progress can
+            // appear beside them without changing the card's height.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 TextButton(onClick = onRefresh, enabled = !busy) { Text("刷新") }
                 TextButton(onClick = onLogout, enabled = !busy) { Text("退出登录") }
+                if (busy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(12.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Text(
+                        text = account.progress.ifEmpty { "正在${commandLabel(account.command)}…" },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
-
 
         } else {
             // Not signed in: the login form.
             Text(
-                text = "登录后可以读取云端书签、备份同步项；连接服务器时会展示你的 " +
-                    "myTeamSpeak 身份。登录凭据只保存在本应用的私有目录，退出登录即删除。",
+                text = "登录后可读取云端书签，连接时展示 myTeamSpeak 身份。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -531,13 +517,28 @@ private fun AccountSection(
             } else {
                 TextButton(onClick = { onShowOtpChange(true) }) { Text("需要两步验证码？") }
             }
-            if (busy) InlineBusy(account)
             Button(
                 onClick = onLogin,
                 enabled = email.isNotBlank() && password.isNotBlank() && !busy,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             ) {
-                Text(if (busy) "正在登录…" else "登录")
+                if (busy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                    )
+                }
+                Text(
+                    text = if (busy) {
+                        account.progress.ifEmpty { "正在${commandLabel(account.command)}…" }
+                    } else {
+                        "登录"
+                    },
+                    modifier = Modifier.padding(start = if (busy) 8.dp else 0.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -559,25 +560,17 @@ private fun AccountSection(
 
 
 
-@Composable
-private fun InlineBusy(account: AccountState) {
-    LinearProgressIndicator(
-        modifier = Modifier.fillMaxWidth().height(2.dp),
-    )
-    Text(
-        text = account.progress.ifEmpty { "正在${commandLabel(account.command)}…" },
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
-
 private fun commandLabel(command: String): String = when (command) {
     "account_login" -> "登录"
     "account_logout" -> "退出登录"
+    "account_resume" -> "恢复登录"
     "account_refresh" -> "刷新"
+    "identity_pick" -> "选择身份"
     "sync_list" -> "读取书签"
     "sync_backup" -> "备份"
     "sync_bookmark_create" -> "创建书签"
+    "sync_bookmark_edit" -> "编辑书签"
+    "sync_bookmark_move" -> "调整书签顺序"
     "sync_delete" -> "删除同步项"
     "sync_restore" -> "恢复"
     "sync_merge" -> "比对"
@@ -640,7 +633,7 @@ private fun BatterySettingsRow() {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = "后台运行", style = MaterialTheme.typography.bodyMedium)
             Text(
-                text = "被系统清理时在这里允许",
+                text = "在系统设置中允许",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -742,18 +735,20 @@ private fun FocusOption(label: String, current: String, value: String, onPick: (
 @Composable
 private fun ToggleRow(
     label: String,
-    hint: String,
     checked: Boolean,
     onChange: (Boolean) -> Unit,
+    hint: String? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = label, style = MaterialTheme.typography.bodyMedium)
-            Text(
-                text = hint,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (hint != null) {
+                Text(
+                    text = hint,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         Switch(checked = checked, onCheckedChange = onChange)
     }

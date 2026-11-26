@@ -23,7 +23,6 @@ import dev.tsdroid.model.ChatMessage
 import dev.tsdroid.model.ChatScope
 import dev.tsdroid.model.FileEntry
 import dev.tsdroid.model.ServerEvent
-import dev.tsdroid.model.ServerState
 import dev.tsdroid.model.Transfer
 import dev.tsdroid.model.TransferDirection
 import dev.tsdroid.model.TransferState
@@ -940,7 +939,11 @@ class SessionController(
                             error = event.message,
                         ),
                     ),
-                    toast = "传输失败：${event.name}",
+                    toast = if (event.message.isBlank()) {
+                        "传输失败：${event.name}"
+                    } else {
+                        "传输失败：${event.name}（${event.message}）"
+                    },
                 )
 
                 else -> current

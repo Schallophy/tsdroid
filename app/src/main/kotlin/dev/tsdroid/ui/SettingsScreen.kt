@@ -48,11 +48,12 @@ import dev.tsdroid.model.AccountState
 import dev.tsdroid.ui.components.MemberAvatar
 
 /**
- * Settings, grouped into five sections: 通用 / 语音 / 聊天 / 文件 / 账号.
+ * Settings, grouped into five sections: 账号 / 连接 / 语音 / 聊天 / 文件.
  *
  * Each section is one rounded container, the same card language the rest of
- * the app uses. The account is the last section: it holds the login and the
- * read-only identity display — the identity is never a choice the user makes
+ * the app uses. The account is first because it is the one thing a new install
+ * needs before anything else, and it holds the login and the read-only identity
+ * display — the identity is never a choice the user makes
  * here, it is simply shown as the one the client automatically adopted.
  */
 @Composable
@@ -162,8 +163,8 @@ fun SettingsScreen(vm: SessionViewModel) {
             onDismissLogout = { confirmLogout = false },
         )
 
-        // ── 通用 ──────────────────────────────────────────────────────────
-        Section("通用") {
+        // ── 连接 ──────────────────────────────────────────────────────────
+        Section("连接") {
             // The announced client version. Global: one choice for every server.
             // Both fields are picked from the signed pairs the native side
             // offers, so the selection cannot name a version it has no

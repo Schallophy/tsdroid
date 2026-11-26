@@ -153,7 +153,6 @@ fun SettingsScreen(vm: SessionViewModel) {
             onShowOtpChange = { showOtp = it },
             onPasswordVisibleChange = { passwordVisible = it },
             onLogin = { run { vm.accountLogin(email, password, otp) } },
-            onRefresh = { run { vm.accountRefresh() } },
             onLogout = { confirmLogout = true },
             confirmLogout = confirmLogout,
             onConfirmLogout = {
@@ -383,7 +382,6 @@ private fun AccountSection(
     onShowOtpChange: (Boolean) -> Unit,
     onPasswordVisibleChange: (Boolean) -> Unit,
     onLogin: () -> Unit,
-    onRefresh: () -> Unit,
     onLogout: () -> Unit,
     confirmLogout: Boolean,
     onConfirmLogout: () -> Unit,
@@ -419,7 +417,6 @@ private fun AccountSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                TextButton(onClick = onRefresh, enabled = !busy) { Text("刷新") }
                 TextButton(onClick = onLogout, enabled = !busy) { Text("退出登录") }
                 if (busy) {
                     CircularProgressIndicator(

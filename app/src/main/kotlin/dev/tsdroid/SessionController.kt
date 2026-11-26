@@ -623,8 +623,6 @@ class SessionController(
 
     fun accountLogout(): String? = account.logout()
 
-    fun accountRefresh(): String? = account.refreshAccount()
-
     fun accountBackup(): String? = account.backup()
 
     /**

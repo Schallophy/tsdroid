@@ -384,7 +384,6 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun accountLogin(email: String, password: String, otp: String = ""): String? =
         account.login(email.trim(), password, otp.trim())
     fun accountLogout(): String? = account.logout()
-    fun accountRefresh(): String? = account.refreshAccount()
     fun accountBackup(): String? = account.backup()
     fun accountBookmarkSecrets(uuid: String): BookmarkSecrets? = account.bookmarkSecrets(uuid)
     /**

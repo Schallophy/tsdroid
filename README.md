@@ -158,8 +158,9 @@ There is no separate "install into the app" step any more: Gradle compiles the
 submodule itself, so a hand-built `.so` is only an artifact to inspect.
 
 Both paths share the same cargo cache (`third_party/tsbridge/target`), so the
-first build pays the cold cost (~3 min) and later ones are incremental (~15 s if
-nothing under the submodule changed — the task is `UP-TO-DATE`).
+first build pays the cold cost and later ones are incremental — and when
+nothing under the submodule changed, the Gradle task is a cache hit and cargo
+does not run at all.
 
 License texts for the statically linked third-party code (tsclientlib, Opus,
 aws-lc) are copied from tsbridge's `NOTICE` into `app/src/main/assets/licenses/`
@@ -211,13 +212,13 @@ Two jobs, both `ubuntu-latest`:
 Both jobs cache what they can. Gradle User Home — the distribution, the
 dependencies and the local build cache — is restored by setup-gradle, and
 `buildTsbridgeJni` is a `@CacheableTask`, so a push that does not move the
-submodule restores the compiled `.so` rather than spending 80 s rebuilding it.
-A cold run is what happens when the submodule or a lockfile changes.
+submodule restores the compiled `.so` instead of rebuilding it. A cold run is
+what happens when the submodule or a lockfile changes.
 
 There is no emulator job: there are no instrumentation tests to run, and a
-booted emulator would cost ten minutes to prove nothing the JVM suite does not
-already pin. `build.gradle.kts` prefers `ANDROID_NDK_HOME` over "newest NDK in
-the SDK", so CI and a local build never compile against different sysroots.
+booted emulator would cost minutes per run to prove nothing the JVM suite does
+not already pin. `build.gradle.kts` prefers `ANDROID_NDK_HOME` over "newest NDK
+in the SDK", so CI and a local build never compile against different sysroots.
 
 ## Known gaps
 

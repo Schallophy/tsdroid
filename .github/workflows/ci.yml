@@ -15,11 +15,11 @@ name: CI
 # re-downloading rather than compiling. Gradle User Home (distribution,
 # dependencies, build cache) is cached by setup-gradle, and `buildTsbridgeJni` is
 # a `@CacheableTask`, so a run where the submodule did not move restores the
-# compiled `.so` instead of spending 80 s rebuilding it.
+# compiled `.so` instead of rebuilding it.
 #
 # Deliberately absent: an emulator job. There is no instrumentation test to run,
-# and a booted emulator would cost ten minutes to prove nothing the JVM suite
-# does not already pin.
+# and a booted emulator would cost minutes per run to prove nothing the JVM
+# suite does not already pin.
 
 on:
   push:

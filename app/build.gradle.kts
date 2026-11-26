@@ -31,10 +31,10 @@ plugins {
  * copy is one forgotten step away from shipping stale code.
  *
  * Inputs and outputs are declared so Gradle skips the task when nothing under
- * the submodule changed — an incremental cargo build is ~80 s, a no-op has to
- * be ~0. Skipping is only safe because the output is *deleted* first inside the
- * task: a failed build leaves no `.so`, rather than the previous one wearing the
- * new code's name.
+ * the submodule changed — the release build is the slowest step in the project,
+ * and a no-op has to be ~0. Skipping is only safe because the output is
+ * *deleted* first inside the task: a failed build leaves no `.so`, rather than
+ * the previous one wearing the new code's name.
  *
  * `@CacheableTask` is what makes a fresh CI runner skip it too: a new runner has
  * no task history, so only the build cache can say "this exact input set already

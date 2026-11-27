@@ -103,6 +103,7 @@ fun ChannelsTab(
                 current = current,
                 hasChildren = hasChildren,
                 expanded = expanded,
+                whispering = channel.id in ui.state.whisperChannels,
                 onToggle = { collapsed[channel.id] = expanded },
                 onJoin = {
                     if (channel.hasPassword) {
@@ -125,6 +126,7 @@ fun ChannelsTab(
                     // say that something is waiting there.
                     unread = ui.unreadPrivate[member.id] ?: 0,
                     titles = ui.state.titlesFor(member),
+                    whispering = member.id in ui.state.whisperClients,
                     onClick = { onSelectUser(member) },
                 )
             }
@@ -166,6 +168,7 @@ private fun ChannelRow(
     current: Boolean,
     hasChildren: Boolean,
     expanded: Boolean,
+    whispering: Boolean,
     onToggle: () -> Unit,
     onJoin: () -> Unit,
 ) {
@@ -234,6 +237,10 @@ private fun ChannelRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
+        if (whispering) {
+            WhisperMark()
+            Spacer(6.dp)
+        }
         if (memberCount > 0) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -252,6 +259,17 @@ private fun ChannelRow(
     }
 }
 
+/** The official client draws a whisper mark beside a person or channel. */
+@Composable
+private fun WhisperMark() {
+    Text(
+        text = "密",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 6.dp),
+    )
+}
+
 @Composable
 private fun MemberRow(
     member: User,
@@ -260,6 +278,7 @@ private fun MemberRow(
     unread: Int,
     /** Group titles to draw after the name; empty when the server named none. */
     titles: List<GroupEntry>,
+    whispering: Boolean,
     onClick: () -> Unit,
 ) {
     Row(
@@ -294,6 +313,9 @@ private fun MemberRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
+        if (whispering) {
+            WhisperMark()
+        }
         // Titles sit after the name and before the unread badge, in the order
         // the desktop client uses: channel group, then server groups. Each is
         // drawn only when it exists, so a member with neither gets no gap.

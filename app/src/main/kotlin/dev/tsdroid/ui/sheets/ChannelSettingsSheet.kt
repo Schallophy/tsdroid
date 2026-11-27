@@ -33,11 +33,10 @@ import androidx.compose.ui.unit.dp
 import dev.tsdroid.model.Channel
 import kotlin.math.roundToInt
 
+// TeamSpeak Server 3.11.0 migrated channels using the deprecated Speex/CELT
+// codecs to Opus and removed the ability to select them; 3.13.9 only accepts
+// Opus. Offering the dead values would be a button that the server refuses.
 private val CODECS = listOf(
-    "speex_narrowband" to "Speex NB",
-    "speex_wideband" to "Speex WB",
-    "speex_ultrawideband" to "Speex UWB",
-    "celt_mono" to "CELT",
     "opus_voice" to "Opus Voice",
     "opus_music" to "Opus Music",
 )

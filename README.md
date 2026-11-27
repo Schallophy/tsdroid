@@ -32,10 +32,10 @@ nothing here has to be re-derived to support another desktop.
 | **Identity** | the session's key is written to `identity.ini`, so the UID survives a restart |
 | **Account** | myTeamSpeak login (password + optional OTP), remembered login, cloud bookmarks that fill the connect form (passwords read on demand), backup, logout; the myTS ID is announced on connect |
 
-Not yet implemented: the non-Opus codecs (Speex/CELT). The product target is
-parity with the official client, so this is open work rather than a permanent
-omission. If it turns out to need a private API, the evidence and the
-consequence belong in `docs/`; it is not a reason to stop short of the rest.
+The channel codec list is Opus Voice and Opus Music only. TeamSpeak Server
+3.11.0 migrated channels using the deprecated Speex/CELT codecs to Opus and
+removed them from channel creation/editing; 3.13.9 rejects them. Carrying those
+codecs would be a setting the official server no longer accepts.
 
 The account side runs on its own native handle, so signing in, reading bookmarks
 and backing them up work before any server is joined. The same handle is handed

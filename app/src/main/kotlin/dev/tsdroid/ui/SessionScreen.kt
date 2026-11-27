@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -44,6 +47,7 @@ import dev.tsdroid.ui.components.StatusDot
 import dev.tsdroid.ui.components.inputStatusIcon
 import dev.tsdroid.ui.components.outputStatusIcon
 import dev.tsdroid.ui.sheets.ChannelSettingsSheet
+import dev.tsdroid.ui.sheets.ServerSettingsSheet
 import dev.tsdroid.ui.sheets.UserSheet
 import dev.tsdroid.ui.sheets.WhisperSheet
 
@@ -65,6 +69,7 @@ fun SessionScreen(
     val ui by vm.ui.collectAsStateWithLifecycle()
     var sheetUser by remember { mutableStateOf<User?>(null) }
     var whisperOpen by remember { mutableStateOf(false) }
+    var serverSettingsOpen by remember { mutableStateOf(false) }
     var editChannel by remember { mutableStateOf<Channel?>(null) }
 
     // The server never reports our own voice, so the core derives this from the
@@ -79,6 +84,7 @@ fun SessionScreen(
             connected = ui.status == SessionStatus.Online,
             onDisconnect = vm::disconnect,
             onWhisper = { whisperOpen = true },
+            onServerSettings = { serverSettingsOpen = true },
         )
 
         Box(modifier = Modifier.weight(1f)) {
@@ -152,6 +158,24 @@ fun SessionScreen(
             onDismiss = { whisperOpen = false },
             onApply = { clients, channels, groups ->
                 vm.setWhisperTargets(clients, channels, groups)
+            },
+        )
+    }
+
+    if (serverSettingsOpen) {
+        ServerSettingsSheet(
+            server = ui.state.server,
+            onDismiss = { serverSettingsOpen = false },
+            onApply = { name, welcome, maxClients, password, hostMessage, hostBanner, level ->
+                vm.editServer(
+                    name = name,
+                    welcomeMessage = welcome,
+                    maxClients = maxClients,
+                    password = password,
+                    hostMessage = hostMessage,
+                    hostBannerUrl = hostBanner,
+                    neededSecurityLevel = level,
+                )
             },
         )
     }
@@ -239,6 +263,7 @@ private fun ServerHeader(
     connected: Boolean,
     onDisconnect: () -> Unit,
     onWhisper: () -> Unit,
+    onServerSettings: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -266,6 +291,14 @@ private fun ServerHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+        IconButton(onClick = onServerSettings) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "服务器设置",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp),
+            )
         }
         // Whisper is a first-class voice mode in the official client; the
         // target picker is one tap from the header rather than a settings page.

@@ -713,6 +713,42 @@ class SessionController(
         setToast("频道设置已更新")
     }
 
+    fun editServer(
+        name: String,
+        welcomeMessage: String,
+        maxClients: Int,
+        password: String,
+        hostMessage: String,
+        hostBannerUrl: String,
+        neededSecurityLevel: Int,
+    ) {
+        val properties = buildMap<String, Any?> {
+            if (password.isNotBlank()) {
+                put("virtualserver_password", password)
+                put("virtualserver_flag_password", true)
+            }
+            if (hostMessage.isNotBlank()) {
+                put("virtualserver_hostmessage", hostMessage)
+            }
+            if (hostBannerUrl.isNotBlank()) {
+                put("virtualserver_hostbanner_url", hostBannerUrl)
+            }
+            put(
+                "virtualserver_needed_identity_security_level",
+                neededSecurityLevel.coerceIn(0, 255),
+            )
+        }
+        client?.editServer(
+            mapOf(
+                "name" to name.trim(),
+                "welcomeMessage" to welcomeMessage,
+                "maxClients" to maxClients,
+                "properties" to properties,
+            ),
+        )
+        setToast("服务器设置已更新")
+    }
+
     private fun codecNumber(codec: String): Int = when (codec) {
         "speex_narrowband" -> 0
         "speex_wideband" -> 1

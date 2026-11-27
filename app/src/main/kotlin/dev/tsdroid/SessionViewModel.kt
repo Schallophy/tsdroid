@@ -346,6 +346,26 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun toggleSpeaker() = withController { it.toggleSpeaker() }
     fun setAway(away: Boolean, message: String = "") = withController { it.setAway(away, message) }
     fun setNickname(nickname: String) = withController { it.setNickname(nickname) }
+    fun editServer(
+        name: String,
+        welcomeMessage: String,
+        maxClients: Int,
+        password: String,
+        hostMessage: String,
+        hostBannerUrl: String,
+        neededSecurityLevel: Int,
+    ) = withController {
+        it.editServer(
+            name = name,
+            welcomeMessage = welcomeMessage,
+            maxClients = maxClients,
+            password = password,
+            hostMessage = hostMessage,
+            hostBannerUrl = hostBannerUrl,
+            neededSecurityLevel = neededSecurityLevel,
+        )
+    }
+
     fun editChannel(
         channelId: Long,
         name: String,

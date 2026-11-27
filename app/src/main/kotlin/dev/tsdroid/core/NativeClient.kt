@@ -268,6 +268,9 @@ class NativeClient(
     fun editChannel(channelId: Long, args: Map<String, Any?>) =
         exec("channel_edit", mapOf("channelId" to channelId) + args)
 
+    /** Edit this server; `args` carries the typed fields and raw `properties`. */
+    fun editServer(args: Map<String, Any?>) = exec("server_edit", args)
+
     fun listFiles(channelId: Long, path: String = "/") =
         exec("list_files", mapOf("channelId" to channelId, "path" to path))
 

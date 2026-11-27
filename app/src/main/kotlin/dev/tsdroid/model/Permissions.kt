@@ -20,6 +20,8 @@ data class PermissionTarget(
     val kind: String,
     val id: Long,
     val title: String,
+    /** The channel for a channel-client target; 0 otherwise. */
+    val secondaryId: Long = 0,
 )
 
 /**

@@ -53,6 +53,7 @@ fun UserSheet(
     whispering: Boolean,
     onWhisper: (Boolean) -> Unit,
     onPermissions: () -> Unit,
+    onChannelPermissions: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val isSelf = user.id == ownClientId
@@ -130,6 +131,9 @@ fun UserSheet(
                 }
                 OutlinedButton(onClick = onPermissions) {
                     Text("权限")
+                }
+                OutlinedButton(onClick = onChannelPermissions) {
+                    Text("频道内权限")
                 }
             }
 

@@ -163,6 +163,15 @@ fun SessionScreen(
                 )
                 sheetUser = null
             },
+            onChannelPermissions = {
+                permissionTarget = PermissionTarget(
+                    kind = "channel_client",
+                    id = user.databaseId,
+                    title = "频道内权限 · ${user.nickname}",
+                    secondaryId = user.channelId,
+                )
+                sheetUser = null
+            },
         )
     }
 

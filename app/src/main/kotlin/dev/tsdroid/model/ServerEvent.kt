@@ -372,6 +372,12 @@ sealed interface ServerEvent {
         override val type = "icon_failed"
     }
 
+    data class BanListCount(
+        val count: Long = 0L,
+    ) : ServerEvent {
+        override val type = "ban_list_count"
+    }
+
     data class BanListed(
         val banId: Long = 0L,
         val ip: String = "",
@@ -471,6 +477,12 @@ sealed interface ServerEvent {
 
     data object TempPasswordListDone : ServerEvent {
         override val type = "temp_password_list_done"
+    }
+
+    data class ClientDbListCount(
+        val count: Long = 0L,
+    ) : ServerEvent {
+        override val type = "client_db_list_count"
     }
 
     data class ClientDbEntry(
@@ -1070,6 +1082,7 @@ sealed interface ServerEvent {
         is ChannelUpdated -> "channel_updated"
         is IconReady -> "icon_ready " + path
         is IconFailed -> "icon_failed " + message
+        is BanListCount -> "ban_list_count " + count
         is BanListed -> "ban_listed " + name
         is BanListDone -> "ban_list_done"
         is ComplaintListed -> "complaint_listed " + message
@@ -1083,6 +1096,7 @@ sealed interface ServerEvent {
         is ChannelPermissionListDone -> "channel_permission_list_done"
         is TempPasswordListed -> "temp_password_listed " + nickname
         is TempPasswordListDone -> "temp_password_list_done"
+        is ClientDbListCount -> "client_db_list_count " + count
         is ClientDbEntry -> "client_db_entry " + nickname
         is ClientDbListDone -> "client_db_list_done"
         is ClientDbInfo -> "client_db_info " + nickname
@@ -1414,6 +1428,8 @@ sealed interface ServerEvent {
                     message = str(map, "message"),
                 )
 
+                "ban_list_count" -> BanListCount(count = long(map, "count"))
+
                 "ban_listed" -> BanListed(
                     banId = long(map, "ban_id"),
                     ip = str(map, "ip"),
@@ -1488,6 +1504,8 @@ sealed interface ServerEvent {
                 )
 
                 "temp_password_list_done" -> TempPasswordListDone
+
+                "client_db_list_count" -> ClientDbListCount(count = long(map, "count"))
 
                 "client_db_entry" -> ClientDbEntry(
                     clientDbId = long(map, "client_db_id"),

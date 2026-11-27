@@ -491,6 +491,7 @@ class ServerEventTest {
             "icon_id" to 1L,
             "message" to "v",
         ),
+        "ban_list_count" to mapOf("type" to "ban_list_count", "count" to 1L),
         "ban_listed" to mapOf(
             "type" to "ban_listed",
             "ban_id" to 1L,
@@ -560,6 +561,7 @@ class ServerEventTest {
             "channel_id" to 1L,
         ),
         "temp_password_list_done" to mapOf("type" to "temp_password_list_done"),
+        "client_db_list_count" to mapOf("type" to "client_db_list_count", "count" to 1L),
         "client_db_entry" to mapOf(
             "type" to "client_db_entry",
             "client_db_id" to 1L,

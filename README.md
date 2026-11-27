@@ -25,14 +25,16 @@ nothing here has to be re-derived to support another desktop.
 | **Voice** | Opus 24 kbps mono both ways, 20 ms frames, jitter buffer + PLC |
 | **Files** | browse a channel, download, upload, live transfer progress |
 | **Audio** | noise suppression, echo cancellation, mic gain, speaker boost, optional Bluetooth mic |
+| **Volume** | per-user playback volume, 0–200%, keyed by UID so it survives a reconnect |
+| **Whisper** | client targets from the member sheet; the core carries the whole target set |
 | **Identity** | the session's key is written to `identity.ini`, so the UID survives a restart |
 | **Account** | myTeamSpeak login (password + optional OTP), remembered login, cloud bookmarks that fill the connect form (passwords read on demand), backup, logout; the myTS ID is announced on connect |
 
-Not yet implemented: whisper (密聊), per-user volume, permission editing. The
-product target is parity with the official client, so these are open work rather
-than permanent omissions. If one of them turns out to need a private API, the
-evidence and the consequence belong in `docs/`; they are not a reason to stop
-short of the rest.
+Not yet implemented: whisper channel and group targets, permission editing, and
+the channel/server settings surfaces. The product target is parity with the
+official client, so these are open work rather than permanent omissions. If one
+of them turns out to need a private API, the evidence and the consequence belong
+in `docs/`; they are not a reason to stop short of the rest.
 
 The account side runs on its own native handle, so signing in, reading bookmarks
 and backing them up work before any server is joined. The same handle is handed

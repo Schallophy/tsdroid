@@ -72,20 +72,26 @@ data class ServerState(
     fun user(clientId: Int?): User? = users.firstOrNull { it.id == clientId }
 
     /**
-     * The group titles a member wears, in the order the desktop client draws
+     * The groups a member actually wears, in the order the desktop client draws
      * them: channel group first, then server groups.
      *
      * Ids are resolved against [channelGroups] and [serverGroups]; an id that
      * has no name yet (the group list has not arrived, or the account may not
      * see it) is dropped rather than drawn as a number.
+     *
+     * Template groups are filtered out. `servergrouplist` returns them alongside
+     * the regular ones under the same names, and a template is a blueprint for
+     * new virtual servers — no client is ever a member, so it can only be a
+     * lookup that silently matched the wrong entry.
      */
-    fun titlesFor(member: User): List<String> {
-        val titles = ArrayList<String>(member.serverGroups.size + 1)
+    fun titlesFor(member: User): List<GroupEntry> {
+        val titles = ArrayList<GroupEntry>(member.serverGroups.size + 1)
         if (member.channelGroup != 0L) {
-            channelGroups.firstOrNull { it.id == member.channelGroup }?.let { titles += it.name }
+            channelGroups.firstOrNull { it.id == member.channelGroup && it.groupType != GroupEntry.TEMPLATE }
+                ?.let { titles += it }
         }
         for (id in member.serverGroups) {
-            serverGroups.firstOrNull { it.id == id }?.let { titles += it.name }
+            serverGroups.firstOrNull { it.id == id && it.groupType != GroupEntry.TEMPLATE }?.let { titles += it }
         }
         return titles
     }
@@ -220,4 +226,23 @@ data class Server(
 
 /** One server group, by id and name. */
 @Serializable
-data class GroupEntry(val id: Long = 0, val name: String = "")
+data class GroupEntry(
+    val id: Long = 0,
+    val name: String = "",
+    /**
+     * Which kind of group this is: `template`, `regular` or `query`.
+     *
+     * A group list carries all three, and a template group has the same name as
+     * the regular group it is the blueprint for — two `Server Admin` entries,
+     * only one of which a client can be in. Defaults to `regular` so a snapshot
+     * from a library that predates the field reads as the ordinary case.
+     */
+    val groupType: String = "regular",
+    /** The group's icon id, or `0` when it has none. */
+    val iconId: Long = 0,
+) {
+    companion object {
+        /** The `groupType` value of a blueprint group, which no member wears. */
+        const val TEMPLATE = "template"
+    }
+}

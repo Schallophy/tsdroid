@@ -1,5 +1,6 @@
 package dev.tsdroid.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,12 +36,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.tsdroid.SessionUiState
+import dev.tsdroid.R
 import dev.tsdroid.model.Channel
+import dev.tsdroid.model.GroupEntry
 import dev.tsdroid.model.User
 import dev.tsdroid.ui.components.MemberStatusBadge
 
@@ -255,7 +259,7 @@ private fun MemberRow(
     talking: Boolean,
     unread: Int,
     /** Group titles to draw after the name; empty when the server named none. */
-    titles: List<String>,
+    titles: List<GroupEntry>,
     onClick: () -> Unit,
 ) {
     Row(
@@ -319,18 +323,50 @@ private fun MemberRow(
 
 /** One group title, drawn small and quiet so a row of them stays readable. */
 @Composable
-private fun GroupTag(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+private fun GroupTag(group: GroupEntry) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(RoundedCornerShape(3.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(horizontal = 4.dp, vertical = 1.dp),
-    )
+    ) {
+        // The icon pack carries the five group marks a stock server uses, keyed
+        // by the same `iconid` the server reports. A group with no icon, or one
+        // whose id this build has no picture for, is drawn as its name alone.
+        groupIcon(group.iconId)?.let { icon ->
+            Image(
+                painter = painterResource(icon),
+                contentDescription = null,
+                modifier = Modifier.size(12.dp),
+            )
+            Spacer(3.dp)
+        }
+        Text(
+            text = group.name,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * The bundled picture for a server's group icon id, or null when there is none.
+ *
+ * These are the ids a stock server assigns: `100` Channel Admin, `200` Operator,
+ * `300` Server Admin, `500` Admin Server Query, `600` Voice. A server may set any
+ * id it likes on its own groups, and those are fetched as server files rather
+ * than bundled, so an unknown id is ordinary and must not be an error.
+ */
+private fun groupIcon(iconId: Long): Int? = when (iconId) {
+    100L -> R.drawable.icon_group_100
+    200L -> R.drawable.icon_group_200
+    300L -> R.drawable.icon_group_300
+    500L -> R.drawable.icon_group_500
+    600L -> R.drawable.icon_group_600
+    else -> null
 }
 
 @Composable

@@ -142,7 +142,10 @@ class ServerStateTest {
         )
         val member = User(channelGroup = 5, serverGroups = listOf(6, 8))
 
-        assertEquals(listOf("Voice", "Server Admin", "Guest"), state.titlesFor(member))
+        assertEquals(
+            listOf("Voice", "Server Admin", "Guest"),
+            state.titlesFor(member).map { it.name },
+        )
     }
 
     /**
@@ -159,7 +162,7 @@ class ServerStateTest {
         )
         val member = User(channelGroup = 5, serverGroups = listOf(6, 8))
 
-        assertEquals(listOf("Guest"), state.titlesFor(member))
+        assertEquals(listOf("Guest"), state.titlesFor(member).map { it.name })
     }
 
     /**
@@ -175,7 +178,64 @@ class ServerStateTest {
             serverGroups = listOf(GroupEntry(id = 8, name = "Guest")),
         )
 
-        assertEquals(emptyList<String>(), state.titlesFor(User()))
+        assertEquals(emptyList<String>(), state.titlesFor(User()).map { it.name })
+    }
+
+    /**
+     * A template group is never drawn, even when its id somehow matches.
+     *
+     * `servergrouplist` returns template groups under the same names as the
+     * regular groups they are blueprints for. No client is ever a member, so a
+     * match means the lookup found the wrong entry — drawing it would label a
+     * member with a group that does not exist for them.
+     */
+    @Test
+    fun aTemplateGroupIsNeverDrawn() {
+        val state = ServerState(
+            channelGroups = listOf(
+                GroupEntry(id = 1, name = "Channel Admin", groupType = GroupEntry.TEMPLATE),
+                GroupEntry(id = 5, name = "Channel Admin"),
+            ),
+            serverGroups = listOf(
+                GroupEntry(id = 3, name = "Server Admin", groupType = GroupEntry.TEMPLATE),
+                GroupEntry(id = 6, name = "Server Admin"),
+            ),
+        )
+
+        // The regular ids resolve; the template ids resolve to nothing.
+        assertEquals(
+            listOf("Channel Admin", "Server Admin"),
+            state.titlesFor(User(channelGroup = 5, serverGroups = listOf(6))).map { it.name },
+        )
+        assertEquals(
+            emptyList<String>(),
+            state.titlesFor(User(channelGroup = 1, serverGroups = listOf(3))).map { it.name },
+        )
+    }
+
+    /**
+     * The group icon id comes through so the row can draw the group's mark.
+     *
+     * A stock server sets `iconid=300` on Server Admin and `iconid=0` on Guest;
+     * the row keys its bundled pictures off this value, so a dropped field would
+     * silently draw every group as text.
+     */
+    @Test
+    fun theGroupIconIdSurvivesTheSnapshot() {
+        val json = Json { ignoreUnknownKeys = true }
+        val state = json.decodeFromString<ServerState>(
+            """
+            {
+              "serverGroups": [
+                { "id": 6, "name": "Server Admin", "groupType": "regular", "iconId": 300 },
+                { "id": 8, "name": "Guest", "groupType": "regular", "iconId": 0 }
+              ]
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(300L, state.serverGroups.first { it.id == 6L }.iconId)
+        assertEquals(0L, state.serverGroups.first { it.id == 8L }.iconId)
     }
 
     /**
@@ -202,6 +262,9 @@ class ServerStateTest {
 
         assertEquals(5L, state.users.single().channelGroup)
         assertEquals(listOf(6L), state.users.single().serverGroups)
-        assertEquals(listOf("Voice", "Server Admin"), state.titlesFor(state.users.single()))
+        assertEquals(
+            listOf("Voice", "Server Admin"),
+            state.titlesFor(state.users.single()).map { it.name },
+        )
     }
 }

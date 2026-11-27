@@ -48,8 +48,27 @@ sealed interface ServerEvent {
     data class CommandFailure(
         val message: String,
         val missingPermission: String,
+        /**
+         * Ties this failure to the command that caused it.
+         *
+         * `0` when the failure was detected locally and no command was involved;
+         * the same number is on the matching [CommandOk].
+         */
+        val commandId: Int = 0,
     ) : ServerEvent {
         override val type = "command_error"
+    }
+
+    /**
+     * The server accepted a command.
+     *
+     * A successful command produces no other event, so this is the only signal
+     * that a write actually went through. Without it a shell can only wait and
+     * hope, which is why a failed delete used to look identical to one that
+     * worked.
+     */
+    data class CommandOk(val commandId: Int = 0) : ServerEvent {
+        override val type = "command_ok"
     }
 
     data class UserJoined(
@@ -1008,7 +1027,8 @@ sealed interface ServerEvent {
         is Disconnected -> "disconnected"
         is Reconnecting -> "reconnecting…"
         is Failure -> "error[$kind] $message"
-        is CommandFailure -> "command failed: $message"
+        is CommandFailure -> "command $commandId failed: $message"
+        is CommandOk -> "command $commandId ok"
         is UserJoined -> "+ $nickname"
         is UserLeft -> "- $nickname"
         is UserMoved -> "→ $nickname"
@@ -1173,7 +1193,11 @@ sealed interface ServerEvent {
                 "command_error" -> CommandFailure(
                     message = str(map, "message"),
                     missingPermission = str(map, "missing_permission"),
+                    // Absent for a failure detected locally, which is the same
+                    // "no command to blame" case the docs describe.
+                    commandId = int(map, "command_id"),
                 )
+                "command_ok" -> CommandOk(commandId = int(map, "command_id"))
 
                 "user_joined" -> UserJoined(
                     clientId = int(map, "client_id"),

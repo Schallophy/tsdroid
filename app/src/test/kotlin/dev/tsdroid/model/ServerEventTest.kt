@@ -282,6 +282,7 @@ class ServerEventTest {
             "missing_permission" to "",
             "command_id" to 3,
         ),
+        "command_ok" to mapOf("type" to "command_ok", "command_id" to 7),
         "user_joined" to mapOf(
             "type" to "user_joined",
             "client_id" to 2,

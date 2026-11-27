@@ -346,6 +346,39 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun toggleSpeaker() = withController { it.toggleSpeaker() }
     fun setAway(away: Boolean, message: String = "") = withController { it.setAway(away, message) }
     fun setNickname(nickname: String) = withController { it.setNickname(nickname) }
+    fun editChannel(
+        channelId: Long,
+        name: String,
+        topic: String,
+        maxClients: Int,
+        maxFamilyClients: Int,
+        neededTalkPower: Int,
+        codec: String,
+        codecQuality: Int,
+        codecLatencyFactor: Int,
+        deleteDelay: Long,
+        isDefault: Boolean,
+        isPermanent: Boolean,
+        isSemiPermanent: Boolean,
+        password: String,
+    ) = withController {
+        it.editChannel(
+            channelId = channelId,
+            name = name,
+            topic = topic,
+            maxClients = maxClients,
+            maxFamilyClients = maxFamilyClients,
+            neededTalkPower = neededTalkPower,
+            codec = codec,
+            codecQuality = codecQuality,
+            codecLatencyFactor = codecLatencyFactor,
+            deleteDelay = deleteDelay,
+            isDefault = isDefault,
+            isPermanent = isPermanent,
+            isSemiPermanent = isSemiPermanent,
+            password = password,
+        )
+    }
     fun applyAudioSettings(gain: Float, noiseSuppression: Boolean, bluetoothMic: Boolean) =
         withController { it.applyAudioSettings(gain, noiseSuppression, bluetoothMic) }
     fun applyOutputGain(gain: Float) = withController { it.applyOutputGain(gain) }

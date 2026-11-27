@@ -213,6 +213,23 @@ data class Channel(
     val topic: String = "",
     /** -1 unlimited, -2 inherited, >= 0 a limit. */
     val maxClients: Int = -1,
+    /** -1 unlimited, -2 inherited, >= 0 a limit. */
+    val maxFamilyClients: Int = -1,
+    /** Lowercase: `speex_narrowband`, `celt_mono`, `opus_voice`, `opus_music`, … */
+    val codec: String = "opus_voice",
+    /** 0–10; higher costs bandwidth. */
+    val codecQuality: Int = 0,
+    /** 1–10 twenty-millisecond frames per packet. */
+    val codecLatencyFactor: Int = 1,
+    /** Seconds before an empty temporary channel disappears; `0` means permanent. */
+    val deleteDelay: Long = 0,
+    /** Talk power needed to speak here; `0` means none. */
+    val neededTalkPower: Int = 0,
+    val forcedSilence: Boolean = false,
+    val isUnencrypted: Boolean = false,
+    val subscribed: Boolean = true,
+    val isPrivate: Boolean = false,
+    val iconId: Long = 0,
     /** File-operation mask from the core; 0 until a listing was requested. */
     val permissionHints: Long = 0,
 )

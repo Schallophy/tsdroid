@@ -264,6 +264,10 @@ class NativeClient(
 
     fun setNickname(nickname: String) = exec("set_nickname", mapOf("nickname" to nickname))
 
+    /** Edit a channel; `args` carries the typed fields and raw `properties`. */
+    fun editChannel(channelId: Long, args: Map<String, Any?>) =
+        exec("channel_edit", mapOf("channelId" to channelId) + args)
+
     fun listFiles(channelId: Long, path: String = "/") =
         exec("list_files", mapOf("channelId" to channelId, "path" to path))
 

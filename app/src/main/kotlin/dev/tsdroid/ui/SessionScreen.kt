@@ -36,12 +36,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.tsdroid.R
 import dev.tsdroid.SessionStatus
 import dev.tsdroid.SessionViewModel
+import dev.tsdroid.model.Channel
 import dev.tsdroid.model.User
 import dev.tsdroid.ui.components.ExitGlyph
 import dev.tsdroid.ui.components.IconPlate
 import dev.tsdroid.ui.components.StatusDot
 import dev.tsdroid.ui.components.inputStatusIcon
 import dev.tsdroid.ui.components.outputStatusIcon
+import dev.tsdroid.ui.sheets.ChannelSettingsSheet
 import dev.tsdroid.ui.sheets.UserSheet
 import dev.tsdroid.ui.sheets.WhisperSheet
 
@@ -63,6 +65,7 @@ fun SessionScreen(
     val ui by vm.ui.collectAsStateWithLifecycle()
     var sheetUser by remember { mutableStateOf<User?>(null) }
     var whisperOpen by remember { mutableStateOf(false) }
+    var editChannel by remember { mutableStateOf<Channel?>(null) }
 
     // The server never reports our own voice, so the core derives this from the
     // capture path (gain, silence gate and a tail). The local meter is only for
@@ -85,6 +88,7 @@ fun SessionScreen(
                     ownTalking = ownTalking,
                     onJoinChannel = vm::joinChannel,
                     onSelectUser = { sheetUser = it },
+                    onEditChannel = { editChannel = it },
                 )
 
                 dev.tsdroid.SessionTab.Chat -> ChatTab(
@@ -148,6 +152,31 @@ fun SessionScreen(
             onDismiss = { whisperOpen = false },
             onApply = { clients, channels, groups ->
                 vm.setWhisperTargets(clients, channels, groups)
+            },
+        )
+    }
+
+    editChannel?.let { channel ->
+        ChannelSettingsSheet(
+            channel = channel,
+            onDismiss = { editChannel = null },
+            onApply = { name, topic, maxClients, maxFamily, neededTalk, codec, quality, latency, deleteDelay, isDefault, isPermanent, isSemiPermanent, password ->
+                vm.editChannel(
+                    channelId = channel.id,
+                    name = name,
+                    topic = topic,
+                    maxClients = maxClients,
+                    maxFamilyClients = maxFamily,
+                    neededTalkPower = neededTalk,
+                    codec = codec,
+                    codecQuality = quality,
+                    codecLatencyFactor = latency,
+                    deleteDelay = deleteDelay,
+                    isDefault = isDefault,
+                    isPermanent = isPermanent,
+                    isSemiPermanent = isSemiPermanent,
+                    password = password,
+                )
             },
         )
     }

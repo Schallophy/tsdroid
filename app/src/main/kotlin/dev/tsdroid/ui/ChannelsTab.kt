@@ -2,7 +2,9 @@ package dev.tsdroid.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +62,7 @@ fun ChannelsTab(
     ui: SessionUiState,
     onJoinChannel: (Long, String?) -> Unit,
     onSelectUser: (User) -> Unit,
+    onEditChannel: (Channel) -> Unit,
     /** Whether the local user is transmitting; the native list never has us. */
     ownTalking: Boolean = false,
 ) {
@@ -104,6 +107,7 @@ fun ChannelsTab(
                 hasChildren = hasChildren,
                 expanded = expanded,
                 whispering = channel.id in ui.state.whisperChannels,
+                onEdit = { onEditChannel(channel) },
                 onToggle = { collapsed[channel.id] = expanded },
                 onJoin = {
                     if (channel.hasPassword) {
@@ -160,6 +164,7 @@ fun ChannelsTab(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChannelRow(
     channel: Channel,
@@ -169,6 +174,7 @@ private fun ChannelRow(
     hasChildren: Boolean,
     expanded: Boolean,
     whispering: Boolean,
+    onEdit: () -> Unit,
     onToggle: () -> Unit,
     onJoin: () -> Unit,
 ) {
@@ -184,7 +190,7 @@ private fun ChannelRow(
             .fillMaxWidth()
             .height(38.dp)
             .background(background)
-            .clickable(onClick = onJoin)
+            .combinedClickable(onClick = onJoin, onLongClick = onEdit)
             .padding(start = (10 + depth * 14).dp, end = 12.dp),
     ) {
         // A left bar marks the channel you are actually in; colour alone would

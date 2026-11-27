@@ -663,6 +663,66 @@ class SessionController(
         setToast("昵称已更新")
     }
 
+    fun editChannel(
+        channelId: Long,
+        name: String,
+        topic: String,
+        maxClients: Int,
+        maxFamilyClients: Int,
+        neededTalkPower: Int,
+        codec: String,
+        codecQuality: Int,
+        codecLatencyFactor: Int,
+        deleteDelay: Long,
+        isDefault: Boolean,
+        isPermanent: Boolean,
+        isSemiPermanent: Boolean,
+        password: String,
+    ) {
+        val properties = buildMap<String, Any?> {
+            put("channel_codec", codecNumber(codec))
+            put("channel_codec_quality", codecQuality.coerceIn(0, 10))
+            put("channel_codec_latency_factor", codecLatencyFactor.coerceIn(1, 10))
+            put("channel_needed_talk_power", neededTalkPower.coerceAtLeast(0))
+            put("channel_delete_delay", deleteDelay.coerceAtLeast(0))
+            put("channel_flag_default", isDefault)
+            put("channel_flag_permanent", isPermanent)
+            put("channel_flag_semi_permanent", isSemiPermanent)
+            if (maxFamilyClients >= 0) {
+                put("channel_maxfamilyclients", maxFamilyClients)
+            } else {
+                put("channel_flag_maxfamilyclients_unlimited", true)
+            }
+            if (maxClients >= 0) {
+                put("channel_flag_maxclients_unlimited", false)
+            } else {
+                put("channel_flag_maxclients_unlimited", true)
+            }
+            if (password.isNotBlank()) {
+                put("channel_password", password)
+                put("channel_flag_password", true)
+            }
+        }
+        val args = buildMap<String, Any?> {
+            put("name", name.trim())
+            put("topic", topic)
+            if (maxClients >= 0) put("maxClients", maxClients)
+            put("properties", properties)
+        }
+        client?.editChannel(channelId, args)
+        setToast("频道设置已更新")
+    }
+
+    private fun codecNumber(codec: String): Int = when (codec) {
+        "speex_narrowband" -> 0
+        "speex_wideband" -> 1
+        "speex_ultrawideband" -> 2
+        "celt_mono" -> 3
+        "opus_voice" -> 4
+        "opus_music" -> 5
+        else -> 4
+    }
+
     fun applyAudioSettings(gain: Float, noiseSuppression: Boolean, bluetoothMic: Boolean) {
         settings.micGain = gain
         settings.noiseSuppression = noiseSuppression

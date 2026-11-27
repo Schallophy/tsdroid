@@ -120,6 +120,7 @@ fun ChannelsTab(
                     // reachable through this member's sheet — so the list has to
                     // say that something is waiting there.
                     unread = ui.unreadPrivate[member.id] ?: 0,
+                    titles = ui.state.titlesFor(member),
                     onClick = { onSelectUser(member) },
                 )
             }
@@ -253,6 +254,8 @@ private fun MemberRow(
     depth: Int,
     talking: Boolean,
     unread: Int,
+    /** Group titles to draw after the name; empty when the server named none. */
+    titles: List<String>,
     onClick: () -> Unit,
 ) {
     Row(
@@ -287,7 +290,15 @@ private fun MemberRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
+        // Titles sit after the name and before the unread badge, in the order
+        // the desktop client uses: channel group, then server groups. Each is
+        // drawn only when it exists, so a member with neither gets no gap.
+        for (title in titles) {
+            Spacer(6.dp)
+            GroupTag(title)
+        }
         if (unread > 0) {
+            Spacer(6.dp)
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -302,9 +313,24 @@ private fun MemberRow(
                     fontWeight = FontWeight.Bold,
                 )
             }
-            Spacer(6.dp)
         }
     }
+}
+
+/** One group title, drawn small and quiet so a row of them stays readable. */
+@Composable
+private fun GroupTag(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .clip(RoundedCornerShape(3.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(horizontal = 4.dp, vertical = 1.dp),
+    )
 }
 
 @Composable

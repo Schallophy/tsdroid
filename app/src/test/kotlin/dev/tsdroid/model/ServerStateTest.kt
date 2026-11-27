@@ -123,4 +123,85 @@ class ServerStateTest {
         )
         assertEquals(false, quiet.server.askPrivilegeKey)
     }
+
+    /**
+     * Titles are drawn channel group first, then server groups.
+     *
+     * This is the order the desktop client uses, and it is the only thing
+     * deciding what a row looks like: the ids alone say nothing about which one
+     * belongs where.
+     */
+    @Test
+    fun titlesRunFromChannelGroupToServerGroups() {
+        val state = ServerState(
+            channelGroups = listOf(GroupEntry(id = 5, name = "Voice")),
+            serverGroups = listOf(
+                GroupEntry(id = 6, name = "Server Admin"),
+                GroupEntry(id = 8, name = "Guest"),
+            ),
+        )
+        val member = User(channelGroup = 5, serverGroups = listOf(6, 8))
+
+        assertEquals(listOf("Voice", "Server Admin", "Guest"), state.titlesFor(member))
+    }
+
+    /**
+     * A title with no name behind it is dropped, not drawn as a number.
+     *
+     * The group list arrives separately from the client list and an account may
+     * not be allowed to see it at all, so an id without a name is ordinary. A
+     * row showing `5` would be worse than a row showing nothing.
+     */
+    @Test
+    fun anUnresolvedTitleIsDroppedRatherThanDrawnAsAnId() {
+        val state = ServerState(
+            serverGroups = listOf(GroupEntry(id = 8, name = "Guest")),
+        )
+        val member = User(channelGroup = 5, serverGroups = listOf(6, 8))
+
+        assertEquals(listOf("Guest"), state.titlesFor(member))
+    }
+
+    /**
+     * A member with no groups gets no titles at all, so the row has no gap.
+     *
+     * `channelGroup = 0` is what the server reports for a client whose group is
+     * not set; it must not resolve to a title or leave a placeholder behind.
+     */
+    @Test
+    fun aMemberWithoutGroupsGetsNoTitles() {
+        val state = ServerState(
+            channelGroups = listOf(GroupEntry(id = 5, name = "Voice")),
+            serverGroups = listOf(GroupEntry(id = 8, name = "Guest")),
+        )
+
+        assertEquals(emptyList<String>(), state.titlesFor(User()))
+    }
+
+    /**
+     * The group tables and the member's channel group arrive under the names the
+     * native snapshot uses.
+     *
+     * Written as JSON rather than constructed directly because the failure this
+     * guards against is a rename on the Rust side: a field Kotlin cannot find
+     * decodes to its default, so the row would quietly lose its titles with no
+     * error anywhere.
+     */
+    @Test
+    fun theGroupTablesDecodeFromTheNativeSnapshot() {
+        val json = Json { ignoreUnknownKeys = true }
+        val state = json.decodeFromString<ServerState>(
+            """
+            {
+              "users": [ { "id": 2, "nickname": "ann", "channelGroup": 5, "serverGroups": [6] } ],
+              "serverGroups": [ { "id": 6, "name": "Server Admin" } ],
+              "channelGroups": [ { "id": 5, "name": "Voice" } ]
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(5L, state.users.single().channelGroup)
+        assertEquals(listOf(6L), state.users.single().serverGroups)
+        assertEquals(listOf("Voice", "Server Admin"), state.titlesFor(state.users.single()))
+    }
 }

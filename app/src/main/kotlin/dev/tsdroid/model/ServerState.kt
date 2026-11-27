@@ -33,6 +33,16 @@ data class ServerState(
     val ownTalking: Boolean = false,
     val users: List<User> = emptyList(),
     /**
+     * Every server group on this server, by id and name.
+     *
+     * A member carries only ids; this is what turns them into titles. Empty
+     * until the server answers the group list, which is also when the account
+     * lacks permission to see it.
+     */
+    val serverGroups: List<GroupEntry> = emptyList(),
+    /** Every channel group on this server, by id and name. See [serverGroups]. */
+    val channelGroups: List<GroupEntry> = emptyList(),
+    /**
      * The groups **this** client holds, already joined with their names.
      * "Am I an admin here" is answered here, not by guessing from the user list.
      */
@@ -60,6 +70,25 @@ data class ServerState(
     fun channel(channelId: Long?): Channel? = channels.firstOrNull { it.id == channelId }
 
     fun user(clientId: Int?): User? = users.firstOrNull { it.id == clientId }
+
+    /**
+     * The group titles a member wears, in the order the desktop client draws
+     * them: channel group first, then server groups.
+     *
+     * Ids are resolved against [channelGroups] and [serverGroups]; an id that
+     * has no name yet (the group list has not arrived, or the account may not
+     * see it) is dropped rather than drawn as a number.
+     */
+    fun titlesFor(member: User): List<String> {
+        val titles = ArrayList<String>(member.serverGroups.size + 1)
+        if (member.channelGroup != 0L) {
+            channelGroups.firstOrNull { it.id == member.channelGroup }?.let { titles += it.name }
+        }
+        for (id in member.serverGroups) {
+            serverGroups.firstOrNull { it.id == id }?.let { titles += it.name }
+        }
+        return titles
+    }
 
     fun filesIn(channelId: Long): List<FileEntry> =
         files.filter { it.channelId == channelId }.sortedWith(
@@ -142,6 +171,12 @@ data class User(
     val talking: Boolean = false,
     /** Server group ids this member holds. Empty for someone with none. */
     val serverGroups: List<Long> = emptyList(),
+    /**
+     * The channel group this member sits in. Every client has exactly one, so
+     * this is a single id rather than a list; `0` means the server has not told
+     * us yet.
+     */
+    val channelGroup: Long = 0,
     /** Raw `client_badges` (e.g. `overwolf=0`); empty when the server sent none. */
     val badges: String = "",
 )

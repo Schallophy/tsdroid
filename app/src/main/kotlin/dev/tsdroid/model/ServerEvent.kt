@@ -493,11 +493,8 @@ sealed interface ServerEvent {
         val clientDbId: Long = 0L,
         val uid: String = "",
         val nickname: String = "",
-        val clientId: Int = 0,
-        val channelId: Long = 0L,
         val description: String = "",
         val avatarHash: String = "",
-        val iconId: Long = 0L,
         val created: Long = 0L,
     ) : ServerEvent {
         override val type = "client_db_info"
@@ -1508,11 +1505,8 @@ sealed interface ServerEvent {
                     clientDbId = long(map, "client_db_id"),
                     uid = str(map, "uid"),
                     nickname = str(map, "nickname"),
-                    clientId = int(map, "client_id"),
-                    channelId = long(map, "channel_id"),
                     description = str(map, "description"),
                     avatarHash = str(map, "avatar_hash"),
-                    iconId = long(map, "icon_id"),
                     created = long(map, "created"),
                 )
 

@@ -15,12 +15,19 @@ data class PermissionValue(
     val skip: Boolean = false,
 )
 
+/** Where a permission list comes from. `kind` uses the core's command names. */
+data class PermissionTarget(
+    val kind: String,
+    val id: Long,
+    val title: String,
+)
+
 /**
  * The permission editor's data. The catalogue is server-wide and stays after a
- * target change; the values belong to the channel currently open.
+ * target change; the values belong to the target currently open.
  */
 data class PermissionEditorState(
-    val channelId: Long? = null,
+    val target: PermissionTarget? = null,
     val catalog: List<PermissionEntry> = emptyList(),
     val values: List<PermissionValue> = emptyList(),
     val loading: Boolean = false,

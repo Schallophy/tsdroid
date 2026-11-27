@@ -288,6 +288,36 @@ class NativeClient(
             mapOf("channelId" to channelId, "permissionName" to name),
         )
 
+    fun serverGroupPermissionList(groupId: Long) =
+        exec("server_group_perm_list", mapOf("groupId" to groupId, "permsid" to true))
+
+    fun serverGroupAddPermission(groupId: Long, name: String, value: Int) =
+        exec(
+            "server_group_add_perm",
+            mapOf("groupId" to groupId, "permissionName" to name, "value" to value),
+        )
+
+    fun serverGroupDeletePermission(groupId: Long, name: String) =
+        exec(
+            "server_group_del_perm",
+            mapOf("groupId" to groupId, "permissionName" to name),
+        )
+
+    fun channelGroupPermissionList(groupId: Long) =
+        exec("channel_group_perm_list", mapOf("groupId" to groupId, "permsid" to true))
+
+    fun channelGroupAddPermission(groupId: Long, name: String, value: Int) =
+        exec(
+            "channel_group_add_perm",
+            mapOf("groupId" to groupId, "permissionName" to name, "value" to value),
+        )
+
+    fun channelGroupDeletePermission(groupId: Long, name: String) =
+        exec(
+            "channel_group_del_perm",
+            mapOf("groupId" to groupId, "permissionName" to name),
+        )
+
     fun listFiles(channelId: Long, path: String = "/") =
         exec("list_files", mapOf("channelId" to channelId, "path" to path))
 

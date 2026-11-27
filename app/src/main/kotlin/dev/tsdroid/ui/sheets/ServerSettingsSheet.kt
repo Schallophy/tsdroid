@@ -39,6 +39,7 @@ import dev.tsdroid.model.Server
 fun ServerSettingsSheet(
     server: Server,
     onDismiss: () -> Unit,
+    onGroupPermissions: () -> Unit,
     onApply: (
         name: String,
         welcomeMessage: String,
@@ -144,6 +145,7 @@ fun ServerSettingsSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    TextButton(onClick = onGroupPermissions) { Text("组权限") }
                     TextButton(onClick = onDismiss) { Text("取消") }
                     Button(onClick = {
                         onApply(

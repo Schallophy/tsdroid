@@ -24,6 +24,7 @@ import dev.tsdroid.model.ChatScope
 import dev.tsdroid.model.FileEntry
 import dev.tsdroid.model.PermissionEditorState
 import dev.tsdroid.model.PermissionEntry
+import dev.tsdroid.model.PermissionTarget
 import dev.tsdroid.model.PermissionValue
 import dev.tsdroid.model.ServerEvent
 import dev.tsdroid.model.Transfer
@@ -613,26 +614,42 @@ class SessionController(
         )
     }
 
-    fun loadChannelPermissions(channelId: Long) {
+    fun loadPermissions(target: PermissionTarget) {
         _permissions.update {
-            it.copy(channelId = channelId, values = emptyList(), loading = true)
+            it.copy(target = target, values = emptyList(), loading = true)
         }
         if (_permissions.value.catalog.isEmpty()) {
             client?.permissionCatalog()
         }
-        client?.channelPermissionList(channelId)
+        requestPermissionList(target)
     }
 
-    fun addChannelPermission(channelId: Long, name: String, value: Int) {
+    fun addPermission(target: PermissionTarget, name: String, value: Int) {
         _permissions.update { it.copy(loading = true, values = emptyList()) }
-        client?.channelAddPermission(channelId, name, value)
-        client?.channelPermissionList(channelId)
+        when (target.kind) {
+            "channel" -> client?.channelAddPermission(target.id, name, value)
+            "server_group" -> client?.serverGroupAddPermission(target.id, name, value)
+            "channel_group" -> client?.channelGroupAddPermission(target.id, name, value)
+        }
+        requestPermissionList(target)
     }
 
-    fun deleteChannelPermission(channelId: Long, name: String) {
+    fun deletePermission(target: PermissionTarget, name: String) {
         _permissions.update { it.copy(loading = true, values = emptyList()) }
-        client?.channelDeletePermission(channelId, name)
-        client?.channelPermissionList(channelId)
+        when (target.kind) {
+            "channel" -> client?.channelDeletePermission(target.id, name)
+            "server_group" -> client?.serverGroupDeletePermission(target.id, name)
+            "channel_group" -> client?.channelGroupDeletePermission(target.id, name)
+        }
+        requestPermissionList(target)
+    }
+
+    private fun requestPermissionList(target: PermissionTarget) {
+        when (target.kind) {
+            "channel" -> client?.channelPermissionList(target.id)
+            "server_group" -> client?.serverGroupPermissionList(target.id)
+            "channel_group" -> client?.channelGroupPermissionList(target.id)
+        }
     }
 
     private fun applyPermissionEvent(event: ServerEvent) {
@@ -652,25 +669,62 @@ class SessionController(
             }
 
             is ServerEvent.ChannelPermission -> _permissions.update { state ->
-                if (state.channelId != event.channelId) return@update state
-                val value = PermissionValue(
-                    name = event.name,
-                    value = event.value,
-                    negated = event.negated,
-                    skip = event.skip,
+                if (state.target?.kind != "channel" || state.target.id != event.channelId) {
+                    return@update state
+                }
+                state.withValue(
+                    PermissionValue(
+                        name = event.name,
+                        value = event.value,
+                        negated = event.negated,
+                        skip = event.skip,
+                    ),
                 )
-                val values = state.values.toMutableList()
-                val index = values.indexOfFirst { it.name == event.name }
-                if (index >= 0) values[index] = value else values.add(value)
-                state.copy(values = values.sortedBy { it.name })
+            }
+
+            is ServerEvent.GroupPermission -> _permissions.update { state ->
+                val targetKind = when (event.groupKind) {
+                    "server" -> "server_group"
+                    "channel" -> "channel_group"
+                    else -> return@update state
+                }
+                if (state.target?.kind != targetKind || state.target.id != event.groupId) {
+                    return@update state
+                }
+                state.withValue(
+                    PermissionValue(
+                        name = event.name,
+                        value = event.value,
+                        negated = event.negated,
+                        skip = event.skip,
+                    ),
+                )
             }
 
             is ServerEvent.ChannelPermissionListDone -> _permissions.update {
-                it.copy(loading = false)
+                if (it.target?.kind == "channel") it.copy(loading = false) else it
+            }
+
+            is ServerEvent.GroupPermissionListDone -> _permissions.update {
+                val targetKind = when (event.groupKind) {
+                    "server" -> "server_group"
+                    "channel" -> "channel_group"
+                    else -> return@update it
+                }
+                if (it.target?.kind == targetKind) it.copy(loading = false) else it
             }
 
             else -> Unit
         }
+    }
+
+    private fun dev.tsdroid.model.PermissionEditorState.withValue(
+        value: PermissionValue,
+    ): dev.tsdroid.model.PermissionEditorState {
+        val values = this.values.toMutableList()
+        val index = values.indexOfFirst { it.name == value.name }
+        if (index >= 0) values[index] = value else values.add(value)
+        return copy(values = values.sortedBy { it.name })
     }
 
     private fun volumeKey(user: User): String =

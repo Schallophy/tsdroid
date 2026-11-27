@@ -19,6 +19,7 @@ import dev.tsdroid.model.AccountState
 import dev.tsdroid.model.BookmarkSecrets
 import dev.tsdroid.model.ChatScope
 import dev.tsdroid.model.PermissionEditorState
+import dev.tsdroid.model.PermissionTarget
 import dev.tsdroid.model.FileEntry
 import dev.tsdroid.model.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -347,12 +348,12 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         groups: List<dev.tsdroid.model.WhisperGroup>,
     ) = withController { it.setWhisperTargets(clients, channels, groups) }
 
-    fun loadChannelPermissions(channelId: Long) =
-        withController { it.loadChannelPermissions(channelId) }
-    fun addChannelPermission(channelId: Long, name: String, value: Int) =
-        withController { it.addChannelPermission(channelId, name, value) }
-    fun deleteChannelPermission(channelId: Long, name: String) =
-        withController { it.deleteChannelPermission(channelId, name) }
+    fun loadPermissions(target: PermissionTarget) =
+        withController { it.loadPermissions(target) }
+    fun addPermission(target: PermissionTarget, name: String, value: Int) =
+        withController { it.addPermission(target, name, value) }
+    fun deletePermission(target: PermissionTarget, name: String) =
+        withController { it.deletePermission(target, name) }
     fun joinChannel(channelId: Long, password: String? = null) =
         withController { it.joinChannel(channelId, password) }
     fun toggleMic() = withController { it.toggleMic() }

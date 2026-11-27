@@ -28,8 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
-import dev.tsdroid.model.Channel
 import dev.tsdroid.model.PermissionEditorState
+import dev.tsdroid.model.PermissionTarget
 import dev.tsdroid.model.PermissionValue
 
 /**
@@ -43,12 +43,12 @@ import dev.tsdroid.model.PermissionValue
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionSheet(
-    channel: Channel,
+    target: PermissionTarget,
     state: PermissionEditorState,
     onDismiss: () -> Unit,
-    onLoad: (Long) -> Unit,
-    onAdd: (name: String, value: Int) -> Unit,
-    onDelete: (name: String) -> Unit,
+    onLoad: (PermissionTarget) -> Unit,
+    onAdd: (PermissionTarget, name: String, value: Int) -> Unit,
+    onDelete: (PermissionTarget, name: String) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var query by remember { mutableStateOf("") }
@@ -56,7 +56,7 @@ fun PermissionSheet(
     var editing by remember { mutableStateOf<PermissionValue?>(null) }
     var editValue by remember { mutableStateOf("0") }
 
-    LaunchedEffect(channel.id) { onLoad(channel.id) }
+    LaunchedEffect(target.kind, target.id) { onLoad(target) }
 
     val existing = state.values.map { it.name }.toSet()
     val results = state.catalog
@@ -80,7 +80,7 @@ fun PermissionSheet(
                 .navigationBarsPadding()
                 .padding(start = 22.dp, end = 22.dp, bottom = 20.dp),
         ) {
-            Text("频道权限 · ${channel.name}", style = MaterialTheme.typography.titleLarge)
+            Text(target.title, style = MaterialTheme.typography.titleLarge)
             Text(
                 "权限表来自服务器；值按官方语义发送，-1 表示不限。",
                 style = MaterialTheme.typography.labelSmall,
@@ -98,7 +98,7 @@ fun PermissionSheet(
                             editing = value
                             editValue = value.value.toString()
                         },
-                        onDelete = { onDelete(value.name) },
+                        onDelete = { onDelete(target, value.name) },
                     )
                 }
                 if (results.isNotEmpty()) {
@@ -138,7 +138,7 @@ fun PermissionSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    onAdd(entry.name, addValue.toIntOrNull() ?: 0)
+                                    onAdd(target, entry.name, addValue.toIntOrNull() ?: 0)
                                 }
                                 .padding(vertical = 6.dp),
                         ) {
@@ -153,7 +153,7 @@ fun PermissionSheet(
                                 }
                             }
                             TextButton(onClick = {
-                                onAdd(entry.name, addValue.toIntOrNull() ?: 0)
+                                onAdd(target, entry.name, addValue.toIntOrNull() ?: 0)
                             }) { Text("添加") }
                         }
                     }
@@ -189,7 +189,7 @@ fun PermissionSheet(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    onAdd(value.name, editValue.toIntOrNull() ?: 0)
+                    onAdd(target, value.name, editValue.toIntOrNull() ?: 0)
                     editing = null
                 }) { Text("保存") }
             },

@@ -40,6 +40,7 @@ import dev.tsdroid.R
 import dev.tsdroid.SessionStatus
 import dev.tsdroid.SessionViewModel
 import dev.tsdroid.model.Channel
+import dev.tsdroid.model.PermissionTarget
 import dev.tsdroid.model.User
 import dev.tsdroid.ui.components.ExitGlyph
 import dev.tsdroid.ui.components.IconPlate
@@ -47,6 +48,7 @@ import dev.tsdroid.ui.components.StatusDot
 import dev.tsdroid.ui.components.inputStatusIcon
 import dev.tsdroid.ui.components.outputStatusIcon
 import dev.tsdroid.ui.sheets.ChannelSettingsSheet
+import dev.tsdroid.ui.sheets.GroupTargetPickerSheet
 import dev.tsdroid.ui.sheets.PermissionSheet
 import dev.tsdroid.ui.sheets.ServerSettingsSheet
 import dev.tsdroid.ui.sheets.UserSheet
@@ -73,7 +75,8 @@ fun SessionScreen(
     var whisperOpen by remember { mutableStateOf(false) }
     var serverSettingsOpen by remember { mutableStateOf(false) }
     var editChannel by remember { mutableStateOf<Channel?>(null) }
-    var permissionChannel by remember { mutableStateOf<Channel?>(null) }
+    var permissionTarget by remember { mutableStateOf<PermissionTarget?>(null) }
+    var groupPickerOpen by remember { mutableStateOf(false) }
 
     // The server never reports our own voice, so the core derives this from the
     // capture path (gain, silence gate and a tail). The local meter is only for
@@ -169,6 +172,10 @@ fun SessionScreen(
         ServerSettingsSheet(
             server = ui.state.server,
             onDismiss = { serverSettingsOpen = false },
+            onGroupPermissions = {
+                serverSettingsOpen = false
+                groupPickerOpen = true
+            },
             onApply = { name, welcome, maxClients, password, hostMessage, hostBanner, level ->
                 vm.editServer(
                     name = name,
@@ -183,14 +190,25 @@ fun SessionScreen(
         )
     }
 
-    permissionChannel?.let { channel ->
+    if (groupPickerOpen) {
+        GroupTargetPickerSheet(
+            ui = ui,
+            onDismiss = { groupPickerOpen = false },
+            onPick = { target ->
+                groupPickerOpen = false
+                permissionTarget = target
+            },
+        )
+    }
+
+    permissionTarget?.let { target ->
         PermissionSheet(
-            channel = channel,
+            target = target,
             state = permissions,
-            onDismiss = { permissionChannel = null },
-            onLoad = vm::loadChannelPermissions,
-            onAdd = { name, value -> vm.addChannelPermission(channel.id, name, value) },
-            onDelete = { name -> vm.deleteChannelPermission(channel.id, name) },
+            onDismiss = { permissionTarget = null },
+            onLoad = vm::loadPermissions,
+            onAdd = { picked, name, value -> vm.addPermission(picked, name, value) },
+            onDelete = { picked, name -> vm.deletePermission(picked, name) },
         )
     }
 
@@ -199,7 +217,11 @@ fun SessionScreen(
             channel = channel,
             onDismiss = { editChannel = null },
             onPermissions = {
-                permissionChannel = channel
+                permissionTarget = PermissionTarget(
+                    kind = "channel",
+                    id = channel.id,
+                    title = "频道权限 · ${channel.name}",
+                )
                 editChannel = null
             },
             onApply = { name, topic, maxClients, maxFamily, neededTalk, codec, quality, latency, deleteDelay, isDefault, isPermanent, isSemiPermanent, password ->

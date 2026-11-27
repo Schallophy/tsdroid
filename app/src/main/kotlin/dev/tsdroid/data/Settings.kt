@@ -38,6 +38,24 @@ class Settings(context: Context) {
         get() = prefs.getFloat(KEY_OUTPUT_GAIN, 1.0f).coerceIn(0.5f, 2f)
         set(value) = prefs.edit().putFloat(KEY_OUTPUT_GAIN, value.coerceIn(0.5f, 2f)).apply()
 
+    /**
+     * Playback volume for one client, keyed by their TeamSpeak UID so it
+     * survives a reconnect and a nickname change. 1.0 is untouched; the core
+     * clips at 2.0.
+     */
+    fun userVolume(uid: String): Float =
+        prefs.getFloat(KEY_USER_VOLUME + uid.ifEmpty { "unknown" }, 1.0f)
+            .coerceIn(0.0f, 2.0f)
+
+    fun setUserVolume(uid: String, volume: Float) {
+        prefs.edit()
+            .putFloat(
+                KEY_USER_VOLUME + uid.ifEmpty { "unknown" },
+                volume.coerceIn(0.0f, 2.0f),
+            )
+            .apply()
+    }
+
     var noiseSuppression: Boolean
         get() = prefs.getBoolean(KEY_NOISE, true)
         set(value) = prefs.edit().putBoolean(KEY_NOISE, value).apply()
@@ -211,6 +229,7 @@ class Settings(context: Context) {
     private companion object {
         const val KEY_MIC_GAIN = "mic_gain"
         const val KEY_OUTPUT_GAIN = "output_gain"
+        const val KEY_USER_VOLUME = "user_volume_"
         const val KEY_NOISE = "noise_suppression"
         const val KEY_BLUETOOTH_MIC = "bluetooth_mic"
         const val KEY_AWAY_MESSAGE = "away_message"

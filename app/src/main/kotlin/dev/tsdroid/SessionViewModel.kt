@@ -329,6 +329,8 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun openPrivateChat(user: User) = withController { it.openPrivateChat(user) }
     fun sendMessage(text: String) = withController { it.sendMessage(text) }
     fun poke(user: User, message: String) = withController { it.poke(user, message) }
+    fun userVolume(user: User): Float = controllerFlow.value?.userVolume(user) ?: 1.0f
+    fun setUserVolume(user: User, volume: Float) = withController { it.setUserVolume(user, volume) }
     fun joinChannel(channelId: Long, password: String? = null) =
         withController { it.joinChannel(channelId, password) }
     fun toggleMic() = withController { it.toggleMic() }

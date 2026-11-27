@@ -132,6 +132,8 @@ fun SessionScreen(
                 vm.poke(user, message)
                 sheetUser = null
             },
+            initialVolume = vm.userVolume(user),
+            onVolume = { volume -> vm.setUserVolume(user, volume) },
         )
     }
 }

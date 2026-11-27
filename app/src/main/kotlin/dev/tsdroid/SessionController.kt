@@ -69,6 +69,13 @@ class SessionController(
     private val adopting = java.util.concurrent.atomic.AtomicBoolean(false)
 
     /**
+     * The volume last sent to the core for each UID, with the client id it was
+     * sent for. A reconnect gives the same person a new `clid`, so the pair has
+     * to change before the value is re-sent.
+     */
+    private val appliedVolumes = mutableMapOf<String, Pair<Int, Float>>()
+
+    /**
      * Called once when the session is over (a leave, or a disconnect the user did
      * not start). The service uses it to stop itself; the UI does not care.
      */
@@ -151,6 +158,7 @@ class SessionController(
     fun connect(config: ServerConfig) {
         goodbyePending = false
         reconnectAfterGoodbye = null
+        appliedVolumes.clear()
         cleanupSession()
         acquireWakeLock()
         requestAudioFocus()
@@ -197,6 +205,7 @@ class SessionController(
 
         scope.launch {
             session.state.collect { state ->
+                applyUserVolumes(state.users)
                 _ui.update { current ->
                     current.copy(
                         state = state,
@@ -551,6 +560,36 @@ class SessionController(
     fun poke(user: User, message: String) {
         client?.poke(user.id, message.ifBlank { "戳了你一下" })
         setToast("已戳 ${user.nickname}")
+    }
+
+    /** The stored playback volume for one client, applied by [applyUserVolumes]. */
+    fun userVolume(user: User): Float = settings.userVolume(user.uid)
+
+    fun setUserVolume(user: User, volume: Float) {
+        val applied = volume.coerceIn(0.0f, 2.0f)
+        settings.setUserVolume(user.uid, applied)
+        client?.setUserVolume(user.id, applied)
+        appliedVolumes[volumeKey(user)] = user.id to applied
+    }
+
+    private fun volumeKey(user: User): String =
+        user.uid.ifEmpty { "id:${user.id}" }
+
+    /**
+     * Push a stored volume to the core when a client appears, reconnects under a
+     * new `clid`, or the user moved the slider. The state collector calls this
+     * on every snapshot; the map makes it a no-op when nothing changed.
+     */
+    private fun applyUserVolumes(users: List<User>) {
+        val session = client ?: return
+        for (user in users) {
+            val key = volumeKey(user)
+            val current = appliedVolumes[key]
+            if (current?.first == user.id) continue
+            val desired = settings.userVolume(user.uid)
+            session.setUserVolume(user.id, desired)
+            appliedVolumes[key] = user.id to desired
+        }
     }
 
     fun joinChannel(channelId: Long, password: String? = null) {

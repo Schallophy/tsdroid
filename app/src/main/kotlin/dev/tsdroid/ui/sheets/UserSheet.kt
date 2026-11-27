@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -30,13 +31,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.tsdroid.model.User
 import dev.tsdroid.ui.components.MemberAvatar
+import kotlin.math.roundToInt
 
 /**
  * What you get when you tap somebody.
  *
- * Only actions that can actually work: private message, poke, and their details.
- * Volume sliders and "move to channel" are deliberately absent — they need
- * permissions this client cannot assume.
+ * Private message, poke, their details, and their playback volume. The volume
+ * is local to this device and keyed by the person's UID, so it survives a
+ * reconnect and a nickname change; it does not need a server permission.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,11 +48,14 @@ fun UserSheet(
     onDismiss: () -> Unit,
     onPrivate: () -> Unit,
     onPoke: (String) -> Unit,
+    initialVolume: Float,
+    onVolume: (Float) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val isSelf = user.id == ownClientId
     var pokeOpen by remember { mutableStateOf(false) }
     var pokeText by remember { mutableStateOf("") }
+    var volume by remember(user.uid) { mutableStateOf(initialVolume) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -95,6 +100,29 @@ fun UserSheet(
             }
 
             DetailRow("UID", user.uid.ifEmpty { "未知" }, mono = true)
+
+            if (!isSelf) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("音量", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            "${(volume * 100).roundToInt()}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Slider(
+                        value = volume,
+                        onValueChange = { volume = it },
+                        onValueChangeFinished = { onVolume(volume) },
+                        valueRange = 0f..2f,
+                    )
+                }
+            }
 
             if (user.description.isNotBlank()) {
                 DetailRow("描述", user.description)

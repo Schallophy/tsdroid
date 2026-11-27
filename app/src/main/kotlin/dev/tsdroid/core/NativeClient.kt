@@ -277,6 +277,10 @@ class NativeClient(
     /** Linear capture gain; the core applies it before the encoder on every platform. */
     fun setMicGain(gain: Float) = exec("set_mic_gain", mapOf("gain" to gain))
 
+    /** Linear playback volume for one client; 1.0 is untouched, 2.0 is the cap. */
+    fun setUserVolume(clientId: Int, volume: Float) =
+        exec("set_user_volume", mapOf("clientId" to clientId, "volume" to volume))
+
     // ── voice ───────────────────────────────────────────────────────────────
 
     fun audioWrite(samples: ShortArray): Int {

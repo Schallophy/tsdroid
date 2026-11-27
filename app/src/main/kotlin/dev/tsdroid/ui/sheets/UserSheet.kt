@@ -52,6 +52,7 @@ fun UserSheet(
     onVolume: (Float) -> Unit,
     whispering: Boolean,
     onWhisper: (Boolean) -> Unit,
+    onPermissions: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val isSelf = user.id == ownClientId
@@ -126,6 +127,9 @@ fun UserSheet(
                 }
                 OutlinedButton(onClick = { onWhisper(!whispering) }) {
                     Text(if (whispering) "停止悄悄话" else "悄悄话")
+                }
+                OutlinedButton(onClick = onPermissions) {
+                    Text("权限")
                 }
             }
 

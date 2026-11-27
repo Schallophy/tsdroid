@@ -177,6 +177,8 @@ data class ChannelTreeEntry(val id: Long = 0, val depth: Int = 0)
 @Serializable
 data class User(
     val id: Int = 0,
+    /** The server database id (`cldbid`), used by client permission commands. */
+    val databaseId: Long = 0,
     val uid: String = "",
     val nickname: String = "",
     val channelId: Long = 0,

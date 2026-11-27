@@ -630,6 +630,7 @@ class SessionController(
             "channel" -> client?.channelAddPermission(target.id, name, value)
             "server_group" -> client?.serverGroupAddPermission(target.id, name, value)
             "channel_group" -> client?.channelGroupAddPermission(target.id, name, value)
+            "client" -> client?.clientAddPermission(target.id, name, value)
         }
         requestPermissionList(target)
     }
@@ -640,6 +641,7 @@ class SessionController(
             "channel" -> client?.channelDeletePermission(target.id, name)
             "server_group" -> client?.serverGroupDeletePermission(target.id, name)
             "channel_group" -> client?.channelGroupDeletePermission(target.id, name)
+            "client" -> client?.clientDeletePermission(target.id, name)
         }
         requestPermissionList(target)
     }
@@ -649,6 +651,7 @@ class SessionController(
             "channel" -> client?.channelPermissionList(target.id)
             "server_group" -> client?.serverGroupPermissionList(target.id)
             "channel_group" -> client?.channelGroupPermissionList(target.id)
+            "client" -> client?.clientPermissionList(target.id)
         }
     }
 
@@ -701,6 +704,20 @@ class SessionController(
                 )
             }
 
+            is ServerEvent.ClientPermission -> _permissions.update { state ->
+                if (state.target?.kind != "client" || state.target.id != event.clientDbId) {
+                    return@update state
+                }
+                state.withValue(
+                    PermissionValue(
+                        name = event.name,
+                        value = event.value,
+                        negated = event.negated,
+                        skip = event.skip,
+                    ),
+                )
+            }
+
             is ServerEvent.ChannelPermissionListDone -> _permissions.update {
                 if (it.target?.kind == "channel") it.copy(loading = false) else it
             }
@@ -712,6 +729,10 @@ class SessionController(
                     else -> return@update it
                 }
                 if (it.target?.kind == targetKind) it.copy(loading = false) else it
+            }
+
+            is ServerEvent.ClientPermissionListDone -> _permissions.update {
+                if (it.target?.kind == "client") it.copy(loading = false) else it
             }
 
             else -> Unit

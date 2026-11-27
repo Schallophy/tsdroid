@@ -155,6 +155,14 @@ fun SessionScreen(
             onVolume = { volume -> vm.setUserVolume(user, volume) },
             whispering = vm.isWhisperingTo(user),
             onWhisper = { enabled -> vm.setWhisperTo(user, enabled) },
+            onPermissions = {
+                permissionTarget = PermissionTarget(
+                    kind = "client",
+                    id = user.databaseId,
+                    title = "客户端权限 · ${user.nickname}",
+                )
+                sheetUser = null
+            },
         )
     }
 

@@ -318,6 +318,21 @@ class NativeClient(
             mapOf("groupId" to groupId, "permissionName" to name),
         )
 
+    fun clientPermissionList(clientDbId: Long) =
+        exec("client_permission_list", mapOf("clientDbId" to clientDbId, "permsid" to true))
+
+    fun clientAddPermission(clientDbId: Long, name: String, value: Int) =
+        exec(
+            "client_add_perm",
+            mapOf("clientDbId" to clientDbId, "permissionName" to name, "value" to value),
+        )
+
+    fun clientDeletePermission(clientDbId: Long, name: String) =
+        exec(
+            "client_del_perm",
+            mapOf("clientDbId" to clientDbId, "permissionName" to name),
+        )
+
     fun listFiles(channelId: Long, path: String = "/") =
         exec("list_files", mapOf("channelId" to channelId, "path" to path))
 

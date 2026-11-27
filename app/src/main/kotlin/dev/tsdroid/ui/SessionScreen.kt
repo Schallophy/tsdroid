@@ -146,7 +146,9 @@ fun SessionScreen(
         WhisperSheet(
             ui = ui,
             onDismiss = { whisperOpen = false },
-            onApply = { clients, channels -> vm.setWhisperTargets(clients, channels) },
+            onApply = { clients, channels, groups ->
+                vm.setWhisperTargets(clients, channels, groups)
+            },
         )
     }
 }

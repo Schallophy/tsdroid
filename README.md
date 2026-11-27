@@ -26,12 +26,12 @@ nothing here has to be re-derived to support another desktop.
 | **Files** | browse a channel, download, upload, live transfer progress |
 | **Audio** | noise suppression, echo cancellation, mic gain, speaker boost, optional Bluetooth mic |
 | **Volume** | per-user playback volume, 0–200%, keyed by UID so it survives a reconnect |
-| **Whisper** | member and channel targets from the header picker; group targets are core-side only |
+| **Whisper** | member, channel and group targets from the header picker (groups use the all-channels form) |
 | **Identity** | the session's key is written to `identity.ini`, so the UID survives a restart |
 | **Account** | myTeamSpeak login (password + optional OTP), remembered login, cloud bookmarks that fill the connect form (passwords read on demand), backup, logout; the myTS ID is announced on connect |
 
-Not yet implemented: whisper group targets, permission editing, and the
-channel/server settings surfaces. The product target is parity with the
+Not yet implemented: permission editing and the channel/server settings
+surfaces. The product target is parity with the
 official client, so these are open work rather than permanent omissions. If one
 of them turns out to need a private API, the evidence and the consequence belong
 in `docs/`; they are not a reason to stop short of the rest.

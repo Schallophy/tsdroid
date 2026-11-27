@@ -25,24 +25,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.tsdroid.SessionUiState
+import dev.tsdroid.model.WhisperGroup
 
 /**
  * The whisper target picker: people and channels.
  *
  * The core replaces the whole set, so this sheet starts from the snapshot and
- * applies both lists together. Server/channel group targets are not in this
- * sheet yet; the core already carries them in `set_whisper_targets`.
+ * applies all lists together. Group targets use the official all-channels form;
+ * the core accepts the other target modes too.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WhisperSheet(
     ui: SessionUiState,
     onDismiss: () -> Unit,
-    onApply: (clients: List<Int>, channels: List<Long>) -> Unit,
+    onApply: (clients: List<Int>, channels: List<Long>, groups: List<WhisperGroup>) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var clients by remember { mutableStateOf(ui.state.whisperClients.toSet()) }
     var channels by remember { mutableStateOf(ui.state.whisperChannels.toSet()) }
+    var groups by remember { mutableStateOf(ui.state.whisperGroups.toSet()) }
+    val allClients = WhisperGroup("all_clients", "all_channels", 0)
+    val commanders = WhisperGroup("channel_commander", "all_channels", 0)
 
     val people = ui.state.users.filter { it.clientType == 0 && it.id != ui.state.ownClientId }
     val channelNames = ui.state.channels.associate { it.id to it.name }
@@ -89,6 +93,46 @@ fun WhisperSheet(
                         },
                     )
                 }
+
+                item { SectionTitle("群组") }
+                item {
+                    CheckRow(
+                        label = "所有客户端",
+                        checked = allClients in groups,
+                        onChange = { checked ->
+                            groups = if (checked) groups + allClients else groups - allClients
+                        },
+                    )
+                }
+                item {
+                    CheckRow(
+                        label = "频道司令",
+                        checked = commanders in groups,
+                        onChange = { checked ->
+                            groups = if (checked) groups + commanders else groups - commanders
+                        },
+                    )
+                }
+                items(ui.state.serverGroups, key = { "sg${it.id}" }) { group ->
+                    val target = WhisperGroup("server_group", "all_channels", group.id)
+                    CheckRow(
+                        label = "服务器组 · ${group.name}",
+                        checked = target in groups,
+                        onChange = { checked ->
+                            groups = if (checked) groups + target else groups - target
+                        },
+                    )
+                }
+                items(ui.state.channelGroups, key = { "cg${it.id}" }) { group ->
+                    val target = WhisperGroup("channel_group", "all_channels", group.id)
+                    CheckRow(
+                        label = "频道组 · ${group.name}",
+                        checked = target in groups,
+                        onChange = { checked ->
+                            groups = if (checked) groups + target else groups - target
+                        },
+                    )
+                }
             }
 
             Row(
@@ -99,11 +143,12 @@ fun WhisperSheet(
                 TextButton(onClick = {
                     clients = emptySet()
                     channels = emptySet()
+                    groups = emptySet()
                 }) {
                     Text("清除")
                 }
                 Button(onClick = {
-                    onApply(clients.toList(), channels.toList())
+                    onApply(clients.toList(), channels.toList(), groups.toList())
                     onDismiss()
                 }) {
                     Text("应用")

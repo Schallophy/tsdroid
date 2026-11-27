@@ -584,12 +584,26 @@ class SessionController(
         val current = _ui.value.state
         val clients = current.whisperClients.toMutableSet()
         if (enabled) clients.add(user.id) else clients.remove(user.id)
-        client?.setWhisperTargets(clients.toList(), current.whisperChannels)
+        client?.setWhisperTargets(
+            clients.toList(),
+            current.whisperChannels,
+            current.whisperGroups,
+        )
     }
 
-    fun setWhisperTargets(clients: List<Int>, channels: List<Long>) {
-        client?.setWhisperTargets(clients, channels)
-        setToast(if (clients.isEmpty() && channels.isEmpty()) "已关闭悄悄话" else "悄悄话目标已更新")
+    fun setWhisperTargets(
+        clients: List<Int>,
+        channels: List<Long>,
+        groups: List<dev.tsdroid.model.WhisperGroup>,
+    ) {
+        client?.setWhisperTargets(clients, channels, groups)
+        setToast(
+            if (clients.isEmpty() && channels.isEmpty() && groups.isEmpty()) {
+                "已关闭悄悄话"
+            } else {
+                "悄悄话目标已更新"
+            },
+        )
     }
 
     private fun volumeKey(user: User): String =

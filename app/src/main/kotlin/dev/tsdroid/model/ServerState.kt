@@ -10,6 +10,14 @@ import kotlinx.serialization.Serializable
  * names must match one-for-one. `rev` is bumped only when something the UI
  * renders changed, which is what lets the poll loop skip a parse per frame.
  */
+/** One group whisper target, in the core's command names. */
+@Serializable
+data class WhisperGroup(
+    @SerialName("type") val kind: String = "",
+    val target: String = "all_channels",
+    val id: Long = 0,
+)
+
 @Serializable
 data class ServerState(
     val rev: Long = 0,
@@ -38,6 +46,7 @@ data class ServerState(
      */
     val whisperClients: List<Int> = emptyList(),
     val whisperChannels: List<Long> = emptyList(),
+    val whisperGroups: List<WhisperGroup> = emptyList(),
     /**
      * Every server group on this server, by id and name.
      *

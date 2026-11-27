@@ -3,6 +3,7 @@ package dev.tsdroid.core
 import dev.tsdroid.model.ChatScope
 import dev.tsdroid.model.ServerEvent
 import dev.tsdroid.model.ServerState
+import dev.tsdroid.model.WhisperGroup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -281,9 +282,21 @@ class NativeClient(
     fun setUserVolume(clientId: Int, volume: Float) =
         exec("set_user_volume", mapOf("clientId" to clientId, "volume" to volume))
 
-    /** Replace the whisper target set; an empty pair is ordinary channel talk. */
-    fun setWhisperTargets(clients: List<Int>, channels: List<Long>) =
-        exec("set_whisper_targets", mapOf("clients" to clients, "channels" to channels))
+    /** Replace the whisper target set; empty lists are ordinary channel talk. */
+    fun setWhisperTargets(
+        clients: List<Int>,
+        channels: List<Long>,
+        groups: List<WhisperGroup> = emptyList(),
+    ) = exec(
+        "set_whisper_targets",
+        mapOf(
+            "clients" to clients,
+            "channels" to channels,
+            "groups" to groups.map {
+                mapOf("type" to it.kind, "target" to it.target, "id" to it.id)
+            },
+        ),
+    )
 
     // ── voice ───────────────────────────────────────────────────────────────
 

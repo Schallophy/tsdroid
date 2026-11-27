@@ -47,6 +47,7 @@ import dev.tsdroid.ui.components.StatusDot
 import dev.tsdroid.ui.components.inputStatusIcon
 import dev.tsdroid.ui.components.outputStatusIcon
 import dev.tsdroid.ui.sheets.ChannelSettingsSheet
+import dev.tsdroid.ui.sheets.PermissionSheet
 import dev.tsdroid.ui.sheets.ServerSettingsSheet
 import dev.tsdroid.ui.sheets.UserSheet
 import dev.tsdroid.ui.sheets.WhisperSheet
@@ -67,10 +68,12 @@ fun SessionScreen(
     modifier: Modifier = Modifier,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
+    val permissions by vm.permissions.collectAsStateWithLifecycle()
     var sheetUser by remember { mutableStateOf<User?>(null) }
     var whisperOpen by remember { mutableStateOf(false) }
     var serverSettingsOpen by remember { mutableStateOf(false) }
     var editChannel by remember { mutableStateOf<Channel?>(null) }
+    var permissionChannel by remember { mutableStateOf<Channel?>(null) }
 
     // The server never reports our own voice, so the core derives this from the
     // capture path (gain, silence gate and a tail). The local meter is only for
@@ -180,10 +183,25 @@ fun SessionScreen(
         )
     }
 
+    permissionChannel?.let { channel ->
+        PermissionSheet(
+            channel = channel,
+            state = permissions,
+            onDismiss = { permissionChannel = null },
+            onLoad = vm::loadChannelPermissions,
+            onAdd = { name, value -> vm.addChannelPermission(channel.id, name, value) },
+            onDelete = { name -> vm.deleteChannelPermission(channel.id, name) },
+        )
+    }
+
     editChannel?.let { channel ->
         ChannelSettingsSheet(
             channel = channel,
             onDismiss = { editChannel = null },
+            onPermissions = {
+                permissionChannel = channel
+                editChannel = null
+            },
             onApply = { name, topic, maxClients, maxFamily, neededTalk, codec, quality, latency, deleteDelay, isDefault, isPermanent, isSemiPermanent, password ->
                 vm.editChannel(
                     channelId = channel.id,

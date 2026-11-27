@@ -54,6 +54,7 @@ private val CODECS = listOf(
 fun ChannelSettingsSheet(
     channel: Channel,
     onDismiss: () -> Unit,
+    onPermissions: () -> Unit,
     onApply: (
         name: String,
         topic: String,
@@ -208,6 +209,7 @@ fun ChannelSettingsSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    TextButton(onClick = onPermissions) { Text("权限") }
                     TextButton(onClick = onDismiss) { Text("取消") }
                     Button(onClick = {
                         onApply(

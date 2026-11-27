@@ -22,6 +22,9 @@ import dev.tsdroid.model.BookmarkSecrets
 import dev.tsdroid.model.ChatMessage
 import dev.tsdroid.model.ChatScope
 import dev.tsdroid.model.FileEntry
+import dev.tsdroid.model.PermissionEditorState
+import dev.tsdroid.model.PermissionEntry
+import dev.tsdroid.model.PermissionValue
 import dev.tsdroid.model.ServerEvent
 import dev.tsdroid.model.Transfer
 import dev.tsdroid.model.TransferDirection
@@ -134,6 +137,9 @@ class SessionController(
 
     private val _ui = MutableStateFlow(SessionUiState())
     val ui: StateFlow<SessionUiState> = _ui.asStateFlow()
+
+    private val _permissions = MutableStateFlow(PermissionEditorState())
+    val permissions: StateFlow<PermissionEditorState> = _permissions.asStateFlow()
 
     /**
      * The bottom-navigation destination.
@@ -267,6 +273,7 @@ class SessionController(
         audio.stop()
         client?.close()
         client = null
+        _permissions.value = PermissionEditorState()
     }
 
     /**
@@ -604,6 +611,66 @@ class SessionController(
                 "悄悄话目标已更新"
             },
         )
+    }
+
+    fun loadChannelPermissions(channelId: Long) {
+        _permissions.update {
+            it.copy(channelId = channelId, values = emptyList(), loading = true)
+        }
+        if (_permissions.value.catalog.isEmpty()) {
+            client?.permissionCatalog()
+        }
+        client?.channelPermissionList(channelId)
+    }
+
+    fun addChannelPermission(channelId: Long, name: String, value: Int) {
+        _permissions.update { it.copy(loading = true, values = emptyList()) }
+        client?.channelAddPermission(channelId, name, value)
+        client?.channelPermissionList(channelId)
+    }
+
+    fun deleteChannelPermission(channelId: Long, name: String) {
+        _permissions.update { it.copy(loading = true, values = emptyList()) }
+        client?.channelDeletePermission(channelId, name)
+        client?.channelPermissionList(channelId)
+    }
+
+    private fun applyPermissionEvent(event: ServerEvent) {
+        when (event) {
+            is ServerEvent.PermListed -> _permissions.update { state ->
+                if (state.catalog.any { it.id == event.permissionId }) {
+                    state
+                } else {
+                    state.copy(
+                        catalog = state.catalog + PermissionEntry(
+                            id = event.permissionId,
+                            name = event.name,
+                            description = event.description,
+                        ),
+                    )
+                }
+            }
+
+            is ServerEvent.ChannelPermission -> _permissions.update { state ->
+                if (state.channelId != event.channelId) return@update state
+                val value = PermissionValue(
+                    name = event.name,
+                    value = event.value,
+                    negated = event.negated,
+                    skip = event.skip,
+                )
+                val values = state.values.toMutableList()
+                val index = values.indexOfFirst { it.name == event.name }
+                if (index >= 0) values[index] = value else values.add(value)
+                state.copy(values = values.sortedBy { it.name })
+            }
+
+            is ServerEvent.ChannelPermissionListDone -> _permissions.update {
+                it.copy(loading = false)
+            }
+
+            else -> Unit
+        }
     }
 
     private fun volumeKey(user: User): String =
@@ -970,6 +1037,7 @@ class SessionController(
         if (event is ServerEvent.TextMessage) {
             appendMessage(event)
         }
+        applyPermissionEvent(event)
 
         _ui.update { current ->
             when (event) {

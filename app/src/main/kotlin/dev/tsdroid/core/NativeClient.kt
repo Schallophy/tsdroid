@@ -271,6 +271,23 @@ class NativeClient(
     /** Edit this server; `args` carries the typed fields and raw `properties`. */
     fun editServer(args: Map<String, Any?>) = exec("server_edit", args)
 
+    fun permissionCatalog() = exec("perm_list")
+
+    fun channelPermissionList(channelId: Long) =
+        exec("channel_permission_list", mapOf("channelId" to channelId, "permsid" to true))
+
+    fun channelAddPermission(channelId: Long, name: String, value: Int) =
+        exec(
+            "channel_add_perm",
+            mapOf("channelId" to channelId, "permissionName" to name, "value" to value),
+        )
+
+    fun channelDeletePermission(channelId: Long, name: String) =
+        exec(
+            "channel_del_perm",
+            mapOf("channelId" to channelId, "permissionName" to name),
+        )
+
     fun listFiles(channelId: Long, path: String = "/") =
         exec("list_files", mapOf("channelId" to channelId, "path" to path))
 

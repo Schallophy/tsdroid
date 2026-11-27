@@ -18,6 +18,7 @@ import dev.tsdroid.data.Settings
 import dev.tsdroid.model.AccountState
 import dev.tsdroid.model.BookmarkSecrets
 import dev.tsdroid.model.ChatScope
+import dev.tsdroid.model.PermissionEditorState
 import dev.tsdroid.model.FileEntry
 import dev.tsdroid.model.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -235,6 +236,11 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         .flatMapLatest { it?.ui ?: flowOf(SessionUiState()) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, SessionUiState())
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val permissions: StateFlow<PermissionEditorState> = controllerFlow
+        .flatMapLatest { it?.permissions ?: flowOf(PermissionEditorState()) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, PermissionEditorState())
+
     /**
      * The bottom-navigation destination.
      *
@@ -340,6 +346,13 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         channels: List<Long>,
         groups: List<dev.tsdroid.model.WhisperGroup>,
     ) = withController { it.setWhisperTargets(clients, channels, groups) }
+
+    fun loadChannelPermissions(channelId: Long) =
+        withController { it.loadChannelPermissions(channelId) }
+    fun addChannelPermission(channelId: Long, name: String, value: Int) =
+        withController { it.addChannelPermission(channelId, name, value) }
+    fun deleteChannelPermission(channelId: Long, name: String) =
+        withController { it.deleteChannelPermission(channelId, name) }
     fun joinChannel(channelId: Long, password: String? = null) =
         withController { it.joinChannel(channelId, password) }
     fun toggleMic() = withController { it.toggleMic() }

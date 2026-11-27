@@ -587,6 +587,11 @@ class SessionController(
         client?.setWhisperTargets(clients.toList(), current.whisperChannels)
     }
 
+    fun setWhisperTargets(clients: List<Int>, channels: List<Long>) {
+        client?.setWhisperTargets(clients, channels)
+        setToast(if (clients.isEmpty() && channels.isEmpty()) "已关闭悄悄话" else "悄悄话目标已更新")
+    }
+
     private fun volumeKey(user: User): String =
         user.uid.ifEmpty { "id:${user.id}" }
 

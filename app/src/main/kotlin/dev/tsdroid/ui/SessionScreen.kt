@@ -43,6 +43,7 @@ import dev.tsdroid.ui.components.StatusDot
 import dev.tsdroid.ui.components.inputStatusIcon
 import dev.tsdroid.ui.components.outputStatusIcon
 import dev.tsdroid.ui.sheets.UserSheet
+import dev.tsdroid.ui.sheets.WhisperSheet
 
 /**
  * The session content: the server header and the active tab's content.
@@ -61,6 +62,7 @@ fun SessionScreen(
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     var sheetUser by remember { mutableStateOf<User?>(null) }
+    var whisperOpen by remember { mutableStateOf(false) }
 
     // The server never reports our own voice, so the core derives this from the
     // capture path (gain, silence gate and a tail). The local meter is only for
@@ -73,6 +75,7 @@ fun SessionScreen(
             subtitle = statusLine(ui.status, ui.state.server.clientsOnline, ui.state.server.maxClients),
             connected = ui.status == SessionStatus.Online,
             onDisconnect = vm::disconnect,
+            onWhisper = { whisperOpen = true },
         )
 
         Box(modifier = Modifier.weight(1f)) {
@@ -138,6 +141,14 @@ fun SessionScreen(
             onWhisper = { enabled -> vm.setWhisperTo(user, enabled) },
         )
     }
+
+    if (whisperOpen) {
+        WhisperSheet(
+            ui = ui,
+            onDismiss = { whisperOpen = false },
+            onApply = { clients, channels -> vm.setWhisperTargets(clients, channels) },
+        )
+    }
 }
 
 /**
@@ -196,6 +207,7 @@ private fun ServerHeader(
     subtitle: String,
     connected: Boolean,
     onDisconnect: () -> Unit,
+    onWhisper: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -223,6 +235,15 @@ private fun ServerHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+        // Whisper is a first-class voice mode in the official client; the
+        // target picker is one tap from the header rather than a settings page.
+        IconButton(onClick = onWhisper) {
+            Text(
+                "密聊",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         // The desktop client buries disconnect in a menu; on a phone that is
         // one tap too many for the action you reach for when things go wrong.

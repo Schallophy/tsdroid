@@ -335,6 +335,8 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         controllerFlow.value?.isWhisperingTo(user) ?: false
     fun setWhisperTo(user: User, enabled: Boolean) =
         withController { it.setWhisperTo(user, enabled) }
+    fun setWhisperTargets(clients: List<Int>, channels: List<Long>) =
+        withController { it.setWhisperTargets(clients, channels) }
     fun joinChannel(channelId: Long, password: String? = null) =
         withController { it.joinChannel(channelId, password) }
     fun toggleMic() = withController { it.toggleMic() }

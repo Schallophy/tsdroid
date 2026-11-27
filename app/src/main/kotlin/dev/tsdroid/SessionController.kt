@@ -572,6 +572,21 @@ class SessionController(
         appliedVolumes[volumeKey(user)] = user.id to applied
     }
 
+    fun isWhisperingTo(user: User): Boolean =
+        user.id in _ui.value.state.whisperClients
+
+    /**
+     * Add or remove one client from the whisper set. The command replaces the
+     * whole set, so the current snapshot is the baseline; the core echoes the
+     * accepted set back in the next snapshot, which is what the sheet reads.
+     */
+    fun setWhisperTo(user: User, enabled: Boolean) {
+        val current = _ui.value.state
+        val clients = current.whisperClients.toMutableSet()
+        if (enabled) clients.add(user.id) else clients.remove(user.id)
+        client?.setWhisperTargets(clients.toList(), current.whisperChannels)
+    }
+
     private fun volumeKey(user: User): String =
         user.uid.ifEmpty { "id:${user.id}" }
 

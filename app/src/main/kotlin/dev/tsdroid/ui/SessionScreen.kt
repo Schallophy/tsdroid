@@ -134,6 +134,8 @@ fun SessionScreen(
             },
             initialVolume = vm.userVolume(user),
             onVolume = { volume -> vm.setUserVolume(user, volume) },
+            whispering = vm.isWhisperingTo(user),
+            onWhisper = { enabled -> vm.setWhisperTo(user, enabled) },
         )
     }
 }

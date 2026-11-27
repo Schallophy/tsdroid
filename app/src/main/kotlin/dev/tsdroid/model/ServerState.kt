@@ -33,6 +33,12 @@ data class ServerState(
     val ownTalking: Boolean = false,
     val users: List<User> = emptyList(),
     /**
+     * The whisper targets this client currently has, as ids. Empty means
+     * ordinary channel talk; the sheet uses these to show the toggle state.
+     */
+    val whisperClients: List<Int> = emptyList(),
+    val whisperChannels: List<Long> = emptyList(),
+    /**
      * Every server group on this server, by id and name.
      *
      * A member carries only ids; this is what turns them into titles. Empty

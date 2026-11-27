@@ -281,6 +281,10 @@ class NativeClient(
     fun setUserVolume(clientId: Int, volume: Float) =
         exec("set_user_volume", mapOf("clientId" to clientId, "volume" to volume))
 
+    /** Replace the whisper target set; an empty pair is ordinary channel talk. */
+    fun setWhisperTargets(clients: List<Int>, channels: List<Long>) =
+        exec("set_whisper_targets", mapOf("clients" to clients, "channels" to channels))
+
     // ── voice ───────────────────────────────────────────────────────────────
 
     fun audioWrite(samples: ShortArray): Int {

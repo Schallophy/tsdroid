@@ -331,6 +331,10 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     fun poke(user: User, message: String) = withController { it.poke(user, message) }
     fun userVolume(user: User): Float = controllerFlow.value?.userVolume(user) ?: 1.0f
     fun setUserVolume(user: User, volume: Float) = withController { it.setUserVolume(user, volume) }
+    fun isWhisperingTo(user: User): Boolean =
+        controllerFlow.value?.isWhisperingTo(user) ?: false
+    fun setWhisperTo(user: User, enabled: Boolean) =
+        withController { it.setWhisperTo(user, enabled) }
     fun joinChannel(channelId: Long, password: String? = null) =
         withController { it.joinChannel(channelId, password) }
     fun toggleMic() = withController { it.toggleMic() }

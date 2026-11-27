@@ -50,6 +50,8 @@ fun UserSheet(
     onPoke: (String) -> Unit,
     initialVolume: Float,
     onVolume: (Float) -> Unit,
+    whispering: Boolean,
+    onWhisper: (Boolean) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val isSelf = user.id == ownClientId
@@ -121,6 +123,9 @@ fun UserSheet(
                         onValueChangeFinished = { onVolume(volume) },
                         valueRange = 0f..2f,
                     )
+                }
+                OutlinedButton(onClick = { onWhisper(!whispering) }) {
+                    Text(if (whispering) "停止悄悄话" else "悄悄话")
                 }
             }
 

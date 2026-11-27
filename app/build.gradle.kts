@@ -544,7 +544,8 @@ android {
 }
 
 dependencies {
-    // The Kotlin/Java half of the TLS verifier reqwest uses on Android. The
+    // The Kotlin/Java half of the TLS verifier the account client uses on
+    // Android. The
     // Rust half is inside libtsbridge_jni.so; the JNI shim initializes this
     // component with the JVM context at load, before the account's first HTTPS
     // request. Without it the verifier panics and a login never finishes.

@@ -63,7 +63,7 @@ tsdroid/
 ```
 
 `app/libs/rustls-platform-verifier-<version>.aar` is the Android TrustManager
-component reqwest verifies TLS through. Its version is read from the core's
+component the account client verifies TLS through. Its version is read from the core's
 `Cargo.lock` at build time, so it cannot drift from the Rust half linked into
 `libtsbridge_jni.so`; `JNI_OnLoad` initializes it before the account's first
 HTTPS request. The AAR is vendored rather than fetched so a build does not
@@ -189,7 +189,7 @@ profiles; switching between `assembleDebug` and `assembleRelease` is not one
 cache entry overwriting the other.
 
 License texts for the statically linked third-party code (tsclientlib, Opus,
-aws-lc) are copied from tsbridge's `NOTICE` into `app/src/main/assets/licenses/`
+ureq, rustls/ring) are copied from tsbridge's `NOTICE` into `app/src/main/assets/licenses/`
 and ship inside the APK — the Apache-2.0 notice obligation applies to the
 binary, not just the source tree. Refresh them whenever tsbridge's `NOTICE`
 changes.

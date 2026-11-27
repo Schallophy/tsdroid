@@ -27,14 +27,15 @@ nothing here has to be re-derived to support another desktop.
 | **Audio** | noise suppression, echo cancellation, mic gain, speaker boost, optional Bluetooth mic |
 | **Volume** | per-user playback volume, 0–200%, keyed by UID so it survives a reconnect |
 | **Whisper** | member, channel and group targets from the header picker (groups use the all-channels form) |
+| **Settings** | channel editor (codec, quality, limits, flags) on long-press; server editor from the header gear |
 | **Identity** | the session's key is written to `identity.ini`, so the UID survives a restart |
 | **Account** | myTeamSpeak login (password + optional OTP), remembered login, cloud bookmarks that fill the connect form (passwords read on demand), backup, logout; the myTS ID is announced on connect |
 
-Not yet implemented: permission editing and the channel/server settings
-surfaces. The product target is parity with the
-official client, so these are open work rather than permanent omissions. If one
-of them turns out to need a private API, the evidence and the consequence belong
-in `docs/`; they are not a reason to stop short of the rest.
+Not yet implemented: permission editing and the non-Opus codecs (Speex/CELT).
+The product target is parity with the official client, so these are open work
+rather than permanent omissions. If one of them turns out to need a private API,
+the evidence and the consequence belong in `docs/`; they are not a reason to
+stop short of the rest.
 
 The account side runs on its own native handle, so signing in, reading bookmarks
 and backing them up work before any server is joined. The same handle is handed

@@ -69,10 +69,13 @@ component reqwest verifies TLS through. Its version is read from the core's
 HTTPS request. The AAR is vendored rather than fetched so a build does not
 depend on GitHub's raw Maven branch.
 
-The native library is not in this repository. `app/buildTsbridgeJni` compiles
-`third_party/tsbridge` with `cargo ndk` into `app/build/generated/tsbridgeJniLibs`
-and Android packages it from there, so the `.so` always matches the submodule
-commit — there is no separate binary that could be from another checkout.
+The native library is not in this repository. `app/buildTsbridgeJniDebug` and
+`app/buildTsbridgeJniRelease` compile `third_party/tsbridge` with `cargo ndk`
+into `app/build/generated/tsbridgeJniLibs/{debug,release}` and Android packages
+the matching one from there, so the `.so` always matches the submodule commit —
+there is no separate binary that could be from another checkout. The debug
+variant uses the core's `android-dev` profile (no LTO), so a core edit does not
+pay the release link; the release variant keeps the shipping profile.
 
 Because of that, a fresh clone needs `git clone --recursive` (or
 `git submodule update --init`) and a Rust toolchain with `cargo-ndk`, the NDK
@@ -161,8 +164,10 @@ git clone --recursive https://github.com/Schallophy/tsdroid.git
 ./gradlew :app:assembleDebug
 ```
 
-`assembleDebug` runs `:app:buildTsbridgeJni`, which compiles the submodule with
-`cargo ndk` and drops `libtsbridge_jni.so` into `app/build/generated/tsbridgeJniLibs`.
+`assembleDebug` runs `:app:buildTsbridgeJniDebug`, which compiles the submodule
+with `cargo ndk` (profile `android-dev`) and drops `libtsbridge_jni.so` into
+`app/build/generated/tsbridgeJniLibs/debug`. `assembleRelease` uses
+`buildTsbridgeJniRelease` and `app/build/generated/tsbridgeJniLibs/release`.
 Nothing under `app/src/main/jniLibs` is used or tracked.
 
 **Native library alone**, for working on the core without Gradle:
@@ -177,8 +182,11 @@ submodule itself, so a hand-built `.so` is only an artifact to inspect.
 
 Both paths share the same cargo cache (`third_party/tsbridge/target`), so the
 first build pays the cold cost and later ones are incremental — and when
-nothing under the submodule changed, the Gradle task is a cache hit and cargo
-does not run at all.
+nothing under the submodule changed, the variant's Gradle task is a cache hit
+and cargo does not run at all. `buildTsbridgeJniDebug` and
+`buildTsbridgeJniRelease` have separate keys because they build different
+profiles; switching between `assembleDebug` and `assembleRelease` is not one
+cache entry overwriting the other.
 
 License texts for the statically linked third-party code (tsclientlib, Opus,
 aws-lc) are copied from tsbridge's `NOTICE` into `app/src/main/assets/licenses/`
@@ -225,13 +233,13 @@ Two jobs, both `ubuntu-latest`:
 | job | what it proves |
 |---|---|
 | `tests` | `:app:testDebugUnitTest` on a bare JVM, plus a byte-for-byte check that `assets/licenses/*` matches the submodule. No `.so` exists on that runner, so a test that reached into the native library would fail instead of passing on a leftover binary. |
-| `apk` | `assembleDebug` with `cargo ndk` and NDK r27c, then compares the `.so` packaged in the APK against the one `buildTsbridgeJni` produced |
+| `apk` | `assembleDebug` with `cargo ndk` and NDK r27c, then compares the `.so` packaged in the APK against the stripped artifact Gradle derived from `buildTsbridgeJniDebug` |
 
 Both jobs cache what they can. Gradle User Home — the distribution, the
-dependencies and the local build cache — is restored by setup-gradle, and
-`buildTsbridgeJni` is a `@CacheableTask`, so a push that does not move the
-submodule restores the compiled `.so` instead of rebuilding it. A cold run is
-what happens when the submodule or a lockfile changes.
+dependencies and the local build cache — is restored by setup-gradle, and each
+`buildTsbridgeJni*` variant is a `@CacheableTask`, so a push that does not move
+the submodule restores the compiled `.so` instead of rebuilding it. A cold run
+is what happens when the submodule or a lockfile changes.
 
 There is no emulator job: there are no instrumentation tests to run, and a
 booted emulator would cost minutes per run to prove nothing the JVM suite does

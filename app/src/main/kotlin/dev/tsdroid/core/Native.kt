@@ -15,7 +15,8 @@ package dev.tsdroid.core
  * | version | `nativeAbiVersion`, so a stale .so is caught before it is used |
  *
  * The .so is `libtsbridge_jni.so`, built from the tsbridge submodule
- * (`crates/jni`) by the `buildTsbridgeJni` Gradle task. The symbol names must
+ * (`crates/jni`) by the `buildTsbridgeJniDebug` / `buildTsbridgeJniRelease`
+ * Gradle tasks. The symbol names must
  * match that crate's `lib.rs` exactly (`Java_dev_tsdroid_core_Native_<name>`),
  * which is why this class lives at a fixed package and is not renamed casually.
  */

@@ -28,9 +28,11 @@ nothing here has to be re-derived to support another desktop.
 | **Identity** | the session's key is written to `identity.ini`, so the UID survives a restart |
 | **Account** | myTeamSpeak login (password + optional OTP), remembered login, cloud bookmarks that fill the connect form (passwords read on demand), backup, logout; the myTS ID is announced on connect |
 
-Deliberately absent: whisper (密聊), per-user volume, permission editing. Each of
-those needs either a private API or another protocol layer, and shipping a
-half-working version is worse than not shipping it.
+Not yet implemented: whisper (密聊), per-user volume, permission editing. The
+product target is parity with the official client, so these are open work rather
+than permanent omissions. If one of them turns out to need a private API, the
+evidence and the consequence belong in `docs/`; they are not a reason to stop
+short of the rest.
 
 The account side runs on its own native handle, so signing in, reading bookmarks
 and backing them up work before any server is joined. The same handle is handed

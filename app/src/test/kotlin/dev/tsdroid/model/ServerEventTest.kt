@@ -109,6 +109,30 @@ class ServerEventTest {
     }
 
     @Test
+    fun anAccountFailureCarriesItsKind() {
+        // The kind is what lets a shell translate the sentence or offer the next
+        // step; without it a non-English UI prints English prose. Empty on
+        // success, so the two fields cannot disagree about whether there was a
+        // failure.
+        val failed = ServerEvent.from(
+            mapOf(
+                "type" to "account_status",
+                "command" to "account_login",
+                "ok" to false,
+                "message" to "the credential was refused",
+                "kind" to "login",
+            ),
+        ) as ServerEvent.AccountStatus
+        assertEquals(false, failed.ok)
+        assertEquals("login", failed.kind)
+
+        val ok = ServerEvent.from(
+            mapOf("type" to "account_status", "command" to "sync_list", "ok" to true, "message" to ""),
+        ) as ServerEvent.AccountStatus
+        assertEquals("", ok.kind)
+    }
+
+    @Test
     fun hardwareFlagsLandInTheRightProperties() {
         val event = ServerEvent.from(
             mapOf(
@@ -354,6 +378,7 @@ class ServerEventTest {
             "command" to "account_login",
             "ok" to true,
             "message" to "",
+            "kind" to "",
         ),
         "user_priority_speaker_changed" to mapOf(
             "type" to "user_priority_speaker_changed",

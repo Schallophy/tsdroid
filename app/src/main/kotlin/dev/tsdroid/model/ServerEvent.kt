@@ -189,6 +189,16 @@ sealed interface ServerEvent {
         val command: String,
         val ok: Boolean,
         val message: String,
+        /**
+         * Machine-readable category of a failure, empty when [ok].
+         *
+         * `not_logged_in` · `no_key` · `login` · `session` · `write` · `file` ·
+         * `identity_ambiguous` · `identity_missing` · `account`. A shell switches
+         * on it to translate the sentence or offer the next step; `account` means
+         * "show it as written". Defaults to empty so an older library reads as
+         * "no category", which is also what success carries.
+         */
+        val kind: String = "",
     ) : ServerEvent {
         override val type = "account_status"
     }
@@ -1270,6 +1280,7 @@ sealed interface ServerEvent {
                     command = str(map, "command"),
                     ok = bool(map, "ok"),
                     message = str(map, "message"),
+                    kind = str(map, "kind"),
                 )
 
                 "user_priority_speaker_changed" -> UserPrioritySpeakerChanged(

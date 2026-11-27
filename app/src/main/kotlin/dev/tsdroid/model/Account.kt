@@ -24,6 +24,15 @@ data class AccountState(
     val command: String = "",
     /** Empty when that command succeeded. */
     val lastError: String = "",
+    /**
+     * Machine-readable category of [lastError], empty exactly when it is.
+     *
+     * The connection side has carried a `kind` beside its message since the
+     * first version; this is the account side's, so a non-English UI can
+     * translate the failure or offer the next step instead of printing English.
+     * See `ServerEvent.AccountStatus.kind` for the values.
+     */
+    val lastErrorKind: String = "",
     val lastBackup: String = "",
     /** In-flight text of a multi-step command (`3/25 restored`), not an error. */
     val progress: String = "",

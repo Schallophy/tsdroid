@@ -1,3 +1,8 @@
+> **Moved.** The Android shell now lives in the
+> [litespeak](https://github.com/Schallophy/litespeak) monorepo at
+> `shells/android`, together with the core it consumes. This repository is
+> archived and kept read-only for its history.
+
 # tsdroid
 
 A TeamSpeak 3/6 client for Android: a Compose UI in Kotlin over the native
